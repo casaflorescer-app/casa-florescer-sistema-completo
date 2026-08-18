@@ -1,0 +1,18 @@
+# dependências e build
+node_modules/
+.next/
+dist/
+.turbo/
+.vercel/
+
+# segredos — nunca enviar ao GitHub
+.env
+.env.*
+!.env.example
+
+# sistema
+.DS_Store
+Thumbs.db
+*.log
+.cursor/
+agent-transcripts/

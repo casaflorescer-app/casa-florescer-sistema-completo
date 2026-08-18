@@ -1,0 +1,7 @@
+{
+  "name": "florescer-pwa",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  }
+}

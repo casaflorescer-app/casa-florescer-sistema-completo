@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#923A66" />
+    <meta name="color-scheme" content="light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Florescer" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Florescer Clínica</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./css/app.css" />
+  </head>
+  <body>
+    <div id="app-root">
+      <div class="splash" id="splash">
+        <img src="./brand/logo-florescer.png" alt="Florescer Clínica" />
+        <p>Clínica</p>
+      </div>
+
+      <section class="screen login" id="screen-login">
+        <img src="./brand/logo-florescer.png" alt="Florescer Clínica" />
+        <h1>Recepção</h1>
+        <p class="sub">Entre para ver as cinco salas</p>
+        <label class="field">
+          <span>E-mail</span>
+          <input id="email" type="email" inputmode="email" autocomplete="username" value="secretaria@florescer.clinica" />
+        </label>
+        <label class="field">
+          <span>Senha</span>
+          <input id="password" type="password" autocomplete="current-password" value="florescer" />
+        </label>
+        <button class="btn-primary" id="btn-login" type="button">Entrar</button>
+        <p class="hint">Acesso da recepção · 4 secretárias em paralelo</p>
+      </section>
+
+      <section class="screen" id="screen-app">
+        <div class="shell">
+          <header class="topbar">
+            <div class="brand">
+              <img src="./brand/logo-florescer.png" alt="" />
+            </div>
+            <div class="who">
+              <strong id="who-name">Ana Souza</strong>
+              Secretária
+            </div>
+          </header>
+
+          <main class="main">
+            <div class="view is-on" id="view-hoje"></div>
+            <div class="view" id="view-agenda"></div>
+            <div class="view" id="view-pacientes"></div>
+            <div class="view" id="view-mais"></div>
+          </main>
+
+          <nav class="tabbar" aria-label="Principal">
+            <button class="tab is-on" data-view="hoje" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z" />
+              </svg>
+              Hoje
+            </button>
+            <button class="tab" data-view="agenda" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3.5" y="5" width="17" height="15" rx="2" />
+                <path d="M8 3.5V7M16 3.5V7M3.5 10h17" />
+              </svg>
+              Agenda
+            </button>
+            <button class="tab" data-view="pacientes" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="9" cy="8" r="3" />
+                <path d="M3.5 19c.6-3 2.8-4.5 5.5-4.5S14.4 16 15 19" />
+                <circle cx="17" cy="9" r="2.4" />
+                <path d="M16 14.5c2.4.3 4 1.8 4.6 4.5" />
+              </svg>
+              Pacientes
+            </button>
+            <button class="tab" data-view="mais" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="6" r="1.2" fill="currentColor" />
+                <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+                <circle cx="12" cy="18" r="1.2" fill="currentColor" />
+              </svg>
+              Mais
+            </button>
+          </nav>
+        </div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <script src="./js/app.js"></script>
+  </body>
+</html>

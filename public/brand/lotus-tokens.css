@@ -1,0 +1,18 @@
+/* Florescer Clínica — tokens amostrados no logo (PNG 828×841).
+   Não interpolar azul/roxo. O lockup oficial é public/brand/logo-florescer.png */
+
+@theme {
+  --color-lotus-50: #fbf6f8;
+  --color-lotus-100: #f7e3e9;
+  --color-lotus-200: #edcfd8;
+  --color-lotus-300: #dfb5bf;
+  --color-lotus-400: #ce8b9d;
+  --color-lotus-500: #ac5b7d;
+  --color-lotus-600: #9b406c;
+  --color-lotus-700: #923a66;
+  --color-lotus-800: #6e2c4d;
+  --color-lotus-900: #4a1d34;
+
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --letter-spacing-brand: 0.22em;
+}

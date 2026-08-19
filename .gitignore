@@ -4,6 +4,16 @@ node_modules/
 dist/
 .turbo/
 .vercel/
+apps/pwa/.next/
+apps/pwa/public/
+
+# gerados no build da Vercel (cópia da PWA)
+/public/index.html
+/public/css/
+/public/js/
+/public/icons/
+/public/manifest.webmanifest
+/public/sw.js
 
 # segredos — nunca enviar ao GitHub
 .env

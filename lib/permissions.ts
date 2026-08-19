@@ -24,15 +24,15 @@ export const APP_MODULES: AppModule[] = [
   { id: "prontuario", label: "Prontuário", href: "/medica/prontuario", description: "Histórico obstétrico" },
   { id: "obstetrico", label: "Programação obstétrica", href: "/medica", description: "Datas prováveis de parto" },
   { id: "capacidade", label: "Capacidade", href: "/medica/capacidade", description: "Teto diário" },
-  { id: "estoque", label: "Estoque", href: "/gestao/estoque", description: "Clínico e copa" },
+  { id: "estoque", label: "Estoque", href: "/gestao/estoque", description: "Casa inteira, por setor" },
   { id: "auditoria", label: "Auditoria", href: "/gestao/auditoria", description: "Conferência de estoque" },
-  { id: "contratos", label: "Contratos", href: "/gestao/contratos", description: "Sublocação" },
+  { id: "contratos", label: "Contratos e Sublocações", href: "/gestao/contratos", description: "Aluguel com água, luz e internet" },
   { id: "permissoes", label: "Usuários", href: "/gestao/usuarios", description: "Colaboradores e módulos" },
 ];
 
 export const MODULE_IDS = APP_MODULES.map((item) => item.id);
 
-const SECRETARY_DEFAULT: ModuleId[] = ["agenda", "pacientes", "exames"];
+const SECRETARY_DEFAULT: ModuleId[] = ["agenda", "pacientes", "exames", "estoque"];
 const PHYSICIAN_DEFAULT: ModuleId[] = [
   "obstetrico",
   "agenda",

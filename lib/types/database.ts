@@ -1,5 +1,12 @@
 export type PracticeKind = "house" | "sublet";
 export type RoomStatus = "active" | "maintenance" | "inactive";
+export type RoomKind =
+  | "house_consultorio"
+  | "sublet_consultorio"
+  | "pharmacy"
+  | "procedure"
+  | "reception";
+export type InventoryDirection = "in" | "out";
 export type OccupancyModel =
   | "fixed_monthly"
   | "hourly"
@@ -168,6 +175,46 @@ export type OccupancyContract = {
   starts_on: string;
   ends_on: string | null;
   fixed_amount_cents: number;
+};
+
+export type RentalContract = {
+  id: string;
+  organization_id: string;
+  room_id: string;
+  tenant_professional_id: string | null;
+  tenant_name: string;
+  tenant_specialty: string;
+  monthly_rent_cents: number;
+  water_included: boolean;
+  electricity_included: boolean;
+  internet_included: boolean;
+  starts_on: string;
+  ends_on: string | null;
+  is_active: boolean;
+};
+
+export type RentalStatement = {
+  id: string;
+  rental_contract_id: string;
+  competence: string;
+  rent_cents: number;
+  extras_cents: number;
+  total_cents: number;
+  issued_at: string;
+};
+
+export type InventoryMovement = {
+  id: string;
+  organization_id: string;
+  item_id: string;
+  qty: number;
+  direction: InventoryDirection;
+  destination_room_id: string;
+  encounter_id: string | null;
+  professional_id: string | null;
+  supervised_by: string;
+  occurred_at: string;
+  note: string | null;
 };
 
 export type Item = {

@@ -11,9 +11,6 @@ apps/pwa/public/
 /public/index.html
 /public/css/
 /public/js/
-/public/icons/
-/public/manifest.webmanifest
-/public/sw.js
 
 # segredos — nunca enviar ao GitHub
 .env

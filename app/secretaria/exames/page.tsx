@@ -1,7 +1,9 @@
+import { requireModule } from "@/components/layout/RoleGate";
 import { examQueue } from "@/lib/preview/fixtures";
 import { EXAM_STATUS_LABEL } from "@/lib/types/domain";
 
-export default function ExamesPage() {
+export default async function ExamesPage() {
+  await requireModule("exames");
   return (
     <div>
       <h1 className="page-title">Workflow de exames</h1>

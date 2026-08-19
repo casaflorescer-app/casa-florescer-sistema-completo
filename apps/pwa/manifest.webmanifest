@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Florescer Clínica",
+  "name": "Casa Florescer",
   "short_name": "Florescer",
-  "description": "Agenda e recepção da Florescer Clínica — GO e consultórios locados.",
+  "description": "Agenda, recepção e acompanhamento da Casa Florescer.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "./",

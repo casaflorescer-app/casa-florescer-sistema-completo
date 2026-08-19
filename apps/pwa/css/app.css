@@ -183,6 +183,16 @@ img {
   color: var(--lotus-600);
 }
 
+.login .hint a {
+  color: var(--lotus-700);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login .hint a:hover {
+  text-decoration: underline;
+}
+
 /* ----- Shell ----- */
 .shell {
   flex: 1;

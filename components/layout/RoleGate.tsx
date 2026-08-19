@@ -1,16 +1,46 @@
 import { redirect } from "next/navigation";
 import { StaffShell } from "@/components/layout/StaffShell";
+import { PermissionsProvider } from "@/lib/hooks/usePermissions";
 import { getSessionContext } from "@/lib/auth/session";
 import { homeForRole } from "@/lib/rbac";
-import type { UiRole } from "@/lib/types/domain";
+import { hasModule, type ModuleId } from "@/lib/permissions";
+import type { SessionContext, UiRole } from "@/lib/types/domain";
 
 export const dynamic = "force-dynamic";
 
-export async function requireRole(role: UiRole) {
+export async function requireSession(): Promise<SessionContext> {
   const session = await getSessionContext();
   if (!session) redirect("/login");
-  if (session.uiRole !== role) redirect(homeForRole(session.uiRole));
   return session;
+}
+
+export async function requireRole(role: UiRole) {
+  const session = await requireSession();
+  if (session.uiRole !== role) redirect(homeForRole(session.uiRole, session.permissions));
+  return session;
+}
+
+export async function requireStaff() {
+  const session = await requireSession();
+  if (session.uiRole === "patient") redirect("/paciente");
+  return session;
+}
+
+export async function requireModule(moduleId: ModuleId) {
+  const session = await requireStaff();
+  if (!hasModule(session.permissions, moduleId)) {
+    redirect(homeForRole(session.uiRole, session.permissions));
+  }
+  return session;
+}
+
+export async function StaffAppLayout({ children }: { children: React.ReactNode }) {
+  const session = await requireStaff();
+  return (
+    <PermissionsProvider session={session}>
+      <StaffShell session={session}>{children}</StaffShell>
+    </PermissionsProvider>
+  );
 }
 
 export async function RoleLayout({
@@ -20,7 +50,9 @@ export async function RoleLayout({
   role: UiRole;
   children: React.ReactNode;
 }) {
-  const session = await requireRole(role);
-  if (role === "patient") return children;
-  return <StaffShell session={session}>{children}</StaffShell>;
+  if (role === "patient") {
+    await requireRole("patient");
+    return children;
+  }
+  return <StaffAppLayout>{children}</StaffAppLayout>;
 }

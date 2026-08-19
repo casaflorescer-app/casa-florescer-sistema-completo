@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import {
+  PREVIEW_ACL_COOKIE,
   PREVIEW_COOKIE,
   parsePreviewRole,
   previewSession,
@@ -8,10 +9,26 @@ import {
 import type { SessionContext } from "../types/domain";
 import type { AppRole } from "../types/database";
 import { createServerSupabase } from "./server";
+import { defaultModulesForRole, normalizeModules, type ModuleId } from "../permissions";
+
+function readAclCookie(): Record<string, ModuleId[]> {
+  const raw = cookies().get(PREVIEW_ACL_COOKIE)?.value;
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Record<string, ModuleId[]> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      out[key] = normalizeModules(value, []);
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
 export async function getSessionContext(): Promise<SessionContext | null> {
   const preview = parsePreviewRole(cookies().get(PREVIEW_COOKIE)?.value);
-  if (preview) return previewSession(preview);
+  if (preview) return previewSession(preview, readAclCookie());
 
   const supabase = await createServerSupabase();
   if (!supabase) return null;
@@ -24,7 +41,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, email")
+      .select("full_name, email, permissions")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -52,6 +69,10 @@ export async function getSessionContext(): Promise<SessionContext | null> {
       practiceIds: [...new Set((roles ?? []).map((row) => row.practice_id))],
       patientId: patientAccount?.patient_id ?? null,
       isPreview: false,
+      permissions: normalizeModules(
+        profile?.permissions,
+        defaultModulesForRole(uiRole),
+      ),
     };
   } catch {
     return null;

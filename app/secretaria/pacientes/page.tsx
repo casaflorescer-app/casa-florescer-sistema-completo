@@ -1,10 +1,13 @@
+import { requireModule } from "@/components/layout/RoleGate";
+
 const patients = [
   { name: "Marina Alves", phone: "(11) 90000-0001", last: "Retorno anual em set/2026" },
   { name: "Carla Menezes", phone: "(11) 90000-0002", last: "Pré-natal — 38 semanas" },
   { name: "Helena Dias", phone: "(11) 90000-0003", last: "Consulta ginecológica" },
 ];
 
-export default function PacientesPage() {
+export default async function PacientesPage() {
+  await requireModule("pacientes");
   return (
     <div>
       <h1 className="page-title">Pacientes</h1>

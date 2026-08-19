@@ -6,7 +6,7 @@ import { homeForRole } from "@/lib/rbac";
 
 export default async function HomePage() {
   const session = await getSessionContext();
-  if (session) redirect(homeForRole(session.uiRole));
+  if (session) redirect(homeForRole(session.uiRole, session.permissions));
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6">

@@ -5,7 +5,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
     <div className="flex items-center gap-3">
       <Image
         src="/brand/logo-florescer.png"
-        alt="Florescer Clínica"
+        alt="Casa Florescer"
         width={compact ? 40 : 52}
         height={compact ? 40 : 52}
         className="h-10 w-10 object-contain"
@@ -14,9 +14,9 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
       {!compact ? (
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-brand text-lotus-600">
-            Florescer
+            Casa Florescer
           </p>
-          <p className="text-sm text-lotus-800">Casa clínica</p>
+          <p className="text-sm text-lotus-800">Clínica</p>
         </div>
       ) : null}
     </div>

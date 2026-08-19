@@ -1,4 +1,7 @@
-export default function AuditoriaPage() {
+import { requireModule } from "@/components/layout/RoleGate";
+
+export default async function AuditoriaPage() {
+  await requireModule("auditoria");
   return (
     <div>
       <h1 className="page-title">Auditoria de estoque</h1>

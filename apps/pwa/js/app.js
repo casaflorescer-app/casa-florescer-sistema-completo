@@ -209,7 +209,25 @@ function boot() {
     else $("#screen-login").classList.add("is-on");
   }, 900);
 
-  $("#btn-login").addEventListener("click", () => enterApp());
+  $("#btn-login").addEventListener("click", () => {
+    const login = ($("#email").value || "").trim().toLowerCase();
+    const password = $("#password").value || "";
+    const ok =
+      password === "florescer" &&
+      (login === "secretaria@florescer.clinica" ||
+        login === "medica@florescer.clinica" ||
+        login === "admin@florescer.clinica" ||
+        login === "paciente@florescer.clinica");
+    if (!ok) {
+      toast("Login ou senha inválidos");
+      return;
+    }
+    enterApp();
+  });
+  $("#link-criar")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    toast("Criar conta é só para pacientes. A recepção confirma o cadastro.");
+  });
   $("#password").addEventListener("keydown", (e) => {
     if (e.key === "Enter") enterApp();
   });

@@ -1,4 +1,7 @@
-export default function SecretariaAgendaPage() {
+import { requireModule } from "@/components/layout/RoleGate";
+
+export default async function SecretariaAgendaPage() {
+  await requireModule("agenda");
   return (
     <div>
       <h1 className="page-title">Agenda dinâmica</h1>

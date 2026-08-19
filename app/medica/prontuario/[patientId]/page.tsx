@@ -1,8 +1,11 @@
-export default function ProntuarioPacientePage({
+import { requireModule } from "@/components/layout/RoleGate";
+
+export default async function ProntuarioPacientePage({
   params,
 }: {
   params: { patientId: string };
 }) {
+  await requireModule("prontuario");
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">

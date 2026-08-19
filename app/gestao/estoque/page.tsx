@@ -1,3 +1,5 @@
+import { requireModule } from "@/components/layout/RoleGate";
+
 const rows = [
   { name: "Luvas M", klass: "Clínico · lote", qty: "4 caixas", extra: "Validade 11/2026" },
   { name: "Soro 0,9%", klass: "Clínico · FEFO", qty: "12 un", extra: "Lote A19" },
@@ -5,7 +7,8 @@ const rows = [
   { name: "Copos", klass: "Copa", qty: "1 pacote", extra: "Abaixo do mínimo" },
 ];
 
-export default function EstoquePage() {
+export default async function EstoquePage() {
+  await requireModule("estoque");
   return (
     <div>
       <h1 className="page-title">Estoque híbrido</h1>

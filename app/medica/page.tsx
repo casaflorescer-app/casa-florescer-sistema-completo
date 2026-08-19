@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { requireModule } from "@/components/layout/RoleGate";
 import { obstetricBoard } from "@/lib/preview/fixtures";
 
-export default function MedicaHomePage() {
+export default async function MedicaHomePage() {
+  await requireModule("obstetrico");
   return (
     <div>
       <h1 className="page-title">Programação obstétrica</h1>

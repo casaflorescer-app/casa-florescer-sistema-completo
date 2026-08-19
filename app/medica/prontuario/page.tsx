@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireModule } from "@/components/layout/RoleGate";
 
 const patients = [
   { id: "p1", name: "Carla Menezes", ob: "G2P1 · DPP 22/08 · PA controlada" },
@@ -6,7 +7,8 @@ const patients = [
   { id: "p3", name: "Marina Alves", ob: "G0 · retorno anual ginecológico" },
 ];
 
-export default function ProntuarioListPage() {
+export default async function ProntuarioListPage() {
+  await requireModule("prontuario");
   return (
     <div>
       <h1 className="page-title">Prontuário rápido</h1>

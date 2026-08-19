@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandMark } from "./BrandMark";
 import type { SessionContext } from "@/lib/types/domain";
-import { NAV } from "@/lib/rbac";
+
+const PATIENT_NAV = [
+  { href: "/paciente", label: "Acompanhar" },
+  { href: "/paciente/agenda", label: "Consultas" },
+  { href: "/paciente/exames", label: "Exames" },
+  { href: "/paciente/anexos", label: "Enviar" },
+];
 
 export function PortalShell({
   session,
@@ -15,7 +21,7 @@ export function PortalShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const items = NAV.patient;
+  const items = PATIENT_NAV;
 
   async function exitPreview() {
     await fetch("/api/preview-role", { method: "DELETE" });

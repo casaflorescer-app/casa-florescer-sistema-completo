@@ -1,7 +1,9 @@
+import { requireModule } from "@/components/layout/RoleGate";
 import { capacityRules } from "@/lib/preview/fixtures";
 import { APPOINTMENT_KIND_LABEL } from "@/lib/types/domain";
 
-export default function CapacidadePage() {
+export default async function CapacidadePage() {
+  await requireModule("capacidade");
   return (
     <div>
       <h1 className="page-title">Controle de capacidade</h1>

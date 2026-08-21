@@ -6,8 +6,6 @@ import { homeForRole } from "@/lib/rbac";
 import { hasModule, type ModuleId } from "@/lib/permissions";
 import type { SessionContext, UiRole } from "@/lib/types/domain";
 
-export const dynamic = "force-dynamic";
-
 export async function requireSession(): Promise<SessionContext> {
   const session = await getSessionContext();
   if (!session) redirect("/login");

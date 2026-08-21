@@ -9,6 +9,7 @@ import {
   canAccessPath,
   homeForRole,
 } from "@/lib/rbac";
+import { isMasterAdminRole } from "@/lib/permissions";
 import { stripTrailingSlash } from "@/lib/hosting";
 import type { SessionContext } from "@/lib/types/domain";
 
@@ -114,12 +115,15 @@ export function ClientPatientGate({ children }: { children: React.ReactNode }) {
       router.replace("/login");
       return;
     }
-    if (session.uiRole !== "patient") {
+    if (session.uiRole !== "patient" && !isMasterAdminRole(session.uiRole)) {
       router.replace(homeForRole(session.uiRole, session.permissions));
     }
   }, [session, router]);
 
-  if (!session || session.uiRole !== "patient") return <LoadingLine />;
+  if (!session) return <LoadingLine />;
+  if (session.uiRole !== "patient" && !isMasterAdminRole(session.uiRole)) {
+    return <LoadingLine />;
+  }
 
   return (
     <PermissionsProvider session={session}>

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import type { UiRole } from "@/lib/types/domain";
 import { homeForRole } from "@/lib/rbac";
 import { defaultModulesForRole } from "@/lib/permissions";
-import { setPreviewRole } from "@/lib/preview-api";
+import { setPreviewRole, setPreviewUserId } from "@/lib/preview-api";
+import { findDirectoryUserByEmail } from "@/lib/admin/directory";
 
 const DEMO: Record<string, UiRole> = {
   "secretaria@florescer.clinica": "secretary",
@@ -28,13 +29,16 @@ export function LoginForm() {
     event.preventDefault();
     setError("");
     setBusy(true);
-    const role = DEMO[login.trim().toLowerCase()];
+    const email = login.trim().toLowerCase();
+    const directory = findDirectoryUserByEmail(email);
+    const role = directory?.uiRole ?? DEMO[email];
     if (!role || password !== "florescer") {
       setBusy(false);
       setError("Login ou senha inválidos.");
       return;
     }
     await setPreviewRole(role);
+    setPreviewUserId(directory?.userId ?? `preview-${role}`);
     router.push(homeForRole(role, defaultModulesForRole(role)));
     router.refresh();
   }

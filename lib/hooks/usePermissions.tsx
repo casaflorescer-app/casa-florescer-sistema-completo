@@ -3,14 +3,16 @@
 import { createContext, useContext, useMemo } from "react";
 import type { SessionContext } from "@/lib/types/domain";
 import {
-  hasModule,
+  canAccessModule,
   modulesForSidebar,
+  isMasterAdminRole,
   type ModuleId,
 } from "@/lib/permissions";
 import { navSectionsFor } from "@/lib/nav";
 
 type PermissionsValue = {
   session: SessionContext;
+  isAdmin: boolean;
   can: (moduleId: ModuleId) => boolean;
   modules: ReturnType<typeof modulesForSidebar>;
   navSections: ReturnType<typeof navSectionsFor>;
@@ -28,7 +30,8 @@ export function PermissionsProvider({
   const value = useMemo<PermissionsValue>(
     () => ({
       session,
-      can: (moduleId) => hasModule(session.permissions, moduleId),
+      isAdmin: isMasterAdminRole(session.uiRole),
+      can: (moduleId) => canAccessModule(session.uiRole, session.permissions, moduleId),
       modules: modulesForSidebar(session.permissions),
       navSections: navSectionsFor(session.uiRole, session.permissions),
     }),

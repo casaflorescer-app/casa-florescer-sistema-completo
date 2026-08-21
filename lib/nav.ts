@@ -1,4 +1,4 @@
-import { hasModule, type ModuleId } from "@/lib/permissions";
+import { hasModule, isMasterAdminRole, type ModuleId } from "@/lib/permissions";
 import type { UiRole } from "@/lib/types/domain";
 import { stripTrailingSlash } from "@/lib/hosting";
 
@@ -186,7 +186,8 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
   },
 ];
 
-function linkAllowed(item: SidebarLink, permissions: ModuleId[]) {
+function linkAllowed(item: SidebarLink, role: UiRole, permissions: ModuleId[]) {
+  if (isMasterAdminRole(role)) return true;
   if (!item.moduleIds || item.moduleIds.length === 0) return true;
   return item.moduleIds.some((id) => hasModule(permissions, id));
 }
@@ -197,14 +198,28 @@ function pathMatches(pathname: string, href: string) {
   return path === target || path.startsWith(`${target}/`);
 }
 
+const ADMIN_SECTION_ORDER: SidebarSection["id"][] = [
+  "gestao",
+  "medico",
+  "secretaria",
+  "paciente",
+];
+
 export function navSectionsFor(
   role: UiRole,
   permissions: ModuleId[],
 ): SidebarSection[] {
+  if (isMasterAdminRole(role)) {
+    const byId = new Map(SIDEBAR_SECTIONS.map((section) => [section.id, section]));
+    return ADMIN_SECTION_ORDER.map((id) => {
+      const section = byId.get(id)!;
+      return { ...section, items: [...section.items] };
+    });
+  }
   return SIDEBAR_SECTIONS.filter((section) => section.roles.includes(role))
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => linkAllowed(item, permissions)),
+      items: section.items.filter((item) => linkAllowed(item, role, permissions)),
     }))
     .filter((section) => section.items.length > 0);
 }

@@ -1,5 +1,5 @@
 import { isStaticHosting } from "./hosting";
-import { PREVIEW_ACL_COOKIE, PREVIEW_COOKIE } from "./rbac";
+import { PREVIEW_ACL_COOKIE, PREVIEW_COOKIE, PREVIEW_USER_KEY } from "./rbac";
 import type { ModuleId } from "./permissions";
 import type { UiRole } from "./types/domain";
 
@@ -18,6 +18,17 @@ export function readPreviewAclFromStorage(): Record<string, ModuleId[]> {
   return readAcl();
 }
 
+export function readPreviewUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(PREVIEW_USER_KEY);
+}
+
+export function setPreviewUserId(userId: string | null) {
+  if (typeof window === "undefined") return;
+  if (userId) localStorage.setItem(PREVIEW_USER_KEY, userId);
+  else localStorage.removeItem(PREVIEW_USER_KEY);
+}
+
 export async function setPreviewRole(role: UiRole) {
   if (isStaticHosting()) {
     localStorage.setItem(PREVIEW_COOKIE, role);
@@ -34,6 +45,7 @@ export async function setPreviewRole(role: UiRole) {
 export async function clearPreviewRole() {
   if (isStaticHosting()) {
     localStorage.removeItem(PREVIEW_COOKIE);
+    localStorage.removeItem(PREVIEW_USER_KEY);
     return { ok: true as const };
   }
   const res = await fetch("/api/preview-role", { method: "DELETE" });

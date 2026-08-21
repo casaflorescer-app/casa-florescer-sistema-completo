@@ -3,6 +3,8 @@ import type { SessionContext, UiRole } from "./types/domain";
 import {
   defaultModulesForRole,
   hasModule,
+  isMasterAdminRole,
+  MODULE_IDS,
   moduleByPath,
   type ModuleId,
 } from "./permissions";
@@ -10,6 +12,7 @@ import { firstSidebarHref } from "./nav";
 
 export const PREVIEW_COOKIE = "florescer_preview_role";
 export const PREVIEW_ACL_COOKIE = "florescer_preview_acl";
+export const PREVIEW_USER_KEY = "florescer_preview_user";
 
 export function resolveUiRole(
   staffRoles: AppRole[],
@@ -45,6 +48,7 @@ export function canAccessPath(
   permissions: ModuleId[],
 ): boolean {
   if (pathname === "/" || pathname.startsWith("/login")) return true;
+  if (isMasterAdminRole(role)) return true;
   if (role === "patient") {
     return pathname === "/paciente" || pathname.startsWith("/paciente/");
   }
@@ -78,6 +82,7 @@ export function parsePreviewRole(value: string | undefined | null): UiRole | nul
 export function previewSession(
   role: UiRole,
   aclOverride?: Record<string, ModuleId[]>,
+  identity?: { userId: string; fullName: string; email: string } | null,
 ): SessionContext {
   const names: Record<UiRole, string> = {
     physician: "Dra. Samara",
@@ -85,12 +90,12 @@ export function previewSession(
     manager: "Thais",
     patient: "Marina Alves",
   };
-  const userId = `preview-${role}`;
+  const userId = identity?.userId ?? `preview-${role}`;
   const fallback = defaultModulesForRole(role);
   return {
     userId,
-    fullName: names[role],
-    email: `${role}@florescer.clinica`,
+    fullName: identity?.fullName ?? names[role],
+    email: identity?.email ?? `${role}@florescer.clinica`,
     uiRole: role,
     staffRoles:
       role === "physician"
@@ -101,9 +106,11 @@ export function previewSession(
             ? ["admin"]
             : [],
     practiceIds: ["preview-house"],
-    patientId: role === "patient" ? "preview-patient" : null,
+    patientId: role === "patient" ? identity?.userId ?? "preview-patient" : null,
     isPreview: true,
-    permissions: aclOverride?.[userId] ?? fallback,
+    permissions: isMasterAdminRole(role)
+      ? [...MODULE_IDS]
+      : aclOverride?.[userId] ?? fallback,
   };
 }
 

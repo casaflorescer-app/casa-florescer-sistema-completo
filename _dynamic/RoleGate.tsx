@@ -3,7 +3,7 @@ import { StaffShell } from "@/components/layout/StaffShell";
 import { PermissionsProvider } from "@/lib/hooks/usePermissions";
 import { getSessionContext } from "@/lib/auth/session";
 import { homeForRole } from "@/lib/rbac";
-import { hasModule, type ModuleId } from "@/lib/permissions";
+import { canAccessModule, isMasterAdminRole, type ModuleId } from "@/lib/permissions";
 import type { SessionContext, UiRole } from "@/lib/types/domain";
 
 export async function requireSession(): Promise<SessionContext> {
@@ -14,7 +14,9 @@ export async function requireSession(): Promise<SessionContext> {
 
 export async function requireRole(role: UiRole) {
   const session = await requireSession();
-  if (session.uiRole !== role) redirect(homeForRole(session.uiRole, session.permissions));
+  if (session.uiRole !== role && !isMasterAdminRole(session.uiRole)) {
+    redirect(homeForRole(session.uiRole, session.permissions));
+  }
   return session;
 }
 
@@ -26,7 +28,7 @@ export async function requireStaff() {
 
 export async function requireModule(moduleId: ModuleId) {
   const session = await requireStaff();
-  if (!hasModule(session.permissions, moduleId)) {
+  if (!canAccessModule(session.uiRole, session.permissions, moduleId)) {
     redirect(homeForRole(session.uiRole, session.permissions));
   }
   return session;

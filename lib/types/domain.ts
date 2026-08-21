@@ -25,7 +25,7 @@ export type NavItem = {
 export const UI_ROLE_LABEL: Record<UiRole, string> = {
   physician: "Médica",
   secretary: "Secretária",
-  manager: "Admin",
+  manager: "Admin Master",
   patient: "Paciente",
 };
 

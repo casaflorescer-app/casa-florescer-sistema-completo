@@ -72,6 +72,19 @@ export function hasModule(ids: ModuleId[], id: ModuleId): boolean {
   return ids.includes(id);
 }
 
+export function isMasterAdminRole(role: string) {
+  return role === "manager" || role === "admin";
+}
+
+export function canAccessModule(
+  role: string,
+  ids: ModuleId[],
+  id: ModuleId,
+) {
+  if (isMasterAdminRole(role)) return true;
+  return hasModule(ids, id);
+}
+
 export function moduleByPath(pathname: string): AppModule | undefined {
   const exact = APP_MODULES.find((item) => item.href === pathname);
   if (exact) return exact;

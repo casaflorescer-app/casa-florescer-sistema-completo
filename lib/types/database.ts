@@ -57,6 +57,7 @@ export type Profile = {
   is_active: boolean;
   created_at: string;
   permissions: string[];
+  role: "admin" | "physician" | "secretary" | "patient" | null;
 };
 
 export type UserPracticeRole = {

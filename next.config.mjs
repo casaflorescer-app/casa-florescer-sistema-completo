@@ -6,7 +6,7 @@
  *
  * Ao retomar o servidor dinâmico:
  * 1. Troque STATIC_EXPORT para false (ou defina STATIC_EXPORT=false no ambiente)
- * 2. Copie _dynamic/middleware.ts → middleware.ts (raiz)
+ * 2. Copie _dynamic/middleware.dynamic.ts → middleware.ts (raiz)
  * 3. Copie _dynamic/api → app/api
  * 4. Copie _dynamic/RoleGate.tsx → components/layout/RoleGate.tsx
  * 5. O callback de auth em app/auth/callback/page.tsx serve os dois modos

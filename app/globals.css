@@ -21,10 +21,12 @@ body {
     @apply text-2xl font-semibold tracking-tight text-lotus-900;
   }
   .page-sub {
-    @apply mt-1 max-w-2xl text-sm text-lotus-700/80;
+    @apply mt-1 max-w-2xl text-sm text-lotus-700;
+    opacity: 0.8;
   }
   .card {
-    @apply rounded-2xl border border-lotus-100 bg-white p-5 shadow-[0_1px_0_rgba(74,29,52,0.04)];
+    @apply rounded-2xl border border-lotus-100 bg-white p-5;
+    box-shadow: 0 1px 0 rgb(74 29 52 / 0.04);
   }
 }
 

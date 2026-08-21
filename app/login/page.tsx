@@ -1,16 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { BrandMark } from "@/components/layout/BrandMark";
-import { getSessionContext } from "@/lib/auth/session";
-import { homeForRole } from "@/lib/rbac";
+import { RedirectIfSession } from "@/components/layout/StaticAuthGates";
 import { LoginForm } from "./ui";
 
-export default async function LoginPage() {
-  const session = await getSessionContext();
-  if (session) redirect(homeForRole(session.uiRole, session.permissions));
-
+export default function LoginPage() {
   return (
     <main className="view-enter mx-auto flex min-h-[100dvh] max-w-md flex-col justify-center px-6 py-10">
+      <RedirectIfSession />
       <div className="flex justify-center">
         <BrandMark />
       </div>

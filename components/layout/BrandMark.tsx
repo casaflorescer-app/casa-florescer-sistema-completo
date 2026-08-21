@@ -10,6 +10,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
         height={compact ? 40 : 52}
         className="h-10 w-10 object-contain"
         priority
+        unoptimized
       />
       {!compact ? (
         <div>

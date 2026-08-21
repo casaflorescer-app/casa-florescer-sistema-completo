@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandMark } from "./BrandMark";
 import type { SessionContext } from "@/lib/types/domain";
+import { clearPreviewRole } from "@/lib/preview-api";
+import { createClient } from "@/lib/supabase/client";
 
 const PATIENT_NAV = [
   { href: "/paciente", label: "Acompanhar" },
@@ -24,7 +26,9 @@ export function PortalShell({
   const items = PATIENT_NAV;
 
   async function exitPreview() {
-    await fetch("/api/preview-role", { method: "DELETE" });
+    await clearPreviewRole();
+    const supabase = createClient();
+    await supabase?.auth.signOut();
     router.push("/login");
     router.refresh();
   }

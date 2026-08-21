@@ -6,6 +6,8 @@ import { BrandMark } from "./BrandMark";
 import { RoleBadge } from "./RoleBadge";
 import type { SessionContext } from "@/lib/types/domain";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { clearPreviewRole } from "@/lib/preview-api";
+import { createClient } from "@/lib/supabase/client";
 
 export function StaffShell({
   session,
@@ -19,7 +21,9 @@ export function StaffShell({
   const { modules } = usePermissions();
 
   async function exitPreview() {
-    await fetch("/api/preview-role", { method: "DELETE" });
+    await clearPreviewRole();
+    const supabase = createClient();
+    await supabase?.auth.signOut();
     router.push("/login");
     router.refresh();
   }

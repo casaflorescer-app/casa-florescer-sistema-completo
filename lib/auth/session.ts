@@ -4,12 +4,11 @@ import {
   PREVIEW_COOKIE,
   parsePreviewRole,
   previewSession,
-  resolveUiRole,
 } from "../rbac";
 import type { SessionContext } from "../types/domain";
-import type { AppRole } from "../types/database";
 import { createServerSupabase } from "./server";
-import { defaultModulesForRole, normalizeModules, type ModuleId } from "../permissions";
+import { normalizeModules, type ModuleId } from "../permissions";
+import { sessionFromSupabase } from "./hydrate";
 
 function readAclCookie(): Record<string, ModuleId[]> {
   const raw = cookies().get(PREVIEW_ACL_COOKIE)?.value;
@@ -39,41 +38,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, email, permissions")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const { data: roles } = await supabase
-      .from("user_practice_roles")
-      .select("role, practice_id")
-      .eq("user_id", user.id);
-
-    const { data: patientAccount } = await supabase
-      .from("patient_accounts")
-      .select("patient_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const staffRoles = (roles ?? []).map((row) => row.role as AppRole);
-    const uiRole = resolveUiRole(staffRoles, Boolean(patientAccount));
-    if (!uiRole) return null;
-
-    return {
-      userId: user.id,
-      fullName: profile?.full_name ?? user.email ?? "Usuária",
-      email: profile?.email ?? user.email ?? "",
-      uiRole,
-      staffRoles,
-      practiceIds: [...new Set((roles ?? []).map((row) => row.practice_id))],
-      patientId: patientAccount?.patient_id ?? null,
-      isPreview: false,
-      permissions: normalizeModules(
-        profile?.permissions,
-        defaultModulesForRole(uiRole),
-      ),
-    };
+    return sessionFromSupabase(supabase, user);
   } catch {
     return null;
   }

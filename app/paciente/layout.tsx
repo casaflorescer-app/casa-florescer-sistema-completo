@@ -1,11 +1,9 @@
-import { PortalShell } from "@/components/layout/PortalShell";
-import { requireRole } from "@/components/layout/RoleGate";
+import { ClientPatientGate } from "@/components/layout/StaticAuthGates";
 
-export default async function PacienteLayout({
+export default function PacienteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireRole("patient");
-  return <PortalShell session={session}>{children}</PortalShell>;
+  return <ClientPatientGate>{children}</ClientPatientGate>;
 }

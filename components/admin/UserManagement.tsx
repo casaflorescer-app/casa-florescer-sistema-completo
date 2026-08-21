@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { APP_MODULES, type ModuleId } from "@/lib/permissions";
 import { UI_ROLE_LABEL, type UiRole } from "@/lib/types/domain";
+import { readPreviewAclFromStorage, setPreviewAcl } from "@/lib/preview-api";
+import { isStaticHosting } from "@/lib/hosting";
 
 export type Collaborator = {
   userId: string;
@@ -34,6 +36,13 @@ export function UserManagement({
   const [draft, setDraft] = useState<ModuleId[]>([]);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    if (!isStaticHosting()) return;
+    const stored = readPreviewAclFromStorage();
+    if (Object.keys(stored).length === 0) return;
+    setAcl((current) => ({ ...current, ...stored }));
+  }, []);
 
   const selected = users.find((user) => user.userId === openId) ?? null;
 
@@ -70,11 +79,7 @@ export function UserManagement({
     if (!selected) return;
     setSaving(true);
     const next = { ...acl, [selected.userId]: draft };
-    const res = await fetch("/api/preview-acl", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ acl: next }),
-    });
+    const res = await setPreviewAcl(next);
     setSaving(false);
     if (!res.ok) return;
     setAcl(next);

@@ -1,15 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { BrandMark } from "@/components/layout/BrandMark";
-import { getSessionContext } from "@/lib/auth/session";
-import { homeForRole } from "@/lib/rbac";
+import { RedirectIfSession } from "@/components/layout/StaticAuthGates";
 
-export default async function HomePage() {
-  const session = await getSessionContext();
-  if (session) redirect(homeForRole(session.uiRole, session.permissions));
-
+export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6">
+      <RedirectIfSession />
       <BrandMark />
       <h1 className="mt-8 page-title">Casa Florescer</h1>
       <p className="page-sub">

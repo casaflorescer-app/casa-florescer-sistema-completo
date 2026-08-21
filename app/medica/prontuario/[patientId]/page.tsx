@@ -1,5 +1,9 @@
 import { requireModule } from "@/components/layout/RoleGate";
 
+export function generateStaticParams() {
+  return [{ patientId: "p1" }, { patientId: "p2" }, { patientId: "p3" }];
+}
+
 export default async function ProntuarioPacientePage({
   params,
 }: {

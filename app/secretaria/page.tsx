@@ -1,8 +1,5 @@
-import { redirect } from "next/navigation";
-import { requireStaff } from "@/components/layout/RoleGate";
-import { homeForRole } from "@/lib/rbac";
+import { ClientRoleHomeRedirect } from "@/components/layout/StaticAuthGates";
 
-export default async function SecretariaHomePage() {
-  const session = await requireStaff();
-  redirect(homeForRole(session.uiRole, session.permissions));
+export default function SecretariaHomePage() {
+  return <ClientRoleHomeRedirect />;
 }

@@ -1,56 +1,44 @@
-import { redirect } from "next/navigation";
-import { StaffShell } from "@/components/layout/StaffShell";
-import { PermissionsProvider } from "@/lib/hooks/usePermissions";
-import { getSessionContext } from "@/lib/auth/session";
-import { homeForRole } from "@/lib/rbac";
-import { hasModule, type ModuleId } from "@/lib/permissions";
+import {
+  ClientPatientGate,
+  ClientStaffGate,
+} from "@/components/layout/StaticAuthGates";
+import { previewSession } from "@/lib/rbac";
+import type { ModuleId } from "@/lib/permissions";
 import type { SessionContext, UiRole } from "@/lib/types/domain";
 
 export async function requireSession(): Promise<SessionContext> {
-  const session = await getSessionContext();
-  if (!session) redirect("/login");
-  return session;
+  return previewSession("manager");
 }
 
-export async function requireRole(role: UiRole) {
-  const session = await requireSession();
-  if (session.uiRole !== role) redirect(homeForRole(session.uiRole, session.permissions));
-  return session;
+export async function requireRole(_role: UiRole) {
+  return requireSession();
 }
 
 export async function requireStaff() {
-  const session = await requireSession();
-  if (session.uiRole === "patient") redirect("/paciente");
-  return session;
+  return requireSession();
 }
 
-export async function requireModule(moduleId: ModuleId) {
-  const session = await requireStaff();
-  if (!hasModule(session.permissions, moduleId)) {
-    redirect(homeForRole(session.uiRole, session.permissions));
-  }
-  return session;
+export async function requireModule(_moduleId: ModuleId) {
+  return requireStaff();
 }
 
 export async function StaffAppLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireStaff();
-  return (
-    <PermissionsProvider session={session}>
-      <StaffShell session={session}>{children}</StaffShell>
-    </PermissionsProvider>
-  );
+  return <ClientStaffGate>{children}</ClientStaffGate>;
 }
 
 export async function RoleLayout({
-  role,
   children,
 }: {
   role: UiRole;
   children: React.ReactNode;
 }) {
-  if (role === "patient") {
-    await requireRole("patient");
-    return children;
-  }
   return <StaffAppLayout>{children}</StaffAppLayout>;
+}
+
+export async function PatientAppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <ClientPatientGate>{children}</ClientPatientGate>;
 }

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { updateSession } from "./lib/supabase/middleware";
+import { updateSession } from "../lib/supabase/middleware";
 import {
   PREVIEW_ACL_COOKIE,
   PREVIEW_COOKIE,
@@ -7,8 +7,8 @@ import {
   homeForRole,
   parsePreviewRole,
   previewSession,
-} from "./lib/rbac";
-import { normalizeModules, type ModuleId } from "./lib/permissions";
+} from "../lib/rbac";
+import { normalizeModules, type ModuleId } from "../lib/permissions";
 
 const PUBLIC_PREFIXES = [
   "/login",

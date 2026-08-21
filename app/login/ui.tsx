@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { UiRole } from "@/lib/types/domain";
 import { homeForRole } from "@/lib/rbac";
 import { defaultModulesForRole } from "@/lib/permissions";
+import { setPreviewRole } from "@/lib/preview-api";
 
 const DEMO: Record<string, UiRole> = {
   "secretaria@florescer.clinica": "secretary",
@@ -30,11 +31,7 @@ export function LoginForm() {
       setError("Login ou senha inválidos.");
       return;
     }
-    await fetch("/api/preview-role", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
-    });
+    await setPreviewRole(role);
     router.push(homeForRole(role, defaultModulesForRole(role)));
     router.refresh();
   }

@@ -1,7 +1,13 @@
 import { requireModule } from "@/components/layout/RoleGate";
+import { ClinicalSnapshot } from "@/components/patients/ClinicalSnapshot";
 
 export function generateStaticParams() {
-  return [{ patientId: "p1" }, { patientId: "p2" }, { patientId: "p3" }];
+  return [
+    { patientId: "p1" },
+    { patientId: "p2" },
+    { patientId: "p3" },
+    { patientId: "preview-helena" },
+  ];
 }
 
 export default async function ProntuarioPacientePage({
@@ -16,29 +22,23 @@ export default async function ProntuarioPacientePage({
         Prontuário · GO
       </p>
       <h1 className="page-title">Histórico obstétrico</h1>
-      <p className="page-sub">Paciente {params.patientId} · prática isolada</p>
+      <p className="page-sub">Prática isolada · notas clínicas não aparecem na recepção.</p>
+      <div className="mt-6">
+        <ClinicalSnapshot patientId={params.patientId} />
+      </div>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <section className="card">
           <h2 className="font-semibold">Gestação atual</h2>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-lotus-600">DUM</dt>
-              <dd>15/11/2025</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-lotus-600">DPP</dt>
-              <dd>22/08/2026</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-lotus-600">Tipo sanguíneo</dt>
-              <dd>O+</dd>
-            </div>
-          </dl>
+          <p className="mt-3 text-sm text-lotus-700">
+            DUM e DPP da ficha de cadastro aparecem no painel rosa. A evolução
+            do pré-natal (risco, exames, conduta) continua neste prontuário.
+          </p>
         </section>
         <section className="card">
-          <h2 className="font-semibold">Antecedentes</h2>
+          <h2 className="font-semibold">Notas da prática</h2>
           <p className="mt-3 text-sm text-lotus-700">
-            1 parto vaginal (2023). Sem cesárea. Alergia a dipirona: não.
+            As anotações de consulta não entram no MPI da casa e a secretaria
+            não lê este conteúdo.
           </p>
         </section>
       </div>

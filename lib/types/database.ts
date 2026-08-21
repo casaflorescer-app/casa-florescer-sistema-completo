@@ -80,6 +80,10 @@ export type PracticeUnit = {
   is_active: boolean;
 };
 
+export type CareSpecialty = "gynecology" | "obstetrics";
+export type BillingModality = "private" | "insurance";
+export type PrivatePaymentMethod = "pix" | "card" | "cash";
+
 export type Patient = {
   id: string;
   organization_id: string;
@@ -91,6 +95,39 @@ export type Patient = {
   email: string | null;
   reception_notes: string | null;
   preferred_channel: string;
+  address_street: string | null;
+  address_number: string | null;
+  address_complement: string | null;
+  address_district: string | null;
+  address_city: string | null;
+  address_state: string | null;
+  address_cep: string | null;
+  care_specialties: CareSpecialty[];
+  billing_modality: BillingModality | null;
+  insurance_name: string | null;
+  insurance_card_number: string | null;
+  insurance_valid_until: string | null;
+  private_payment_method: PrivatePaymentMethod | null;
+  updated_at: string;
+};
+
+export type PatientClinicalData = {
+  id: string;
+  patient_id: string;
+  organization_id: string;
+  pregnancies: number;
+  births: number;
+  abortions: number;
+  lmp_date: string | null;
+  edd: string | null;
+  edd_override: boolean;
+  gyn_procedures: string[];
+  comorbidities: string | null;
+  continuous_medications: string | null;
+  allergies: string | null;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
 };
 
 export type Appointment = {

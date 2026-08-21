@@ -7,16 +7,14 @@ export default function LoginPage() {
   const fundo = publicAsset("/images/logo-fundo.png");
 
   return (
-    <main className="relative min-h-[100dvh] overflow-hidden">
+    <main className="relative min-h-[100dvh] overflow-hidden bg-[#FAF3F4]">
       <RedirectIfSession />
 
-      <div className="pointer-events-none absolute inset-0 isolate">
-        <div
-          className="absolute inset-0 bg-[#E8C4C4] bg-cover bg-center"
-          style={{ backgroundImage: `url('${fundo}')` }}
-        />
-        <div className="absolute inset-0 bg-[#B76E79]/40 mix-blend-multiply" />
-      </div>
+      <div
+        className="pointer-events-none absolute inset-0 bg-auto bg-center bg-no-repeat opacity-20"
+        style={{ backgroundImage: `url('${fundo}')` }}
+        aria-hidden
+      />
 
       <div className="relative z-10 flex min-h-[100dvh] items-center justify-center px-6 py-10">
         <div className="w-full max-w-md rounded-2xl border border-white/50 bg-white/60 p-8 shadow-2xl backdrop-blur-lg">

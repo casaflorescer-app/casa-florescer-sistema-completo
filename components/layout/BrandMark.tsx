@@ -1,16 +1,14 @@
-import Image from "next/image";
+import { publicAsset } from "@/lib/hosting";
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <Image
-        src="/brand/logo-florescer.png"
+      <img
+        src={publicAsset("/brand/logo-florescer.png")}
         alt="Casa Florescer"
         width={compact ? 40 : 52}
         height={compact ? 40 : 52}
-        className="h-10 w-10 object-contain"
-        priority
-        unoptimized
+        className="h-10 w-10 shrink-0 object-contain"
       />
       {!compact ? (
         <div>

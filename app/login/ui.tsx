@@ -14,6 +14,9 @@ const DEMO: Record<string, UiRole> = {
   "paciente@florescer.clinica": "patient",
 };
 
+const fieldClass =
+  "mt-1.5 w-full rounded-xl border-0 bg-white/70 px-4 py-3 text-rose-900 outline-none ring-1 ring-white/60 transition placeholder:text-rose-900/35 focus:ring-2 focus:ring-rose-400";
+
 export function LoginForm() {
   const router = useRouter();
   const [login, setLogin] = useState("");
@@ -38,7 +41,7 @@ export function LoginForm() {
 
   return (
     <form onSubmit={enter} className="mt-8 space-y-4">
-      <label className="block text-sm font-medium text-lotus-800">
+      <label className="block text-sm font-medium text-rose-900">
         Login
         <input
           name="login"
@@ -47,11 +50,11 @@ export function LoginForm() {
           autoComplete="username"
           value={login}
           onChange={(e) => setLogin(e.target.value)}
-          className="mt-1.5 w-full rounded-2xl border border-lotus-200 bg-white px-4 py-3 outline-none transition focus:border-lotus-500"
+          className={fieldClass}
           placeholder="seu acesso"
         />
       </label>
-      <label className="block text-sm font-medium text-lotus-800">
+      <label className="block text-sm font-medium text-rose-900">
         Senha
         <input
           name="password"
@@ -59,14 +62,14 @@ export function LoginForm() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1.5 w-full rounded-2xl border border-lotus-200 bg-white px-4 py-3 outline-none transition focus:border-lotus-500"
+          className={fieldClass}
         />
       </label>
-      {error ? <p className="text-sm text-lotus-700">{error}</p> : null}
+      {error ? <p className="text-sm text-rose-800">{error}</p> : null}
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded-2xl bg-lotus-700 py-3.5 font-semibold text-white transition hover:bg-lotus-800 disabled:opacity-60"
+        className="w-full rounded-full bg-[#B76E79] py-3.5 font-semibold text-white shadow-lg shadow-[#B76E79]/25 transition hover:bg-[#9A5B64] disabled:opacity-60"
       >
         {busy ? "Entrando…" : "Entrar"}
       </button>

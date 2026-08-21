@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { StaffShell } from "@/components/layout/StaffShell";
-import { PortalShell } from "@/components/layout/PortalShell";
 import { PermissionsProvider } from "@/lib/hooks/usePermissions";
 import { loadBrowserSession } from "@/lib/auth/session-browser";
 import {
@@ -122,5 +121,9 @@ export function ClientPatientGate({ children }: { children: React.ReactNode }) {
 
   if (!session || session.uiRole !== "patient") return <LoadingLine />;
 
-  return <PortalShell session={session}>{children}</PortalShell>;
+  return (
+    <PermissionsProvider session={session}>
+      <StaffShell session={session}>{children}</StaffShell>
+    </PermissionsProvider>
+  );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { EXAM_STATUS_LABEL } from "@/lib/types/domain";
 
 const exams = [
@@ -12,6 +13,12 @@ export default function PacienteExamesPage() {
       <p className="text-sm text-lotus-600">
         O status muda sozinho. Se estiver “disponível”, é só passar na recepção.
       </p>
+      <Link
+        href="/paciente/anexos"
+        className="inline-block text-sm font-medium text-rose-800"
+      >
+        Enviar exame (foto ou PDF)
+      </Link>
       {exams.map((exam) => (
         <article key={exam.title} className="card">
           <p className="font-semibold">{exam.title}</p>

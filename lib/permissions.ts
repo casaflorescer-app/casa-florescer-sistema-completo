@@ -32,7 +32,7 @@ export const APP_MODULES: AppModule[] = [
 
 export const MODULE_IDS = APP_MODULES.map((item) => item.id);
 
-const SECRETARY_DEFAULT: ModuleId[] = ["agenda", "pacientes", "exames", "estoque"];
+const SECRETARY_DEFAULT: ModuleId[] = ["agenda", "pacientes", "exames"];
 const PHYSICIAN_DEFAULT: ModuleId[] = [
   "obstetrico",
   "agenda",

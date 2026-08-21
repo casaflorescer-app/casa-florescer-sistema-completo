@@ -7,11 +7,13 @@ import {
   modulesForSidebar,
   type ModuleId,
 } from "@/lib/permissions";
+import { navSectionsFor } from "@/lib/nav";
 
 type PermissionsValue = {
   session: SessionContext;
   can: (moduleId: ModuleId) => boolean;
   modules: ReturnType<typeof modulesForSidebar>;
+  navSections: ReturnType<typeof navSectionsFor>;
 };
 
 const PermissionsContext = createContext<PermissionsValue | null>(null);
@@ -28,6 +30,7 @@ export function PermissionsProvider({
       session,
       can: (moduleId) => hasModule(session.permissions, moduleId),
       modules: modulesForSidebar(session.permissions),
+      navSections: navSectionsFor(session.uiRole, session.permissions),
     }),
     [session],
   );

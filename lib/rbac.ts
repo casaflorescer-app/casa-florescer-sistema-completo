@@ -3,10 +3,10 @@ import type { SessionContext, UiRole } from "./types/domain";
 import {
   defaultModulesForRole,
   hasModule,
-  homeFromModules,
   moduleByPath,
   type ModuleId,
 } from "./permissions";
+import { firstSidebarHref } from "./nav";
 
 export const PREVIEW_COOKIE = "florescer_preview_role";
 export const PREVIEW_ACL_COOKIE = "florescer_preview_acl";
@@ -26,9 +26,17 @@ export function resolveUiRole(
   return null;
 }
 
+const ROLE_PREFIX: Record<UiRole, string> = {
+  physician: "/medica",
+  secretary: "/secretaria",
+  manager: "/gestao",
+  patient: "/paciente",
+};
+
 export function homeForRole(role: UiRole, permissions?: ModuleId[]): string {
+  const ids = permissions ?? defaultModulesForRole(role);
   if (role === "patient") return "/paciente";
-  return homeFromModules(permissions ?? defaultModulesForRole(role), "/login");
+  return firstSidebarHref(role, ids) ?? "/login";
 }
 
 export function canAccessPath(
@@ -41,12 +49,20 @@ export function canAccessPath(
     return pathname === "/paciente" || pathname.startsWith("/paciente/");
   }
   if (pathname.startsWith("/paciente")) return false;
+
+  const prefix = ROLE_PREFIX[role];
+  const inOwnArea = pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+  if (role !== "manager" && !inOwnArea) return false;
+
   const mod = moduleByPath(pathname);
   if (!mod) {
     return (
-      pathname.startsWith("/medica") ||
-      pathname.startsWith("/secretaria") ||
-      pathname.startsWith("/gestao")
+      inOwnArea ||
+      (role === "manager" &&
+        (pathname.startsWith("/medica") ||
+          pathname.startsWith("/secretaria") ||
+          pathname.startsWith("/gestao")))
     );
   }
   return hasModule(permissions, mod.id);

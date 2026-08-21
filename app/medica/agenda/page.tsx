@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { APPOINTMENT_KIND_LABEL } from "@/lib/types/domain";
 
 const slots = [
@@ -15,6 +16,12 @@ export default function MedicaAgendaPage() {
         Visão separada por consulta e procedimento. Procedimentos ocupam kit e
         sala; consultas ocupam só o tempo da médica.
       </p>
+      <Link
+        href="/medica"
+        className="mt-4 inline-block text-sm font-medium text-rose-800 hover:text-rose-900"
+      >
+        Ver programação obstétrica →
+      </Link>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {(["consultation", "procedure"] as const).map((kind) => (
           <section key={kind} className="card">

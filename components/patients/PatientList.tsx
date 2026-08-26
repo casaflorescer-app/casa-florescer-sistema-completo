@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
@@ -10,9 +12,10 @@ import {
   type PatientListRow,
 } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
-import { StatusMessage, fieldClass } from "@/components/platform/Ui";
+import { StatusMessage, buttonClass, fieldClass } from "@/components/platform/Ui";
 
 export function PatientList() {
+  const router = useRouter();
   const [rows, setRows] = useState<PatientListRow[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -69,14 +72,9 @@ export function PatientList() {
               ? "Carregando…"
               : `${filtered.length} ${filtered.length === 1 ? "paciente" : "pacientes"}`}
           </p>
-          <button
-            type="button"
-            disabled
-            title="Cadastro será implementado na próxima etapa"
-            className="rounded-xl bg-lotus-800 px-4 py-2 text-sm font-medium text-white opacity-50"
-          >
+          <Link href="/app/patients/new" className={`${buttonClass} inline-flex items-center`}>
             Nova paciente
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -96,7 +94,8 @@ export function PatientList() {
         <>
           <ul className="mt-6 space-y-3 md:hidden">
             {filtered.map((row) => (
-              <li key={row.id} className="card">
+              <li key={row.id}>
+                <Link href={`/app/patients/${row.id}`} className="card block hover:border-lotus-200">
                 <p className="font-semibold text-lotus-900">{row.fullName}</p>
                 {row.socialName ? (
                   <p className="mt-0.5 text-sm text-lotus-600">{row.socialName}</p>
@@ -123,6 +122,7 @@ export function PatientList() {
                     <dd>{formatDateTime(row.createdAt)}</dd>
                   </div>
                 </dl>
+                </Link>
               </li>
             ))}
           </ul>
@@ -141,12 +141,18 @@ export function PatientList() {
               </thead>
               <tbody>
                 {filtered.map((row) => (
-                  <tr key={row.id} className="border-b border-lotus-50 align-top">
+                  <tr
+                    key={row.id}
+                    className="cursor-pointer border-b border-lotus-50 align-top hover:bg-lotus-50/70"
+                    onClick={() => router.push(`/app/patients/${row.id}`)}
+                  >
                     <td className="px-4 py-3">
-                      <p className="font-medium text-lotus-900">{row.fullName}</p>
-                      {row.socialName ? (
-                        <p className="mt-0.5 text-xs text-lotus-600">{row.socialName}</p>
-                      ) : null}
+                      <Link href={`/app/patients/${row.id}`} className="block hover:text-lotus-700">
+                        <p className="font-medium text-lotus-900">{row.fullName}</p>
+                        {row.socialName ? (
+                          <p className="mt-0.5 text-xs text-lotus-600">{row.socialName}</p>
+                        ) : null}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{maskCpf(row.cpf)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">

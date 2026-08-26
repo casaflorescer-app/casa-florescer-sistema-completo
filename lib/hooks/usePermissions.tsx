@@ -5,7 +5,6 @@ import type { SessionContext } from "@/lib/types/domain";
 import {
   canAccessModule,
   modulesForSidebar,
-  isMasterAdminRole,
   type ModuleId,
 } from "@/lib/permissions";
 import { navSectionsFor } from "@/lib/nav";
@@ -30,8 +29,11 @@ export function PermissionsProvider({
   const value = useMemo<PermissionsValue>(
     () => ({
       session,
-      isAdmin: isMasterAdminRole(session.uiRole),
-      can: (moduleId) => canAccessModule(session.uiRole, session.permissions, moduleId),
+      isAdmin: false,
+      can: (moduleId) =>
+        session.uiRole
+          ? canAccessModule(session.uiRole, session.permissions, moduleId)
+          : false,
       modules: modulesForSidebar(session.permissions),
       navSections: navSectionsFor(session.uiRole, session.permissions),
     }),

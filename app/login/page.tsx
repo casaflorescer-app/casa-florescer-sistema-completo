@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Playfair_Display } from "next/font/google";
 import { RedirectIfSession } from "@/components/layout/StaticAuthGates";
@@ -45,7 +46,9 @@ export default function LoginPage() {
             Bem-vinda! Acesse sua conta.
           </p>
 
-          <LoginForm />
+          <Suspense fallback={<p className="mt-6 text-sm text-rose-900/70">Carregando…</p>}>
+            <LoginForm />
+          </Suspense>
 
           <div className="mt-6 space-y-1.5 text-sm">
             <p>
@@ -53,15 +56,7 @@ export default function LoginPage() {
                 href="/login/criar"
                 className="font-medium text-[#9B406C] underline-offset-2 hover:underline"
               >
-                Create Account (Criar nova conta)
-              </Link>
-            </p>
-            <p>
-              <Link
-                href="/login/criar"
-                className="text-rose-900/60 underline-offset-2 hover:text-[#9B406C] hover:underline"
-              >
-                Ainda não é paciente?
+                Criar nova conta
               </Link>
             </p>
           </div>

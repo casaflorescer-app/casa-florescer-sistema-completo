@@ -7,7 +7,8 @@ export type SessionContext = {
   userId: string;
   fullName: string;
   email: string;
-  uiRole: UiRole;
+  /** Legado de UI. NÃO é autoridade. Papéis reais: authorization.memberships. */
+  uiRole: UiRole | null;
   staffRoles: AppRole[];
   practiceIds: string[];
   patientId: string | null;

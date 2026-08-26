@@ -1,5 +1,3 @@
-import { isStaticHosting } from "@/lib/hosting";
-import { createClient } from "@/lib/supabase/client";
 import type { PatientCadastroValues } from "./schema";
 import { eddFromLmp, onlyDigits } from "./format";
 
@@ -195,49 +193,9 @@ export function toFormValues(row: StoredPatient): PatientCadastroValues {
   return rest;
 }
 
-async function persistToSupabase(row: StoredPatient) {
-  const supabase = createClient();
-  if (!supabase || isStaticHosting()) return;
-  const specialties = row.careSpecialties;
-  const isInsurance = row.billingModality === "insurance";
-  const { error: mpiError } = await supabase.from("patients").upsert({
-    id: row.id,
-    full_name: row.fullName,
-    cpf: onlyDigits(row.cpf),
-    birth_date: row.birthDate,
-    phone: onlyDigits(row.phone),
-    email: row.email,
-    address_street: row.addressStreet,
-    address_number: row.addressNumber,
-    address_complement: row.addressComplement || null,
-    address_district: row.addressDistrict,
-    address_city: row.addressCity,
-    address_state: row.addressState,
-    address_cep: onlyDigits(row.addressCep),
-    care_specialties: specialties,
-    billing_modality: row.billingModality,
-    insurance_name: isInsurance ? row.insuranceName : null,
-    insurance_card_number: isInsurance ? row.insuranceCardNumber : null,
-    insurance_valid_until: isInsurance ? row.insuranceValidUntil || null : null,
-    private_payment_method: isInsurance ? null : row.privatePaymentMethod ?? null,
-  });
-  if (mpiError) throw mpiError;
-  const { error: clinicalError } = await supabase.from("patient_clinical_data").upsert(
-    {
-      patient_id: row.id,
-      pregnancies: row.pregnancies,
-      births: row.births,
-      abortions: row.abortions,
-      lmp_date: row.lmpDate || null,
-      edd: row.edd || null,
-      gyn_procedures: row.gynProcedures,
-      comorbidities: row.comorbidities || null,
-      continuous_medications: row.continuousMedications || null,
-      allergies: row.allergies || null,
-    },
-    { onConflict: "patient_id" },
-  );
-  if (clinicalError) throw clinicalError;
+async function persistToSupabase(_row: StoredPatient) {
+  // FASE 9: MPI real. Nesta etapa não gravar pacientes no banco.
+  return;
 }
 
 export async function saveStoredPatient(

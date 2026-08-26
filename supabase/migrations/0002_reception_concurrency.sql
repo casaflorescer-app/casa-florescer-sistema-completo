@@ -1,4 +1,6 @@
--- Concorrência da recepção: 4 secretárias não podem duplo-agendar a mesma sala.
+-- Concorrência da recepção: a mesma sala física não pode ter dois agendamentos
+-- sobrepostos (invariante de banco, não de UI). GitHub Pages não aplica esta regra.
+
 create extension if not exists btree_gist;
 
 alter table public.patients
@@ -22,4 +24,4 @@ alter table public.appointments
   where (status not in ('cancelled', 'no_show'));
 
 comment on constraint appointments_room_no_overlap on public.appointments is
-  'Impede duas secretárias de ocuparem o mesmo consultório no mesmo intervalo.';
+  'Impede duas secretárias (ou qualquer staff) de ocuparem o mesmo consultório no mesmo intervalo.';

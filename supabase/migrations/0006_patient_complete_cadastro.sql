@@ -2,11 +2,12 @@
 -- Invariantes:
 --   1. Identidade, contato e faturamento ficam em public.patients (cadastro da casa).
 --   2. GPA, DUM/DPP, cirurgias, comorbidades, medicações e alergias ficam em
---      public.patient_clinical_data (1:1 com o paciente). Não substitui
---      obstetric_followups nem clinical_notes (prontuário isolado por prática).
---   3. Idade não é persistida: deriva de birth_date.
---   4. DPP (edd) é recalculada a partir da DUM (regra de Naegele: +280 dias)
---      quando a DUM muda e a médica ainda não informou um edd_override.
+--      public.patient_clinical_data (1:1). Não substitui obstetric_followups
+--      nem clinical_notes. Secretaria NÃO lê esta tabela.
+--   3. Segurança da recepção: view public.patient_safety_flags (alergias/medicações).
+--   4. Idade não é persistida: deriva de birth_date.
+--   5. DPP (edd) é recalculada a partir da DUM (Naegele: +280 dias)
+--      quando a DUM muda e não há edd_override.
 
 create type public.care_specialty as enum ('gynecology', 'obstetrics');
 create type public.billing_modality as enum ('private', 'insurance');
@@ -77,7 +78,7 @@ comment on column public.patients.billing_modality is
   'Particular ou plano. Campos de convênio e Pix/cartão/dinheiro são mutuamente exclusivos.';
 
 -- ---------------------------------------------------------------------------
--- Ficha clínica de admissão (PEP básico GO)
+-- Ficha clínica de admissão (PEP básico GO) — não é evolução
 -- ---------------------------------------------------------------------------
 
 create table public.patient_clinical_data (
@@ -107,12 +108,7 @@ create index patient_clinical_data_edd_idx
   where edd is not null;
 
 comment on table public.patient_clinical_data is
-  'Histórico clínico de cadastro (GPA, DUM/DPP, alergias). Isolado das notas de consulta.';
-comment on column public.patient_clinical_data.pregnancies is 'G — gestações (inclui a atual).';
-comment on column public.patient_clinical_data.births is 'P — partos.';
-comment on column public.patient_clinical_data.abortions is 'A — abortos.';
-comment on column public.patient_clinical_data.lmp_date is 'DUM — data da última menstruação.';
-comment on column public.patient_clinical_data.edd is 'DPP — data provável do parto.';
+  'Histórico clínico de cadastro (GPA, DUM/DPP, alergias). Isolado das notas de consulta. Secretaria não acessa esta tabela.';
 
 create or replace function public.naegele_edd(p_lmp date)
 returns date
@@ -126,7 +122,20 @@ create or replace function public.patient_clinical_data_before_write()
 returns trigger
 language plpgsql
 as $$
+declare
+  v_patient_org uuid;
 begin
+  select organization_id into v_patient_org
+  from public.patients
+  where id = new.patient_id;
+
+  if v_patient_org is null then
+    raise exception 'Paciente inexistente.';
+  end if;
+  if new.organization_id is distinct from v_patient_org then
+    raise exception 'patient_clinical_data.organization_id deve coincidir com a paciente.';
+  end if;
+
   new.updated_at := now();
   if new.lmp_date is null then
     if not new.edd_override then
@@ -166,54 +175,68 @@ create trigger patients_touch_updated_at
   for each row execute function public.patients_touch_updated_at();
 
 -- ---------------------------------------------------------------------------
--- RLS
+-- Camada de segurança da recepção (não é prontuário)
 -- ---------------------------------------------------------------------------
 
-create or replace function public.is_org_clinical_staff(p_org uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.profiles p
-    join public.user_practice_roles r on r.user_id = p.id
-    where p.id = auth.uid()
-      and p.organization_id = p_org
-      and r.role in ('owner', 'admin', 'secretary', 'physician')
+create or replace view public.patient_safety_flags
+with (security_invoker = false)
+as
+select
+  c.patient_id,
+  c.organization_id,
+  (nullif(btrim(coalesce(c.allergies, '')), '') is not null) as has_allergies,
+  c.allergies,
+  (nullif(btrim(coalesce(c.continuous_medications, '')), '') is not null) as has_continuous_medications,
+  c.continuous_medications
+from public.patient_clinical_data c
+where public.is_house_staff(
+    c.organization_id,
+    array['owner', 'admin', 'secretary', 'physician']::public.app_role[]
   )
-$$;
+  or exists (
+    select 1
+    from public.patient_practice_links l
+    where l.patient_id = c.patient_id
+      and public.has_practice_role(l.practice_id, array['physician']::public.app_role[])
+  )
+  or public.is_patient_self(c.patient_id);
+
+comment on view public.patient_safety_flags is
+  'Alergias e medicações contínuas para operação segura da recepção. Não inclui GPA, DUM/DPP, comorbidades nem evolução. Não substitui RLS de patient_clinical_data.';
+
+grant select on public.patient_safety_flags to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- RLS da ficha clínica: physician da casa, paciente (próprio), break-glass
+-- ---------------------------------------------------------------------------
 
 alter table public.patient_clinical_data enable row level security;
 
-drop policy if exists patients_staff_insert on public.patients;
-create policy patients_staff_insert on public.patients
-  for insert
-  with check (public.is_org_clinical_staff(organization_id));
-
-drop policy if exists patients_staff_update on public.patients;
-create policy patients_staff_update on public.patients
-  for update
-  using (public.is_org_clinical_staff(organization_id))
-  with check (public.is_org_clinical_staff(organization_id));
-
-drop policy if exists patient_clinical_data_staff_read on public.patient_clinical_data;
-create policy patient_clinical_data_staff_read on public.patient_clinical_data
-  for select
-  using (
-    public.is_org_clinical_staff(organization_id)
+create policy patient_clinical_data_physician_select on public.patient_clinical_data
+  for select using (
+    public.is_house_staff(organization_id, array['physician']::public.app_role[])
     or public.is_patient_self(patient_id)
+    or exists (
+      select 1
+      from public.break_glass_grants g
+      join public.practice_units pu on pu.id = g.practice_id
+      where g.user_id = auth.uid()
+        and g.patient_id = patient_clinical_data.patient_id
+        and pu.organization_id = patient_clinical_data.organization_id
+        and g.starts_at <= now()
+        and g.expires_at > now()
+    )
   );
 
-drop policy if exists patient_clinical_data_staff_write on public.patient_clinical_data;
-create policy patient_clinical_data_staff_write on public.patient_clinical_data
-  for insert
-  with check (public.is_org_clinical_staff(organization_id));
+create policy patient_clinical_data_physician_insert on public.patient_clinical_data
+  for insert with check (
+    public.is_house_staff(organization_id, array['physician']::public.app_role[])
+  );
 
-drop policy if exists patient_clinical_data_staff_update on public.patient_clinical_data;
-create policy patient_clinical_data_staff_update on public.patient_clinical_data
-  for update
-  using (public.is_org_clinical_staff(organization_id))
-  with check (public.is_org_clinical_staff(organization_id));
+create policy patient_clinical_data_physician_update on public.patient_clinical_data
+  for update using (
+    public.is_house_staff(organization_id, array['physician']::public.app_role[])
+  )
+  with check (
+    public.is_house_staff(organization_id, array['physician']::public.app_role[])
+  );

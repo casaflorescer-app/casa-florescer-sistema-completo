@@ -1,19 +1,10 @@
 /**
- * HOSPEDAGEM ESTÁTICA PROVISÓRIA (GitHub Pages)
+ * Hospedagem dinâmica (Auth + SSR + middleware).
  *
- * STATIC_EXPORT = true  → GitHub Pages (fase atual)
- * STATIC_EXPORT = false → Vercel / EasyPanel (hospedagem dinâmica)
- *
- * Ao retomar o servidor dinâmico:
- * 1. Troque STATIC_EXPORT para false (ou defina STATIC_EXPORT=false no ambiente)
- * 2. Copie _dynamic/middleware.dynamic.ts → middleware.ts (raiz)
- * 3. Copie _dynamic/api → app/api
- * 4. Copie _dynamic/RoleGate.tsx → components/layout/RoleGate.tsx
- * 5. O callback de auth em app/auth/callback/page.tsx serve os dois modos
+ * STATIC_EXPORT=true permanece disponível só para build estático legado
+ * (GitHub Pages). Auth real exige o modo dinâmico (padrão).
  */
-const STATIC_EXPORT = process.env.STATIC_EXPORT
-  ? process.env.STATIC_EXPORT === "true"
-  : true;
+const STATIC_EXPORT = process.env.STATIC_EXPORT === "true";
 
 const basePath =
   process.env.NEXT_PUBLIC_BASE_PATH ??
@@ -30,8 +21,6 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
 
-  // GitHub Pages não tem o otimizador /_next/image. No Vercel, desligue STATIC_EXPORT
-  // para voltar a usar o <Image> otimizado.
   images: { unoptimized: STATIC_EXPORT },
 
   ...(STATIC_EXPORT

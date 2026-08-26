@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { isSupabaseConfigured } from "./config";
 
 export async function createServerSupabase() {
-  if (!isSupabaseConfigured()) return null;
   const jar = cookies();
+  if (!isSupabaseConfigured()) return null;
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

@@ -24,7 +24,6 @@ export function resolveUiRole(
   if (staffRoles.includes("owner") || staffRoles.includes("admin")) {
     return "manager";
   }
-  if (staffRoles.includes("inventory")) return "manager";
   if (hasPatientAccount) return "patient";
   return null;
 }

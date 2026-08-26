@@ -1,34 +1,8 @@
-import { cookies } from "next/headers";
-import {
-  PREVIEW_ACL_COOKIE,
-  PREVIEW_COOKIE,
-  parsePreviewRole,
-  previewSession,
-} from "../rbac";
-import type { SessionContext } from "../types/domain";
-import { createServerSupabase } from "./server";
-import { normalizeModules, type ModuleId } from "../permissions";
-import { sessionFromSupabase } from "./hydrate";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { sessionFromAuthUser, toAuthUser, type AuthUser } from "./user";
+import type { SessionContext } from "@/lib/types/domain";
 
-function readAclCookie(): Record<string, ModuleId[]> {
-  const raw = cookies().get(PREVIEW_ACL_COOKIE)?.value;
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const out: Record<string, ModuleId[]> = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      out[key] = normalizeModules(value, []);
-    }
-    return out;
-  } catch {
-    return {};
-  }
-}
-
-export async function getSessionContext(): Promise<SessionContext | null> {
-  const preview = parsePreviewRole(cookies().get(PREVIEW_COOKIE)?.value);
-  if (preview) return previewSession(preview, readAclCookie());
-
+export async function getAuthUser(): Promise<AuthUser | null> {
   const supabase = await createServerSupabase();
   if (!supabase) return null;
 
@@ -37,9 +11,14 @@ export async function getSessionContext(): Promise<SessionContext | null> {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return null;
-
-    return sessionFromSupabase(supabase, user);
+    return toAuthUser(user);
   } catch {
     return null;
   }
+}
+
+export async function getSessionContext(): Promise<SessionContext | null> {
+  const user = await getAuthUser();
+  if (!user) return null;
+  return sessionFromAuthUser(user);
 }

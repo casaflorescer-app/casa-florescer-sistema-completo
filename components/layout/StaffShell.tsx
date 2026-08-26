@@ -4,11 +4,17 @@ import { BrandMark } from "./BrandMark";
 import { RoleBadge } from "./RoleBadge";
 import { SidebarNav } from "./SidebarNav";
 import type { SessionContext } from "@/lib/types/domain";
-import { clearPreviewRole } from "@/lib/preview-api";
-import { createClient } from "@/lib/supabase/client";
+import { signOutBrowser } from "@/lib/auth/sign-out";
 import { useRouter } from "next/navigation";
 
-export function StaffShell({
+async function exitSession(router: ReturnType<typeof useRouter>) {
+  await signOutBrowser();
+  router.replace("/login");
+  router.refresh();
+}
+
+/** Shell autenticado. Menu por papel entra na FASE 6. */
+export function AuthenticatedShell({
   session,
   children,
 }: {
@@ -17,42 +23,50 @@ export function StaffShell({
 }) {
   const router = useRouter();
 
-  async function exitPreview() {
-    await clearPreviewRole();
-    const supabase = createClient();
-    await supabase?.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
-
   return (
-    <div className="min-h-screen bg-lotus-50 lg:grid lg:grid-cols-[260px_1fr]">
-      <aside className="border-b border-lotus-100 bg-white lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between px-4 py-4 lg:block">
+    <div className="min-h-screen bg-lotus-50">
+      <header className="flex items-center justify-between border-b border-lotus-100 bg-white/80 px-4 py-3 backdrop-blur">
+        <div className="flex items-center gap-3">
           <BrandMark />
-          <div className="lg:mt-4">
-            <RoleBadge role={session.uiRole} />
-          </div>
+          {session.uiRole ? <RoleBadge role={session.uiRole} /> : null}
         </div>
-        <SidebarNav />
-      </aside>
-      <div className="flex min-h-screen flex-col">
-        <header className="flex items-center justify-between border-b border-lotus-100 bg-white/80 px-4 py-3 backdrop-blur">
+        <div className="flex items-center gap-4">
           <p className="text-sm text-lotus-800">
             <span className="font-semibold">{session.fullName}</span>
           </p>
           <button
             type="button"
-            onClick={exitPreview}
+            onClick={() => void exitSession(router)}
             className="text-sm text-lotus-600 transition-colors hover:text-lotus-900"
           >
             Sair
           </button>
-        </header>
+        </div>
+      </header>
+      {session.uiRole ? (
+        <div className="lg:grid lg:grid-cols-[260px_1fr]">
+          <aside className="border-b border-lotus-100 bg-white lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r">
+            <SidebarNav />
+          </aside>
+          <main className="view-enter mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+            {children}
+          </main>
+        </div>
+      ) : (
         <main className="view-enter mx-auto w-full max-w-5xl flex-1 px-4 py-6">
           {children}
         </main>
-      </div>
+      )}
     </div>
   );
+}
+
+export function StaffShell({
+  session,
+  children,
+}: {
+  session: SessionContext;
+  children: React.ReactNode;
+}) {
+  return <AuthenticatedShell session={session}>{children}</AuthenticatedShell>;
 }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AlertProvider } from "@/components/alerts/AlertProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
 import "./globals.css";
 
@@ -34,7 +35,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="font-sans antialiased">
-        <AlertProvider>{children}</AlertProvider>
+        <AuthProvider>
+          <AlertProvider>{children}</AlertProvider>
+        </AuthProvider>
         <PwaRegister />
       </body>
     </html>

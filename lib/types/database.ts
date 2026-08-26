@@ -14,13 +14,7 @@ export type OccupancyModel =
   | "revenue_share"
   | "hybrid";
 
-export type AppRole =
-  | "owner"
-  | "admin"
-  | "physician"
-  | "secretary"
-  | "inventory"
-  | "finance";
+export type AppRole = "owner" | "admin" | "physician" | "secretary";
 
 export type ClinicalAccess =
   | "none"
@@ -57,7 +51,6 @@ export type Profile = {
   is_active: boolean;
   created_at: string;
   permissions: string[];
-  role: "admin" | "physician" | "secretary" | "patient" | null;
 };
 
 export type UserPracticeRole = {
@@ -68,6 +61,7 @@ export type UserPracticeRole = {
   clinical_access: ClinicalAccess;
   can_cashier: boolean;
   can_schedule_any_practice: boolean;
+  can_manage_stock: boolean;
 };
 
 export type PracticeUnit = {

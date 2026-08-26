@@ -1,14 +1,7 @@
 import { requireModule } from "@/components/layout/RoleGate";
 import { ClinicalSnapshot } from "@/components/patients/ClinicalSnapshot";
 
-export function generateStaticParams() {
-  return [
-    { patientId: "p1" },
-    { patientId: "p2" },
-    { patientId: "p3" },
-    { patientId: "preview-helena" },
-  ];
-}
+export const dynamic = "force-dynamic";
 
 export default async function ProntuarioPacientePage({
   params,

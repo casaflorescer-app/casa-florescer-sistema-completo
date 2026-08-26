@@ -1,5 +1,7 @@
 import { RoleLayout } from "@/components/layout/RoleGate";
 
+export const dynamic = "force-dynamic";
+
 export default function GestaoLayout({
   children,
 }: {

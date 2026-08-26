@@ -1,6 +1,12 @@
 import { publicAsset } from "@/lib/hosting";
 
-export function BrandMark({ compact = false }: { compact?: boolean }) {
+export function BrandMark({
+  compact = false,
+  subtitle = "Clínica",
+}: {
+  compact?: boolean;
+  subtitle?: string;
+}) {
   return (
     <div className="flex items-center gap-3">
       <img
@@ -15,7 +21,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
           <p className="text-[11px] font-semibold uppercase tracking-brand text-lotus-600">
             Casa Florescer
           </p>
-          <p className="text-sm text-lotus-800">Clínica</p>
+          <p className="text-sm text-lotus-800">{subtitle}</p>
         </div>
       ) : null}
     </div>

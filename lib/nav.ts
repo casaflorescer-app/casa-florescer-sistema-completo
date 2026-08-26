@@ -206,9 +206,10 @@ const ADMIN_SECTION_ORDER: SidebarSection["id"][] = [
 ];
 
 export function navSectionsFor(
-  role: UiRole,
+  role: UiRole | null,
   permissions: ModuleId[],
 ): SidebarSection[] {
+  if (!role) return [];
   if (isMasterAdminRole(role)) {
     const byId = new Map(SIDEBAR_SECTIONS.map((section) => [section.id, section]));
     return ADMIN_SECTION_ORDER.map((id) => {
@@ -230,6 +231,6 @@ export function isNavItemActive(pathname: string, item: SidebarLink) {
   return (item.aliases ?? []).some((alias) => path === stripTrailingSlash(alias));
 }
 
-export function firstSidebarHref(role: UiRole, permissions: ModuleId[]) {
+export function firstSidebarHref(role: UiRole | null, permissions: ModuleId[]) {
   return navSectionsFor(role, permissions)[0]?.items[0]?.href;
 }

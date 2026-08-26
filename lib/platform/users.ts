@@ -1,13 +1,18 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AppRole } from "@/lib/types/database";
+﻿import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AppRole, PracticeKind } from "@/lib/types/database";
 import { mapDbError } from "@/lib/platform/format";
-import type {
-  PlatformMembership,
-  PlatformUser,
-  SystemAdminRecord,
+import {
+  STAFF_ROLE_OPTIONS,
+  type MembershipCreateInput,
+  type PlatformMembership,
+  type PlatformPractice,
+  type PlatformUser,
+  type SystemAdminRecord,
 } from "@/lib/platform/types";
 
-const STAFF_ROLES: AppRole[] = ["owner", "admin", "physician", "secretary"];
+const STAFF_ROLES: AppRole[] = STAFF_ROLE_OPTIONS.map((item) => item.value);
+const MEMBERSHIP_COLUMNS =
+  "id, user_id, role, clinical_access, practice_id, practice_units ( name, code, kind, organization_id )" as const;
 
 function asString(value: unknown) {
   return typeof value === "string" ? value : null;
@@ -23,14 +28,76 @@ function parseRole(value: unknown): AppRole | null {
     : null;
 }
 
+function parsePracticeKind(value: unknown): PracticeKind | null {
+  return value === "house" || value === "sublet" ? value : null;
+}
+
+function logMembershipError(
+  scope: string,
+  error: { code?: string; message?: string; details?: string; hint?: string },
+) {
+  console.error(`[platform] membership ${scope} failed`, {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+  });
+}
+
+function isRlsError(error: { code?: string; message?: string }) {
+  const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  return (
+    error.code === "42501" ||
+    text.includes("row-level security") ||
+    text.includes("permission denied") ||
+    text.includes("not authorized") ||
+    text.includes("rls")
+  );
+}
+
+function mapMembershipError(error: { code?: string; message?: string }): string {
+  const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  if (error.code === "23505" || text.includes("duplicate") || text.includes("unique")) {
+    return "Este usuário já possui este vínculo.";
+  }
+  if (isRlsError(error)) {
+    return "Você não possui permissão para alterar o acesso deste usuário.";
+  }
+  return "Não foi possível alterar o acesso. Tente novamente.";
+}
+
+function practiceFromJoin(value: unknown): { name: string | null; kind: PracticeKind | null } {
+  const row = Array.isArray(value) ? value[0] : value;
+  if (!row || typeof row !== "object") return { name: null, kind: null };
+  const record = row as Record<string, unknown>;
+  return {
+    name: asString(record.name) ?? asString(record.code),
+    kind: parsePracticeKind(record.kind),
+  };
+}
+
+function toMembership(row: Record<string, unknown>): PlatformMembership | null {
+  const id = asString(row.id);
+  const practiceId = asString(row.practice_id);
+  const role = parseRole(row.role);
+  if (!id || !practiceId || !role) return null;
+  const practice = practiceFromJoin(row.practice_units);
+  return {
+    id,
+    practiceId,
+    practiceName: practice.name ?? practiceId,
+    practiceKind: practice.kind,
+    role,
+    clinicalAccess: asString(row.clinical_access) ?? "none",
+  };
+}
+
 export async function listPlatformUsers(supabase: SupabaseClient): Promise<PlatformUser[]> {
-  let rolesResult = await supabase
-    .from("user_practice_roles")
-    .select("user_id, role, clinical_access, practice_id, practice_units ( name, code )");
+  let rolesResult = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS);
   if (rolesResult.error) {
     rolesResult = await supabase
       .from("user_practice_roles")
-      .select("user_id, role, clinical_access, practice_id");
+      .select("id, user_id, role, clinical_access, practice_id");
   }
 
   const [profilesResult, orgsResult, adminsResult] = await Promise.all([
@@ -62,24 +129,10 @@ export async function listPlatformUsers(supabase: SupabaseClient): Promise<Platf
   const membershipsByUser = new Map<string, PlatformMembership[]>();
   for (const row of rolesResult.data ?? []) {
     const userId = asString(row.user_id);
-    const role = parseRole(row.role);
-    const practiceId = asString(row.practice_id);
-    if (!userId || !role || !practiceId) continue;
-    const practiceRaw = (row as Record<string, unknown>).practice_units;
-    const practice = Array.isArray(practiceRaw) ? practiceRaw[0] : practiceRaw;
-    const practiceName =
-      practice && typeof practice === "object"
-        ? asString((practice as Record<string, unknown>).name) ??
-          asString((practice as Record<string, unknown>).code) ??
-          practiceId
-        : practiceId;
+    const membership = toMembership(row as Record<string, unknown>);
+    if (!userId || !membership) continue;
     const list = membershipsByUser.get(userId) ?? [];
-    list.push({
-      practiceId,
-      practiceName,
-      role,
-      clinicalAccess: asString(row.clinical_access) ?? "none",
-    });
+    list.push(membership);
     membershipsByUser.set(userId, list);
   }
 
@@ -202,4 +255,120 @@ export async function revokeSystemAdmin(
     p_reason: trimmed,
   });
   if (error) throw new Error(mapDbError(error));
+}
+
+export async function listPracticeUnits(supabase: SupabaseClient): Promise<PlatformPractice[]> {
+  const { data, error } = await supabase
+    .from("practice_units")
+    .select("id, organization_id, name, code, kind, is_active")
+    .order("name");
+  if (error) {
+    logMembershipError("list_practices", error);
+    throw new Error(mapMembershipError(error));
+  }
+  return (data ?? []).flatMap((row) => {
+    const id = asString(row.id);
+    const organizationId = asString(row.organization_id);
+    const name = asString(row.name) ?? asString(row.code);
+    const code = asString(row.code) ?? "";
+    const kind = parsePracticeKind(row.kind);
+    if (!id || !organizationId || !name || !kind) return [];
+    return [
+      {
+        id,
+        organizationId,
+        name,
+        code,
+        kind,
+        isActive: asBoolean(row.is_active, true),
+      },
+    ];
+  });
+}
+
+export async function listUserMemberships(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<PlatformMembership[]> {
+  let result = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS).eq("user_id", userId);
+  if (result.error) {
+    result = await supabase
+      .from("user_practice_roles")
+      .select("id, user_id, role, clinical_access, practice_id")
+      .eq("user_id", userId);
+  }
+  if (result.error) {
+    logMembershipError("list", result.error);
+    throw new Error(mapMembershipError(result.error));
+  }
+  return (result.data ?? []).flatMap((row) => {
+    const membership = toMembership(row as Record<string, unknown>);
+    return membership ? [membership] : [];
+  });
+}
+
+export async function createMembership(
+  supabase: SupabaseClient,
+  input: MembershipCreateInput,
+): Promise<PlatformMembership> {
+  const role = parseRole(input.role);
+  if (!role || !input.userId || !input.practiceId) {
+    throw new Error("Não foi possível alterar o acesso. Tente novamente.");
+  }
+
+  const [profileResult, practiceResult] = await Promise.all([
+    supabase.from("profiles").select("id, organization_id").eq("id", input.userId).maybeSingle(),
+    supabase
+      .from("practice_units")
+      .select("id, organization_id")
+      .eq("id", input.practiceId)
+      .maybeSingle(),
+  ]);
+
+  if (profileResult.error) {
+    logMembershipError("profile", profileResult.error);
+    throw new Error(mapMembershipError(profileResult.error));
+  }
+  if (practiceResult.error) {
+    logMembershipError("practice", practiceResult.error);
+    throw new Error(mapMembershipError(practiceResult.error));
+  }
+
+  const profileOrg = asString(profileResult.data?.organization_id);
+  const practiceOrg = asString(practiceResult.data?.organization_id);
+  if (!profileOrg || !practiceOrg || profileOrg !== practiceOrg) {
+    console.error("[platform] membership create rejected: organization mismatch", {
+      userId: input.userId,
+      practiceId: input.practiceId,
+      profileOrg,
+      practiceOrg,
+    });
+    throw new Error("A prática selecionada não pertence à organização deste usuário.");
+  }
+
+  const { data, error } = await supabase
+    .from("user_practice_roles")
+    .insert({
+      user_id: input.userId,
+      practice_id: input.practiceId,
+      role,
+    })
+    .select(MEMBERSHIP_COLUMNS)
+    .single();
+
+  if (error) {
+    logMembershipError("create", error);
+    throw new Error(mapMembershipError(error));
+  }
+  const membership = toMembership(data as Record<string, unknown>);
+  if (!membership) throw new Error("Não foi possível alterar o acesso. Tente novamente.");
+  return membership;
+}
+
+export async function deleteMembership(supabase: SupabaseClient, membershipId: string) {
+  const { error } = await supabase.from("user_practice_roles").delete().eq("id", membershipId);
+  if (error) {
+    logMembershipError("delete", error);
+    throw new Error(mapMembershipError(error));
+  }
 }

@@ -1,4 +1,4 @@
-import type { AppRole } from "@/lib/types/database";
+﻿import type { AppRole, PracticeKind } from "@/lib/types/database";
 
 export type OrganizationRecord = {
   id: string;
@@ -9,11 +9,35 @@ export type OrganizationRecord = {
 };
 
 export type PlatformMembership = {
+  id: string;
   practiceId: string;
   practiceName: string;
+  practiceKind: PracticeKind | null;
   role: AppRole;
   clinicalAccess: string;
 };
+
+export type PlatformPractice = {
+  id: string;
+  organizationId: string;
+  name: string;
+  code: string;
+  kind: PracticeKind;
+  isActive: boolean;
+};
+
+export type MembershipCreateInput = {
+  userId: string;
+  practiceId: string;
+  role: AppRole;
+};
+
+export const STAFF_ROLE_OPTIONS: { value: AppRole; label: string }[] = [
+  { value: "owner", label: "Proprietária" },
+  { value: "admin", label: "Gestão administrativa" },
+  { value: "physician", label: "Médica" },
+  { value: "secretary", label: "Secretária" },
+];
 
 export type PlatformUser = {
   id: string;

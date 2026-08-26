@@ -1,8 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { roleLabels } from "@/lib/auth/app-nav";
 import { createClient } from "@/lib/supabase/client";
 import {
   grantSystemAdmin,
@@ -11,7 +10,7 @@ import {
   revokeSystemAdmin,
   setProfileActive,
 } from "@/lib/platform/users";
-import type { PlatformUser, SystemAdminRecord } from "@/lib/platform/types";
+import { STAFF_ROLE_OPTIONS, type PlatformUser, type SystemAdminRecord } from "@/lib/platform/types";
 import { formatDateTime } from "@/lib/platform/format";
 import {
   PlatformBanner,
@@ -20,6 +19,7 @@ import {
   fieldClass,
   ghostButtonClass,
 } from "@/components/platform/Ui";
+import { UserAccessEditor } from "@/components/platform/UserAccessEditor";
 
 export function UsersPanel() {
   const { authorization } = useAuth();
@@ -28,6 +28,7 @@ export function UsersPanel() {
   const [admins, setAdmins] = useState<SystemAdminRecord[]>([]);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [accessUserId, setAccessUserId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -69,6 +70,7 @@ export function UsersPanel() {
   }, [users, query]);
 
   const selected = users.find((item) => item.id === selectedId) ?? null;
+  const accessUser = users.find((item) => item.id === accessUserId) ?? null;
   const activeAdminCount = admins.filter((item) => item.status === "ativo").length;
 
   async function toggleActive(user: PlatformUser) {
@@ -161,7 +163,9 @@ export function UsersPanel() {
               <th className="px-4 py-3">Organização</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">SYSTEM_ADMIN</th>
+              <th className="px-4 py-3">Acesso</th>
               <th className="px-4 py-3">Criado em</th>
+              <th className="px-4 py-3">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -178,7 +182,32 @@ export function UsersPanel() {
                 <td className="px-4 py-3">{item.organizationName ?? "—"}</td>
                 <td className="px-4 py-3">{item.isActive ? "ativo" : "inativo"}</td>
                 <td className="px-4 py-3">{item.isSystemAdmin ? "Sim" : "Não"}</td>
+                <td className="px-4 py-3">
+                  {item.memberships.length === 0
+                    ? "Sem prática vinculada"
+                    : item.memberships
+                        .map((membership) => {
+                          const label =
+                            STAFF_ROLE_OPTIONS.find((option) => option.value === membership.role)?.label ??
+                            membership.role;
+                          return `${membership.practiceName} (${label})`;
+                        })
+                        .join(" · ")}
+                </td>
                 <td className="px-4 py-3">{formatDateTime(item.createdAt)}</td>
+                <td className="px-4 py-3">
+                  <button
+                    type="button"
+                    className={ghostButtonClass}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedId(item.id);
+                      setAccessUserId(item.id);
+                    }}
+                  >
+                    Editar acesso
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -197,12 +226,23 @@ export function UsersPanel() {
           <p>
             Práticas:{" "}
             {selected.memberships.length === 0
-              ? "nenhuma"
+              ? "Sem prática vinculada"
               : selected.memberships
-                  .map((item) => `${item.practiceName} (${roleLabels([item.role])})`)
+                  .map((item) => {
+                    const label =
+                      STAFF_ROLE_OPTIONS.find((option) => option.value === item.role)?.label ?? item.role;
+                    return `${item.practiceName} (${label})`;
+                  })
                   .join(" · ")}
           </p>
           <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="button"
+              className={buttonClass}
+              onClick={() => setAccessUserId(selected.id)}
+            >
+              Editar acesso
+            </button>
             <button
               type="button"
               className={ghostButtonClass}
@@ -243,6 +283,16 @@ export function UsersPanel() {
             )}
           </div>
         </section>
+      ) : null}
+
+      {accessUser ? (
+        <UserAccessEditor
+          user={accessUser}
+          onClose={() => setAccessUserId(null)}
+          onChanged={async () => {
+            await reload();
+          }}
+        />
       ) : null}
 
       <section className="mt-8">

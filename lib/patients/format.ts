@@ -1,4 +1,4 @@
-/** Cálculos de ficha GO: idade civil e DPP (Naegele). */
+﻿/** Cálculos de ficha GO: idade civil e DPP (Naegele). */
 
 export function onlyDigits(value: string) {
   return value.replace(/\D/g, "");

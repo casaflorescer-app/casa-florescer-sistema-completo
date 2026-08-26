@@ -1,11 +1,5 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { PatientList } from "@/components/patients/PatientList";
 
 export default function PatientsPage() {
-  return (
-    <ModulePlaceholder
-      title="Pacientes"
-      area="clinica"
-      description="Módulo em implementação. O acesso a cadastros depende do membership, da prática e das políticas do banco."
-    />
-  );
+  return <PatientList />;
 }

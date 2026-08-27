@@ -4,6 +4,18 @@ import { isValidCpf, onlyDigits } from "@/lib/patients/format";
 export const PATIENT_LIST_COLUMNS =
   "id, organization_id, full_name, social_name, cpf, birth_date, phone, email, created_by, created_at" as const;
 
+export const PATIENT_DETAIL_COLUMNS = `${PATIENT_LIST_COLUMNS}, photo_path` as const;
+
+export const PATIENT_PHOTO_BUCKET = "patient-photos";
+export const PATIENT_PHOTO_SIGNED_SECONDS = 120;
+export const PATIENT_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+export const PATIENT_PHOTO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+export const PATIENT_PHOTO_INVALID_MESSAGE =
+  "Selecione uma fotografia JPG, PNG ou WebP de até 2 MB.";
+
+export type PatientPhotoMime = (typeof PATIENT_PHOTO_MIME_TYPES)[number];
+
 export type PatientListRow = {
   id: string;
   organizationId: string;
@@ -15,6 +27,7 @@ export type PatientListRow = {
   email: string | null;
   createdBy: string | null;
   createdAt: string;
+  photoPath: string | null;
 };
 
 export type PatientCreateInput = {
@@ -89,6 +102,45 @@ function mapGetError(error: { code?: string; message?: string }): string {
   return mapListError(error);
 }
 
+function mapPhotoError(error: { code?: string; message?: string }): string {
+  if (isRlsError(error)) {
+    return "A sessão atual não possui permissão para alterar a fotografia.";
+  }
+  return "Não foi possível alterar a fotografia. Tente novamente.";
+}
+
+function isMissingPhotoPathColumn(error: { code?: string; message?: string }) {
+  const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  return text.includes("photo_path") && text.includes("does not exist");
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function patientPhotoObjectPath(organizationId: string, patientId: string): string {
+  if (!UUID_PATTERN.test(organizationId) || !UUID_PATTERN.test(patientId)) {
+    throw new Error("Não foi possível identificar o vínculo da sessão atual.");
+  }
+  return `${organizationId}/${patientId}/photo`;
+}
+
+export function isAllowedPatientPhotoMime(value: string): value is PatientPhotoMime {
+  return (PATIENT_PHOTO_MIME_TYPES as readonly string[]).includes(value);
+}
+
+export async function validatePatientPhotoFile(file: File): Promise<string | null> {
+  if (!isAllowedPatientPhotoMime(file.type) || file.size > PATIENT_PHOTO_MAX_BYTES || file.size <= 0) {
+    return PATIENT_PHOTO_INVALID_MESSAGE;
+  }
+  try {
+    const bitmap = await createImageBitmap(file);
+    bitmap.close();
+  } catch {
+    return PATIENT_PHOTO_INVALID_MESSAGE;
+  }
+  return null;
+}
+
 export function validatePatientCreateInput(input: PatientCreateInput): string | null {
   const fullName = input.fullName.trim();
   if (fullName.length < 3) {
@@ -137,6 +189,7 @@ function toRow(value: Record<string, unknown>): PatientListRow | null {
     email: asString(value.email),
     createdBy: asString(value.created_by),
     createdAt,
+    photoPath: asString(value.photo_path),
   };
 }
 
@@ -161,18 +214,26 @@ export async function getPatient(
   supabase: SupabaseClient,
   patientId: string,
 ): Promise<PatientListRow | null> {
-  const { data, error } = await supabase
+  let result = await supabase
     .from("patients")
-    .select(PATIENT_LIST_COLUMNS)
+    .select(PATIENT_DETAIL_COLUMNS)
     .eq("id", patientId)
     .maybeSingle();
 
-  if (error) {
-    logPatientError("get", error);
-    throw new Error(mapGetError(error));
+  if (result.error && isMissingPhotoPathColumn(result.error)) {
+    result = await supabase
+      .from("patients")
+      .select(PATIENT_LIST_COLUMNS)
+      .eq("id", patientId)
+      .maybeSingle();
   }
-  if (!data) return null;
-  return toRow(data as Record<string, unknown>);
+
+  if (result.error) {
+    logPatientError("get", result.error);
+    throw new Error(mapGetError(result.error));
+  }
+  if (!result.data) return null;
+  return toRow(result.data as Record<string, unknown>);
 }
 
 export async function createPatient(
@@ -215,6 +276,87 @@ export async function createPatient(
   const row = toRow(data as Record<string, unknown>);
   if (!row) throw new Error("Não foi possível cadastrar a paciente. Tente novamente.");
   return row;
+}
+
+async function setPatientPhotoPath(
+  supabase: SupabaseClient,
+  patientId: string,
+  organizationId: string,
+  photoPath: string | null,
+) {
+  const { error } = await supabase
+    .from("patients")
+    .update({ photo_path: photoPath })
+    .eq("id", patientId)
+    .eq("organization_id", organizationId);
+  if (error) {
+    logPatientError("photo_path", error);
+    throw new Error(mapPhotoError(error));
+  }
+}
+
+export async function getPatientPhotoUrl(
+  supabase: SupabaseClient,
+  photoPath: string | null,
+): Promise<string | null> {
+  if (!photoPath) return null;
+  const { data, error } = await supabase.storage
+    .from(PATIENT_PHOTO_BUCKET)
+    .createSignedUrl(photoPath, PATIENT_PHOTO_SIGNED_SECONDS);
+  if (error) {
+    logPatientError("photo_url", error);
+    throw new Error(mapPhotoError(error));
+  }
+  return data.signedUrl;
+}
+
+export async function uploadPatientPhoto(
+  supabase: SupabaseClient,
+  organizationId: string,
+  patientId: string,
+  file: File,
+): Promise<string> {
+  const validation = await validatePatientPhotoFile(file);
+  if (validation) throw new Error(validation);
+  const path = patientPhotoObjectPath(organizationId, patientId);
+  const { error: uploadError } = await supabase.storage.from(PATIENT_PHOTO_BUCKET).upload(path, file, {
+    upsert: true,
+    contentType: file.type,
+    cacheControl: "120",
+  });
+  if (uploadError) {
+    logPatientError("photo_upload", uploadError);
+    throw new Error(mapPhotoError(uploadError));
+  }
+  try {
+    await setPatientPhotoPath(supabase, patientId, organizationId, path);
+  } catch (error) {
+    const { error: cleanupError } = await supabase.storage.from(PATIENT_PHOTO_BUCKET).remove([path]);
+    if (cleanupError) logPatientError("photo_upload_cleanup", cleanupError);
+    throw error;
+  }
+  return path;
+}
+
+export async function removePatientPhoto(
+  supabase: SupabaseClient,
+  organizationId: string,
+  patientId: string,
+): Promise<void> {
+  const path = patientPhotoObjectPath(organizationId, patientId);
+  const { error: storageError } = await supabase.storage.from(PATIENT_PHOTO_BUCKET).remove([path]);
+  if (storageError) {
+    logPatientError("photo_remove", storageError);
+    throw new Error(mapPhotoError(storageError));
+  }
+  try {
+    await setPatientPhotoPath(supabase, patientId, organizationId, null);
+  } catch (error) {
+    logPatientError("photo_remove_sync", {
+      message: error instanceof Error ? error.message : "photo_path update failed after storage remove",
+    });
+    throw new Error("A fotografia precisa ser sincronizada. Tente novamente.");
+  }
 }
 
 /** Máscara de apresentação. Não altera o valor persistido. */

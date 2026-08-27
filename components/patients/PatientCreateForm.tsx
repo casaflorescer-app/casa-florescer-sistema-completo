@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -8,7 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCpf, formatPhone } from "@/lib/patients/format";
 import {
   createPatient,
+  uploadPatientPhoto,
   validatePatientCreateInput,
+  validatePatientPhotoFile,
   type PatientCreateInput,
 } from "@/lib/patients/directory";
 import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
@@ -26,6 +28,8 @@ export function PatientCreateForm() {
   const router = useRouter();
   const { authorization, authorizationLoading } = useAuth();
   const [form, setForm] = useState<PatientCreateInput>(emptyForm);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -34,6 +38,31 @@ export function PatientCreateForm() {
   const sessionReady = Boolean(organizationId && createdBy);
   const today = new Date();
   const maxBirthDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
+
+  async function selectPhoto(file: File | null) {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    if (!file) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+    const validation = await validatePatientPhotoFile(file);
+    if (validation) {
+      setError(validation);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+    setError(null);
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -59,6 +88,15 @@ export function PatientCreateForm() {
     setError(null);
     try {
       const created = await createPatient(supabase, form, { organizationId, createdBy });
+      if (photoFile) {
+        try {
+          await uploadPatientPhoto(supabase, created.organizationId, created.id, photoFile);
+        } catch (photoErr: unknown) {
+          console.error("[patients] photo after create failed", photoErr);
+          router.replace(`/app/patients/${created.id}?foto=falhou`);
+          return;
+        }
+      }
       router.replace(`/app/patients/${created.id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Não foi possível cadastrar a paciente. Tente novamente.");
@@ -176,6 +214,43 @@ export function PatientCreateForm() {
               autoComplete="email"
               disabled={busy}
             />
+          </div>
+
+          <div>
+            <label htmlFor="patient-photo" className="text-sm font-medium text-lotus-800">
+              Fotografia
+            </label>
+            <input
+              id="patient-photo"
+              type="file"
+              className={fieldClass}
+              accept="image/jpeg,image/png,image/webp"
+              disabled={busy}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                void selectPhoto(file);
+                event.target.value = "";
+              }}
+            />
+            <p className="mt-1 text-xs text-lotus-600">JPG, PNG ou WebP, até 2 MB. Enviada somente após o cadastro.</p>
+            {photoPreview ? (
+              <div className="mt-3 space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoPreview}
+                  alt="Pré-visualização da fotografia"
+                  className="h-32 w-32 rounded-2xl object-cover border border-lotus-100"
+                />
+                <button
+                  type="button"
+                  className={ghostButtonClass}
+                  disabled={busy}
+                  onClick={() => void selectPhoto(null)}
+                >
+                  Remover seleção
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">

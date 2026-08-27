@@ -3,33 +3,26 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatCpf, formatPhone } from "@/lib/patients/format";
+import { formatCep, formatCpf, formatPhone } from "@/lib/patients/format";
 import {
+  applyBillingModalityChange,
+  emptyPatientForm,
   getPatient,
+  patientDetailToForm,
   updatePatient,
   validatePatientCreateInput,
   type PatientUpdateInput,
 } from "@/lib/patients/directory";
-import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
-
-const emptyForm: PatientUpdateInput = {
-  fullName: "",
-  socialName: "",
-  cpf: "",
-  birthDate: "",
-  phone: "",
-  email: "",
-};
+import { PatientMpiFields } from "@/components/patients/PatientMpiFields";
+import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 
 export function PatientEditForm({ patientId }: { patientId: string }) {
   const router = useRouter();
-  const [form, setForm] = useState<PatientUpdateInput>(emptyForm);
+  const [form, setForm] = useState<PatientUpdateInput>(emptyPatientForm);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const today = new Date();
-  const maxBirthDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const detailHref = `/app/patients/${patientId}`;
 
   useEffect(() => {
@@ -47,13 +40,13 @@ export function PatientEditForm({ patientId }: { patientId: string }) {
           setError("Paciente não encontrada ou sem permissão para visualização.");
           return;
         }
+        const mapped = applyBillingModalityChange(patientDetailToForm(row), row.billingModality ?? "");
         setForm({
-          fullName: row.fullName,
-          socialName: row.socialName ?? "",
-          cpf: row.cpf ? formatCpf(row.cpf) : "",
-          birthDate: row.birthDate ?? "",
-          phone: row.phone ? formatPhone(row.phone) : "",
-          email: row.email ?? "",
+          ...mapped,
+          cpf: mapped.cpf ? formatCpf(mapped.cpf) : "",
+          phone: mapped.phone ? formatPhone(mapped.phone) : "",
+          addressCep: mapped.addressCep ? formatCep(mapped.addressCep) : "",
+          addressState: mapped.addressState.toUpperCase(),
         });
         setLoaded(true);
         setError(null);
@@ -71,7 +64,8 @@ export function PatientEditForm({ patientId }: { patientId: string }) {
     event.preventDefault();
     if (busy) return;
 
-    const validation = validatePatientCreateInput(form);
+    const payload = applyBillingModalityChange(form, form.billingModality);
+    const validation = validatePatientCreateInput(payload);
     if (validation) {
       setError(validation);
       return;
@@ -86,7 +80,7 @@ export function PatientEditForm({ patientId }: { patientId: string }) {
     setBusy(true);
     setError(null);
     try {
-      await updatePatient(supabase, patientId, form);
+      await updatePatient(supabase, patientId, payload);
       router.replace(`${detailHref}?atualizado=1`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Não foi possível alterar o cadastro da paciente. Tente novamente.");
@@ -108,96 +102,11 @@ export function PatientEditForm({ patientId }: { patientId: string }) {
 
       {!loading && loaded ? (
         <form
-          className="card mt-6 max-w-xl space-y-4"
+          className="card mt-6 max-w-xl space-y-8"
           onSubmit={(event) => void handleSubmit(event)}
           aria-busy={busy}
         >
-          <div>
-            <label htmlFor="edit-patient-full-name" className="text-sm font-medium text-lotus-800">
-              Nome completo
-            </label>
-            <input
-              id="edit-patient-full-name"
-              className={fieldClass}
-              value={form.fullName}
-              onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
-              autoComplete="name"
-              required
-              minLength={3}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="edit-patient-social-name" className="text-sm font-medium text-lotus-800">
-              Nome social
-            </label>
-            <input
-              id="edit-patient-social-name"
-              className={fieldClass}
-              value={form.socialName}
-              onChange={(event) => setForm((current) => ({ ...current, socialName: event.target.value }))}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="edit-patient-cpf" className="text-sm font-medium text-lotus-800">
-              CPF
-            </label>
-            <input
-              id="edit-patient-cpf"
-              className={fieldClass}
-              inputMode="numeric"
-              value={form.cpf}
-              onChange={(event) => setForm((current) => ({ ...current, cpf: formatCpf(event.target.value) }))}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="edit-patient-birth-date" className="text-sm font-medium text-lotus-800">
-              Data de nascimento
-            </label>
-            <input
-              id="edit-patient-birth-date"
-              type="date"
-              className={fieldClass}
-              value={form.birthDate}
-              onChange={(event) => setForm((current) => ({ ...current, birthDate: event.target.value }))}
-              max={maxBirthDate}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="edit-patient-phone" className="text-sm font-medium text-lotus-800">
-              Telefone
-            </label>
-            <input
-              id="edit-patient-phone"
-              className={fieldClass}
-              inputMode="tel"
-              value={form.phone}
-              onChange={(event) => setForm((current) => ({ ...current, phone: formatPhone(event.target.value) }))}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="edit-patient-email" className="text-sm font-medium text-lotus-800">
-              E-mail
-            </label>
-            <input
-              id="edit-patient-email"
-              type="email"
-              className={fieldClass}
-              value={form.email}
-              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-              autoComplete="email"
-              disabled={busy}
-            />
-          </div>
+          <PatientMpiFields form={form} setForm={setForm} busy={busy} idPrefix="edit-patient" />
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button type="submit" className={buttonClass} disabled={busy} aria-disabled={busy}>

@@ -3,15 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
+import { formatCep, formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
+  BILLING_MODALITY_LABEL,
+  CARE_SPECIALTY_LABEL,
   getPatient,
   getPatientPhotoUrl,
   maskCpf,
+  PREFERRED_CHANNEL_LABEL,
+  PRIVATE_PAYMENT_METHOD_LABEL,
   removePatientPhoto,
   uploadPatientPhoto,
   validatePatientPhotoFile,
-  type PatientListRow,
+  type PatientDetailRow,
 } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
@@ -26,7 +30,7 @@ export function PatientDetail({
   updated?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [row, setRow] = useState<PatientListRow | null>(null);
+  const [row, setRow] = useState<PatientDetailRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(
@@ -231,42 +235,131 @@ export function PatientDetail({
             </div>
           </section>
 
-          <section className="card mt-6 max-w-xl">
-            <dl className="grid gap-4 text-sm text-lotus-800">
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-lotus-500">Nome completo</dt>
-                <dd className="mt-1 font-medium text-lotus-900">{row.fullName}</dd>
-              </div>
-              {row.socialName ? (
-                <div>
-                  <dt className="text-xs uppercase tracking-wide text-lotus-500">Nome social</dt>
-                  <dd className="mt-1">{row.socialName}</dd>
-                </div>
+          <section className="card mt-6 max-w-xl" aria-labelledby="patient-identity-title">
+            <h2 id="patient-identity-title" className="font-semibold text-lotus-900">
+              Identificação
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+              <DetailItem label="Nome completo" value={row.fullName} strong />
+              {row.socialName ? <DetailItem label="Nome social" value={row.socialName} /> : null}
+              <DetailItem label="CPF" value={maskCpf(row.cpf)} />
+              <DetailItem label="Data de nascimento" value={row.birthDate ? formatIsoDateBr(row.birthDate) : "—"} />
+              <DetailItem label="Data de cadastro" value={formatDateTime(row.createdAt)} />
+            </dl>
+          </section>
+
+          <section className="card mt-6 max-w-xl" aria-labelledby="patient-contact-title">
+            <h2 id="patient-contact-title" className="font-semibold text-lotus-900">
+              Contato
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+              <DetailItem label="Telefone" value={row.phone ? formatPhone(row.phone) : "—"} />
+              <DetailItem label="E-mail" value={row.email ?? "—"} breakAll />
+              <DetailItem label="Canal preferencial" value={PREFERRED_CHANNEL_LABEL[row.preferredChannel]} />
+            </dl>
+          </section>
+
+          <section className="card mt-6 max-w-xl" aria-labelledby="patient-address-title">
+            <h2 id="patient-address-title" className="font-semibold text-lotus-900">
+              Endereço
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+              <DetailItem label="Logradouro" value={displayText(row.addressStreet)} />
+              <DetailItem label="Número" value={displayText(row.addressNumber)} />
+              <DetailItem label="Complemento" value={displayText(row.addressComplement)} />
+              <DetailItem label="Bairro" value={displayText(row.addressDistrict)} />
+              <DetailItem label="Cidade" value={displayText(row.addressCity)} />
+              <DetailItem label="UF" value={displayText(row.addressState)} />
+              <DetailItem label="CEP" value={row.addressCep ? formatCep(row.addressCep) : "—"} />
+            </dl>
+          </section>
+
+          <section className="card mt-6 max-w-xl" aria-labelledby="patient-care-title">
+            <h2 id="patient-care-title" className="font-semibold text-lotus-900">
+              Atendimento
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+              <DetailItem
+                label="Especialidades"
+                value={
+                  row.careSpecialties.length > 0
+                    ? row.careSpecialties.map((item) => CARE_SPECIALTY_LABEL[item]).join(", ")
+                    : "Não informado"
+                }
+              />
+            </dl>
+          </section>
+
+          <section className="card mt-6 max-w-xl" aria-labelledby="patient-reception-title">
+            <h2 id="patient-reception-title" className="font-semibold text-lotus-900">
+              Recepção
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+              <DetailItem label="Observações" value={displayText(row.receptionNotes)} />
+            </dl>
+          </section>
+
+          <section className="card mt-6 max-w-xl" aria-labelledby="patient-billing-title">
+            <h2 id="patient-billing-title" className="font-semibold text-lotus-900">
+              Faturamento
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+              <DetailItem
+                label="Modalidade"
+                value={row.billingModality ? BILLING_MODALITY_LABEL[row.billingModality] : "Não informado"}
+              />
+              {row.billingModality === "private" ? (
+                <DetailItem
+                  label="Forma de pagamento"
+                  value={
+                    row.privatePaymentMethod
+                      ? PRIVATE_PAYMENT_METHOD_LABEL[row.privatePaymentMethod]
+                      : "—"
+                  }
+                />
               ) : null}
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-lotus-500">CPF</dt>
-                <dd className="mt-1">{maskCpf(row.cpf)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-lotus-500">Data de nascimento</dt>
-                <dd className="mt-1">{row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-lotus-500">Telefone</dt>
-                <dd className="mt-1">{row.phone ? formatPhone(row.phone) : "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-lotus-500">E-mail</dt>
-                <dd className="mt-1 break-all">{row.email ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-lotus-500">Data de cadastro</dt>
-                <dd className="mt-1">{formatDateTime(row.createdAt)}</dd>
-              </div>
+              {row.billingModality === "insurance" ? (
+                <>
+                  <DetailItem label="Convênio" value={displayText(row.insuranceName)} />
+                  <DetailItem label="Carteirinha" value={displayText(row.insuranceCardNumber)} />
+                  <DetailItem
+                    label="Validade"
+                    value={row.insuranceValidUntil ? formatIsoDateBr(row.insuranceValidUntil) : "—"}
+                  />
+                </>
+              ) : null}
             </dl>
           </section>
         </>
       ) : null}
+    </div>
+  );
+}
+
+function displayText(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : "—";
+}
+
+function DetailItem({
+  label,
+  value,
+  strong = false,
+  breakAll = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  breakAll?: boolean;
+}) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wide text-lotus-500">{label}</dt>
+      <dd
+        className={`mt-1 ${strong ? "font-medium text-lotus-900" : ""} ${breakAll ? "break-all" : ""}`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

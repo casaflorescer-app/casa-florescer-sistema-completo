@@ -5,29 +5,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import { formatCpf, formatPhone } from "@/lib/patients/format";
 import {
+  applyBillingModalityChange,
   createPatient,
+  emptyPatientForm,
   uploadPatientPhoto,
   validatePatientCreateInput,
   validatePatientPhotoFile,
   type PatientCreateInput,
 } from "@/lib/patients/directory";
+import { PatientMpiFields } from "@/components/patients/PatientMpiFields";
 import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
-
-const emptyForm: PatientCreateInput = {
-  fullName: "",
-  socialName: "",
-  cpf: "",
-  birthDate: "",
-  phone: "",
-  email: "",
-};
 
 export function PatientCreateForm() {
   const router = useRouter();
   const { authorization, authorizationLoading } = useAuth();
-  const [form, setForm] = useState<PatientCreateInput>(emptyForm);
+  const [form, setForm] = useState<PatientCreateInput>(emptyPatientForm);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +29,6 @@ export function PatientCreateForm() {
   const organizationId = authorization?.profile?.organizationId ?? "";
   const createdBy = authorization?.user.id ?? "";
   const sessionReady = Boolean(organizationId && createdBy);
-  const today = new Date();
-  const maxBirthDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   useEffect(() => {
     return () => {
@@ -68,7 +59,8 @@ export function PatientCreateForm() {
     event.preventDefault();
     if (busy) return;
 
-    const validation = validatePatientCreateInput(form);
+    const payload = applyBillingModalityChange(form, form.billingModality);
+    const validation = validatePatientCreateInput(payload);
     if (validation) {
       setError(validation);
       return;
@@ -87,7 +79,7 @@ export function PatientCreateForm() {
     setBusy(true);
     setError(null);
     try {
-      const created = await createPatient(supabase, form, { organizationId, createdBy });
+      const created = await createPatient(supabase, payload, { organizationId, createdBy });
       if (photoFile) {
         try {
           await uploadPatientPhoto(supabase, created.organizationId, created.id, photoFile);
@@ -110,7 +102,7 @@ export function PatientCreateForm() {
         Clínica
       </p>
       <h1 className="page-title mt-1">Nova paciente</h1>
-      <p className="page-sub mt-2">Cadastro administrativo mínimo. Sem dados clínicos nesta etapa.</p>
+      <p className="page-sub mt-2">Cadastro administrativo. Sem dados clínicos nesta etapa.</p>
 
       <StatusMessage
         error={
@@ -125,133 +117,53 @@ export function PatientCreateForm() {
         <p className="mt-6 text-sm text-lotus-600">Carregando sessão…</p>
       ) : (
         <form
-          className="card mt-6 max-w-xl space-y-4"
+          className="card mt-6 max-w-xl space-y-8"
           onSubmit={(event) => void handleSubmit(event)}
           aria-busy={busy}
         >
-          <div>
-            <label htmlFor="patient-full-name" className="text-sm font-medium text-lotus-800">
-              Nome completo
-            </label>
-            <input
-              id="patient-full-name"
-              className={fieldClass}
-              value={form.fullName}
-              onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
-              autoComplete="name"
-              required
-              minLength={3}
-              disabled={busy}
-            />
-          </div>
+          <PatientMpiFields form={form} setForm={setForm} busy={busy} idPrefix="patient" />
 
-          <div>
-            <label htmlFor="patient-social-name" className="text-sm font-medium text-lotus-800">
-              Nome social
-            </label>
-            <input
-              id="patient-social-name"
-              className={fieldClass}
-              value={form.socialName}
-              onChange={(event) => setForm((current) => ({ ...current, socialName: event.target.value }))}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="patient-cpf" className="text-sm font-medium text-lotus-800">
-              CPF
-            </label>
-            <input
-              id="patient-cpf"
-              className={fieldClass}
-              inputMode="numeric"
-              value={form.cpf}
-              onChange={(event) => setForm((current) => ({ ...current, cpf: formatCpf(event.target.value) }))}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="patient-birth-date" className="text-sm font-medium text-lotus-800">
-              Data de nascimento
-            </label>
-            <input
-              id="patient-birth-date"
-              type="date"
-              className={fieldClass}
-              value={form.birthDate}
-              onChange={(event) => setForm((current) => ({ ...current, birthDate: event.target.value }))}
-              max={maxBirthDate}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="patient-phone" className="text-sm font-medium text-lotus-800">
-              Telefone
-            </label>
-            <input
-              id="patient-phone"
-              className={fieldClass}
-              inputMode="tel"
-              value={form.phone}
-              onChange={(event) => setForm((current) => ({ ...current, phone: formatPhone(event.target.value) }))}
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="patient-email" className="text-sm font-medium text-lotus-800">
-              E-mail
-            </label>
-            <input
-              id="patient-email"
-              type="email"
-              className={fieldClass}
-              value={form.email}
-              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-              autoComplete="email"
-              disabled={busy}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="patient-photo" className="text-sm font-medium text-lotus-800">
+          <section className="space-y-4" aria-labelledby="patient-photo-title">
+            <h2 id="patient-photo-title" className="font-semibold text-lotus-900">
               Fotografia
-            </label>
-            <input
-              id="patient-photo"
-              type="file"
-              className={fieldClass}
-              accept="image/jpeg,image/png,image/webp"
-              disabled={busy}
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                void selectPhoto(file);
-                event.target.value = "";
-              }}
-            />
-            <p className="mt-1 text-xs text-lotus-600">JPG, PNG ou WebP, até 2 MB. Enviada somente após o cadastro.</p>
-            {photoPreview ? (
-              <div className="mt-3 space-y-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photoPreview}
-                  alt="Pré-visualização da fotografia"
-                  className="h-32 w-32 rounded-2xl object-cover border border-lotus-100"
-                />
-                <button
-                  type="button"
-                  className={ghostButtonClass}
-                  disabled={busy}
-                  onClick={() => void selectPhoto(null)}
-                >
-                  Remover seleção
-                </button>
-              </div>
-            ) : null}
-          </div>
+            </h2>
+            <div>
+              <label htmlFor="patient-photo" className="text-sm font-medium text-lotus-800">
+                Fotografia
+              </label>
+              <input
+                id="patient-photo"
+                type="file"
+                className={fieldClass}
+                accept="image/jpeg,image/png,image/webp"
+                disabled={busy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  void selectPhoto(file);
+                  event.target.value = "";
+                }}
+              />
+              <p className="mt-1 text-xs text-lotus-600">JPG, PNG ou WebP, até 2 MB. Enviada somente após o cadastro.</p>
+              {photoPreview ? (
+                <div className="mt-3 space-y-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview}
+                    alt="Pré-visualização da fotografia"
+                    className="h-32 w-32 rounded-2xl object-cover border border-lotus-100"
+                  />
+                  <button
+                    type="button"
+                    className={ghostButtonClass}
+                    disabled={busy}
+                    onClick={() => void selectPhoto(null)}
+                  >
+                    Remover seleção
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </section>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button type="submit" className={buttonClass} disabled={busy || !sessionReady} aria-disabled={busy || !sessionReady}>

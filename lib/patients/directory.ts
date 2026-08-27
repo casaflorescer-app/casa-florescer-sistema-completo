@@ -4,7 +4,9 @@ import { isValidCpf, onlyDigits } from "@/lib/patients/format";
 export const PATIENT_LIST_COLUMNS =
   "id, organization_id, full_name, social_name, cpf, birth_date, phone, email, created_by, created_at" as const;
 
-export const PATIENT_DETAIL_COLUMNS = `${PATIENT_LIST_COLUMNS}, photo_path` as const;
+export const PATIENT_LIST_PHOTO_COLUMNS = `${PATIENT_LIST_COLUMNS}, photo_path` as const;
+
+export const PATIENT_DETAIL_COLUMNS = `${PATIENT_LIST_PHOTO_COLUMNS}, preferred_channel, address_street, address_number, address_complement, address_district, address_city, address_state, address_cep, reception_notes, care_specialties, billing_modality, insurance_name, insurance_card_number, insurance_valid_until, private_payment_method` as const;
 
 export const PATIENT_PHOTO_BUCKET = "patient-photos";
 export const PATIENT_PHOTO_SIGNED_SECONDS = 120;
@@ -15,6 +17,73 @@ export const PATIENT_PHOTO_INVALID_MESSAGE =
   "Selecione uma fotografia JPG, PNG ou WebP de até 2 MB.";
 
 export type PatientPhotoMime = (typeof PATIENT_PHOTO_MIME_TYPES)[number];
+
+export const CARE_SPECIALTIES = ["gynecology", "obstetrics"] as const;
+export type CareSpecialty = (typeof CARE_SPECIALTIES)[number];
+
+export const BILLING_MODALITIES = ["private", "insurance"] as const;
+export type BillingModality = (typeof BILLING_MODALITIES)[number];
+
+export const PRIVATE_PAYMENT_METHODS = ["pix", "card", "cash"] as const;
+export type PrivatePaymentMethod = (typeof PRIVATE_PAYMENT_METHODS)[number];
+
+export const PREFERRED_CHANNELS = ["whatsapp", "phone", "email", "other"] as const;
+export type PreferredChannel = (typeof PREFERRED_CHANNELS)[number];
+
+export const PREFERRED_CHANNEL_LABEL: Record<PreferredChannel, string> = {
+  whatsapp: "WhatsApp",
+  phone: "Telefone",
+  email: "E-mail",
+  other: "Outro",
+};
+
+export const CARE_SPECIALTY_LABEL: Record<CareSpecialty, string> = {
+  gynecology: "Ginecologia",
+  obstetrics: "Obstetrícia",
+};
+
+export const BILLING_MODALITY_LABEL: Record<BillingModality, string> = {
+  private: "Particular",
+  insurance: "Plano/Convênio",
+};
+
+export const PRIVATE_PAYMENT_METHOD_LABEL: Record<PrivatePaymentMethod, string> = {
+  pix: "Pix",
+  card: "Cartão",
+  cash: "Dinheiro",
+};
+
+export const BRAZIL_UFS = [
+  "AC",
+  "AL",
+  "AM",
+  "AP",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MG",
+  "MS",
+  "MT",
+  "PA",
+  "PB",
+  "PE",
+  "PI",
+  "PR",
+  "RJ",
+  "RN",
+  "RO",
+  "RR",
+  "RS",
+  "SC",
+  "SE",
+  "SP",
+  "TO",
+] as const;
+
+export type BrazilUf = (typeof BRAZIL_UFS)[number];
 
 export type PatientListRow = {
   id: string;
@@ -30,6 +99,24 @@ export type PatientListRow = {
   photoPath: string | null;
 };
 
+export type PatientDetailRow = PatientListRow & {
+  preferredChannel: PreferredChannel;
+  addressStreet: string | null;
+  addressNumber: string | null;
+  addressComplement: string | null;
+  addressDistrict: string | null;
+  addressCity: string | null;
+  addressState: string | null;
+  addressCep: string | null;
+  receptionNotes: string | null;
+  careSpecialties: CareSpecialty[];
+  billingModality: BillingModality | null;
+  insuranceName: string | null;
+  insuranceCardNumber: string | null;
+  insuranceValidUntil: string | null;
+  privatePaymentMethod: PrivatePaymentMethod | null;
+};
+
 export type PatientCreateInput = {
   fullName: string;
   socialName: string;
@@ -37,6 +124,21 @@ export type PatientCreateInput = {
   birthDate: string;
   phone: string;
   email: string;
+  preferredChannel: PreferredChannel;
+  addressStreet: string;
+  addressNumber: string;
+  addressComplement: string;
+  addressDistrict: string;
+  addressCity: string;
+  addressState: string;
+  addressCep: string;
+  receptionNotes: string;
+  careSpecialties: CareSpecialty[];
+  billingModality: "" | BillingModality;
+  insuranceName: string;
+  insuranceCardNumber: string;
+  insuranceValidUntil: string;
+  privatePaymentMethod: "" | PrivatePaymentMethod;
 };
 
 export type PatientCreateContext = {
@@ -46,10 +148,75 @@ export type PatientCreateContext = {
 
 export type PatientUpdateInput = PatientCreateInput;
 
+export const emptyPatientForm = (): PatientCreateInput => ({
+  fullName: "",
+  socialName: "",
+  cpf: "",
+  birthDate: "",
+  phone: "",
+  email: "",
+  preferredChannel: "whatsapp",
+  addressStreet: "",
+  addressNumber: "",
+  addressComplement: "",
+  addressDistrict: "",
+  addressCity: "",
+  addressState: "",
+  addressCep: "",
+  receptionNotes: "",
+  careSpecialties: [],
+  billingModality: "",
+  insuranceName: "",
+  insuranceCardNumber: "",
+  insuranceValidUntil: "",
+  privatePaymentMethod: "",
+});
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UF_PATTERN = /^[A-Z]{2}$/;
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function asTrimmed(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function optionalText(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function isPreferredChannel(value: unknown): value is PreferredChannel {
+  return typeof value === "string" && (PREFERRED_CHANNELS as readonly string[]).includes(value);
+}
+
+function isCareSpecialty(value: unknown): value is CareSpecialty {
+  return typeof value === "string" && (CARE_SPECIALTIES as readonly string[]).includes(value);
+}
+
+function isBillingModality(value: unknown): value is BillingModality {
+  return value === "private" || value === "insurance";
+}
+
+function isPrivatePaymentMethod(value: unknown): value is PrivatePaymentMethod {
+  return value === "pix" || value === "card" || value === "cash";
+}
+
+function parseCareSpecialties(value: unknown): CareSpecialty[] {
+  if (!Array.isArray(value)) return [];
+  const unique: CareSpecialty[] = [];
+  for (const item of value) {
+    if (isCareSpecialty(item) && !unique.includes(item)) unique.push(item);
+  }
+  return unique;
+}
+
+function parsePreferredChannel(value: unknown): PreferredChannel {
+  return isPreferredChannel(value) ? value : "whatsapp";
 }
 
 function logPatientError(scope: string, error: { code?: string; message?: string; details?: string; hint?: string }) {
@@ -91,6 +258,9 @@ function mapCreateError(error: { code?: string; message?: string }): string {
   if (error.code === "23505" || text.includes("duplicate") || text.includes("unique")) {
     return "Já existe uma paciente cadastrada com este CPF.";
   }
+  if (error.code === "23514" || text.includes("check constraint") || text.includes("patients_billing_shape")) {
+    return "Os dados de faturamento estão incompletos ou incompatíveis.";
+  }
   if (isRlsError(error)) {
     return "A sessão atual não possui permissão para realizar este cadastro.";
   }
@@ -115,6 +285,9 @@ function mapUpdateError(error: { code?: string; message?: string }): string {
   const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
   if (error.code === "23505" || text.includes("duplicate") || text.includes("unique")) {
     return "Já existe uma paciente cadastrada com este CPF.";
+  }
+  if (error.code === "23514" || text.includes("check constraint") || text.includes("patients_billing_shape")) {
+    return "Os dados de faturamento estão incompletos ou incompatíveis.";
   }
   if (isRlsError(error) || error.code === "PGRST116") {
     return "A sessão atual não possui permissão para alterar este cadastro.";
@@ -154,6 +327,45 @@ export async function validatePatientPhotoFile(file: File): Promise<string | nul
   return null;
 }
 
+export function applyBillingModalityChange(
+  current: PatientCreateInput,
+  billingModality: "" | BillingModality,
+): PatientCreateInput {
+  if (billingModality === "private") {
+    return {
+      ...current,
+      billingModality,
+      insuranceName: "",
+      insuranceCardNumber: "",
+      insuranceValidUntil: "",
+    };
+  }
+  if (billingModality === "insurance") {
+    return {
+      ...current,
+      billingModality,
+      privatePaymentMethod: "",
+    };
+  }
+  return {
+    ...current,
+    billingModality: "",
+    insuranceName: "",
+    insuranceCardNumber: "",
+    insuranceValidUntil: "",
+    privatePaymentMethod: "",
+  };
+}
+
+export function toggleCareSpecialty(
+  current: CareSpecialty[],
+  specialty: CareSpecialty,
+): CareSpecialty[] {
+  return current.includes(specialty)
+    ? current.filter((item) => item !== specialty)
+    : [...current, specialty];
+}
+
 export function validatePatientCreateInput(input: PatientCreateInput): string | null {
   const fullName = input.fullName.trim();
   if (fullName.length < 3) {
@@ -182,10 +394,55 @@ export function validatePatientCreateInput(input: PatientCreateInput): string | 
     }
   }
 
+  if (!isPreferredChannel(input.preferredChannel)) {
+    return "Selecione o canal preferencial.";
+  }
+
+  const cepDigits = onlyDigits(input.addressCep);
+  if (cepDigits.length > 0 && cepDigits.length !== 8) {
+    return "Informe um CEP com 8 dígitos.";
+  }
+
+  const uf = input.addressState.trim().toUpperCase();
+  if (uf.length > 0 && !UF_PATTERN.test(uf)) {
+    return "Informe uma UF com 2 letras.";
+  }
+
+  if (!Array.isArray(input.careSpecialties) || input.careSpecialties.some((item) => !isCareSpecialty(item))) {
+    return "Selecione somente Ginecologia e/ou Obstetrícia.";
+  }
+
+  const modality = input.billingModality;
+  if (modality !== "" && !isBillingModality(modality)) {
+    return "Selecione a modalidade de faturamento.";
+  }
+
+  if (modality === "private") {
+    if (!isPrivatePaymentMethod(input.privatePaymentMethod)) {
+      return "Selecione Pix, cartão ou dinheiro.";
+    }
+  }
+
+  if (modality === "insurance") {
+    if (!input.insuranceName.trim()) {
+      return "Informe o nome do convênio.";
+    }
+    if (!input.insuranceCardNumber.trim()) {
+      return "Informe o número da carteirinha.";
+    }
+    const validUntil = input.insuranceValidUntil.trim();
+    if (validUntil.length > 0) {
+      const parsed = new Date(`${validUntil}T00:00:00`);
+      if (Number.isNaN(parsed.getTime())) {
+        return "Informe uma validade da carteirinha válida.";
+      }
+    }
+  }
+
   return null;
 }
 
-function toRow(value: Record<string, unknown>): PatientListRow | null {
+function toListRow(value: Record<string, unknown>): PatientListRow | null {
   const id = asString(value.id);
   const organizationId = asString(value.organization_id);
   const fullName = asString(value.full_name);
@@ -206,8 +463,109 @@ function toRow(value: Record<string, unknown>): PatientListRow | null {
   };
 }
 
+function toDetailRow(value: Record<string, unknown>): PatientDetailRow | null {
+  const base = toListRow(value);
+  if (!base) return null;
+  const privatePayment = value.private_payment_method;
+  return {
+    ...base,
+    preferredChannel: parsePreferredChannel(value.preferred_channel),
+    addressStreet: asTrimmed(value.address_street),
+    addressNumber: asTrimmed(value.address_number),
+    addressComplement: asTrimmed(value.address_complement),
+    addressDistrict: asTrimmed(value.address_district),
+    addressCity: asTrimmed(value.address_city),
+    addressState: asTrimmed(value.address_state)?.toUpperCase() ?? null,
+    addressCep: asTrimmed(value.address_cep) ? onlyDigits(String(value.address_cep)) : null,
+    receptionNotes: asTrimmed(value.reception_notes),
+    careSpecialties: parseCareSpecialties(value.care_specialties),
+    billingModality: isBillingModality(value.billing_modality) ? value.billing_modality : null,
+    insuranceName: asTrimmed(value.insurance_name),
+    insuranceCardNumber: asTrimmed(value.insurance_card_number),
+    insuranceValidUntil: asTrimmed(value.insurance_valid_until),
+    privatePaymentMethod: isPrivatePaymentMethod(privatePayment) ? privatePayment : null,
+  };
+}
+
+export function patientDetailToForm(row: PatientDetailRow): PatientCreateInput {
+  return {
+    fullName: row.fullName,
+    socialName: row.socialName ?? "",
+    cpf: row.cpf ?? "",
+    birthDate: row.birthDate ?? "",
+    phone: row.phone ?? "",
+    email: row.email ?? "",
+    preferredChannel: row.preferredChannel,
+    addressStreet: row.addressStreet ?? "",
+    addressNumber: row.addressNumber ?? "",
+    addressComplement: row.addressComplement ?? "",
+    addressDistrict: row.addressDistrict ?? "",
+    addressCity: row.addressCity ?? "",
+    addressState: row.addressState ?? "",
+    addressCep: row.addressCep ?? "",
+    receptionNotes: row.receptionNotes ?? "",
+    careSpecialties: row.careSpecialties,
+    billingModality: row.billingModality ?? "",
+    insuranceName: row.insuranceName ?? "",
+    insuranceCardNumber: row.insuranceCardNumber ?? "",
+    insuranceValidUntil: row.insuranceValidUntil ?? "",
+    privatePaymentMethod: row.privatePaymentMethod ?? "",
+  };
+}
+
+function toPersistPayload(input: PatientCreateInput) {
+  const cepDigits = onlyDigits(input.addressCep);
+  const uf = input.addressState.trim().toUpperCase();
+  const modality = isBillingModality(input.billingModality) ? input.billingModality : null;
+
+  const billing =
+    modality === "private"
+      ? {
+          billing_modality: "private" as const,
+          private_payment_method: input.privatePaymentMethod as PrivatePaymentMethod,
+          insurance_name: null,
+          insurance_card_number: null,
+          insurance_valid_until: null,
+        }
+      : modality === "insurance"
+        ? {
+            billing_modality: "insurance" as const,
+            private_payment_method: null,
+            insurance_name: input.insuranceName.trim(),
+            insurance_card_number: input.insuranceCardNumber.trim(),
+            insurance_valid_until: optionalText(input.insuranceValidUntil),
+          }
+        : {
+            billing_modality: null,
+            private_payment_method: null,
+            insurance_name: null,
+            insurance_card_number: null,
+            insurance_valid_until: null,
+          };
+
+  return {
+    full_name: input.fullName.trim(),
+    social_name: optionalText(input.socialName),
+    cpf: onlyDigits(input.cpf).length === 11 ? onlyDigits(input.cpf) : null,
+    birth_date: optionalText(input.birthDate),
+    phone: onlyDigits(input.phone).length > 0 ? onlyDigits(input.phone) : null,
+    email: optionalText(input.email),
+    preferred_channel: input.preferredChannel,
+    address_street: optionalText(input.addressStreet),
+    address_number: optionalText(input.addressNumber),
+    address_complement: optionalText(input.addressComplement),
+    address_district: optionalText(input.addressDistrict),
+    address_city: optionalText(input.addressCity),
+    address_state: uf.length > 0 ? uf : null,
+    address_cep: cepDigits.length > 0 ? cepDigits : null,
+    reception_notes: optionalText(input.receptionNotes),
+    care_specialties: parseCareSpecialties(input.careSpecialties),
+    ...billing,
+  };
+}
+
 export async function listPatients(supabase: SupabaseClient): Promise<PatientListRow[]> {
-  let result = await supabase.from("patients").select(PATIENT_DETAIL_COLUMNS).order("full_name");
+  let result = await supabase.from("patients").select(PATIENT_LIST_PHOTO_COLUMNS).order("full_name");
 
   if (result.error && isMissingPhotoPathColumn(result.error)) {
     result = await supabase.from("patients").select(PATIENT_LIST_COLUMNS).order("full_name");
@@ -219,7 +577,7 @@ export async function listPatients(supabase: SupabaseClient): Promise<PatientLis
   }
 
   return (result.data ?? []).flatMap((item) => {
-    const row = toRow(item as Record<string, unknown>);
+    const row = toListRow(item as Record<string, unknown>);
     return row ? [row] : [];
   });
 }
@@ -227,7 +585,7 @@ export async function listPatients(supabase: SupabaseClient): Promise<PatientLis
 export async function getPatient(
   supabase: SupabaseClient,
   patientId: string,
-): Promise<PatientListRow | null> {
+): Promise<PatientDetailRow | null> {
   let result = await supabase
     .from("patients")
     .select(PATIENT_DETAIL_COLUMNS)
@@ -247,47 +605,35 @@ export async function getPatient(
     throw new Error(mapGetError(result.error));
   }
   if (!result.data) return null;
-  return toRow(result.data as Record<string, unknown>);
+  return toDetailRow(result.data as Record<string, unknown>);
 }
 
 export async function createPatient(
   supabase: SupabaseClient,
   input: PatientCreateInput,
   context: PatientCreateContext,
-): Promise<PatientListRow> {
+): Promise<PatientDetailRow> {
   const message = validatePatientCreateInput(input);
   if (message) throw new Error(message);
   if (!context.organizationId || !context.createdBy) {
     throw new Error("Não foi possível identificar o vínculo da sessão atual.");
   }
 
-  const fullName = input.fullName.trim();
-  const socialName = input.socialName.trim();
-  const cpfDigits = onlyDigits(input.cpf);
-  const phoneDigits = onlyDigits(input.phone);
-  const email = input.email.trim();
-  const birthDate = input.birthDate.trim();
-
   const { data, error } = await supabase
     .from("patients")
     .insert({
-      full_name: fullName,
-      social_name: socialName.length > 0 ? socialName : null,
-      cpf: cpfDigits.length === 11 ? cpfDigits : null,
-      birth_date: birthDate.length > 0 ? birthDate : null,
-      phone: phoneDigits.length > 0 ? phoneDigits : null,
-      email: email.length > 0 ? email : null,
+      ...toPersistPayload(input),
       organization_id: context.organizationId,
       created_by: context.createdBy,
     })
-    .select(PATIENT_LIST_COLUMNS)
+    .select(PATIENT_DETAIL_COLUMNS)
     .single();
 
   if (error) {
     logPatientError("create", error);
     throw new Error(mapCreateError(error));
   }
-  const row = toRow(data as Record<string, unknown>);
+  const row = toDetailRow(data as Record<string, unknown>);
   if (!row) throw new Error("Não foi possível cadastrar a paciente. Tente novamente.");
   return row;
 }
@@ -296,39 +642,25 @@ export async function updatePatient(
   supabase: SupabaseClient,
   patientId: string,
   input: PatientUpdateInput,
-): Promise<PatientListRow> {
+): Promise<PatientDetailRow> {
   const message = validatePatientCreateInput(input);
   if (message) throw new Error(message);
   if (!patientId) {
     throw new Error("Não foi possível identificar a paciente.");
   }
 
-  const fullName = input.fullName.trim();
-  const socialName = input.socialName.trim();
-  const cpfDigits = onlyDigits(input.cpf);
-  const phoneDigits = onlyDigits(input.phone);
-  const email = input.email.trim();
-  const birthDate = input.birthDate.trim();
-
   const { data, error } = await supabase
     .from("patients")
-    .update({
-      full_name: fullName,
-      social_name: socialName.length > 0 ? socialName : null,
-      cpf: cpfDigits.length === 11 ? cpfDigits : null,
-      birth_date: birthDate.length > 0 ? birthDate : null,
-      phone: phoneDigits.length > 0 ? phoneDigits : null,
-      email: email.length > 0 ? email : null,
-    })
+    .update(toPersistPayload(input))
     .eq("id", patientId)
-    .select(PATIENT_LIST_COLUMNS)
+    .select(PATIENT_DETAIL_COLUMNS)
     .single();
 
   if (error) {
     logPatientError("update", error);
     throw new Error(mapUpdateError(error));
   }
-  const row = toRow(data as Record<string, unknown>);
+  const row = toDetailRow(data as Record<string, unknown>);
   if (!row) throw new Error("Não foi possível alterar o cadastro da paciente. Tente novamente.");
   return row;
 }

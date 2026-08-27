@@ -207,17 +207,18 @@ function toRow(value: Record<string, unknown>): PatientListRow | null {
 }
 
 export async function listPatients(supabase: SupabaseClient): Promise<PatientListRow[]> {
-  const { data, error } = await supabase
-    .from("patients")
-    .select(PATIENT_LIST_COLUMNS)
-    .order("full_name");
+  let result = await supabase.from("patients").select(PATIENT_DETAIL_COLUMNS).order("full_name");
 
-  if (error) {
-    logPatientError("list", error);
-    throw new Error(mapListError(error));
+  if (result.error && isMissingPhotoPathColumn(result.error)) {
+    result = await supabase.from("patients").select(PATIENT_LIST_COLUMNS).order("full_name");
   }
 
-  return (data ?? []).flatMap((item) => {
+  if (result.error) {
+    logPatientError("list", result.error);
+    throw new Error(mapListError(result.error));
+  }
+
+  return (result.data ?? []).flatMap((item) => {
     const row = toRow(item as Record<string, unknown>);
     return row ? [row] : [];
   });

@@ -13,6 +13,7 @@ import {
 } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, buttonClass, fieldClass } from "@/components/platform/Ui";
+import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 
 export function PatientList() {
   const router = useRouter();
@@ -95,34 +96,39 @@ export function PatientList() {
           <ul className="mt-6 space-y-3 md:hidden">
             {filtered.map((row) => (
               <li key={row.id}>
-                <Link href={`/app/patients/${row.id}`} className="card block hover:border-lotus-200">
-                <p className="font-semibold text-lotus-900">{row.fullName}</p>
-                {row.socialName ? (
-                  <p className="mt-0.5 text-sm text-lotus-600">{row.socialName}</p>
-                ) : null}
-                <dl className="mt-3 grid gap-2 text-sm text-lotus-800">
-                  <div>
-                    <dt className="text-xs uppercase tracking-wide text-lotus-500">CPF</dt>
-                    <dd>{maskCpf(row.cpf)}</dd>
+                <div className="card flex gap-3 hover:border-lotus-200">
+                  <div className="pt-0.5">
+                    <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
                   </div>
-                  <div>
-                    <dt className="text-xs uppercase tracking-wide text-lotus-500">Nascimento</dt>
-                    <dd>{row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs uppercase tracking-wide text-lotus-500">Telefone</dt>
-                    <dd>{row.phone ? formatPhone(row.phone) : "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs uppercase tracking-wide text-lotus-500">E-mail</dt>
-                    <dd className="break-all">{row.email ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs uppercase tracking-wide text-lotus-500">Cadastro</dt>
-                    <dd>{formatDateTime(row.createdAt)}</dd>
-                  </div>
-                </dl>
-                </Link>
+                  <Link href={`/app/patients/${row.id}`} className="min-w-0 flex-1">
+                    <p className="font-semibold text-lotus-900">{row.fullName}</p>
+                    {row.socialName ? (
+                      <p className="mt-0.5 text-sm text-lotus-600">{row.socialName}</p>
+                    ) : null}
+                    <dl className="mt-3 grid gap-2 text-sm text-lotus-800">
+                      <div>
+                        <dt className="text-xs uppercase tracking-wide text-lotus-500">CPF</dt>
+                        <dd>{maskCpf(row.cpf)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs uppercase tracking-wide text-lotus-500">Nascimento</dt>
+                        <dd>{row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs uppercase tracking-wide text-lotus-500">Telefone</dt>
+                        <dd>{row.phone ? formatPhone(row.phone) : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs uppercase tracking-wide text-lotus-500">E-mail</dt>
+                        <dd className="break-all">{row.email ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs uppercase tracking-wide text-lotus-500">Cadastro</dt>
+                        <dd>{formatDateTime(row.createdAt)}</dd>
+                      </div>
+                    </dl>
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>
@@ -131,6 +137,7 @@ export function PatientList() {
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-lotus-100 text-xs uppercase tracking-wide text-lotus-500">
                 <tr>
+                  <th className="px-4 py-3">Foto</th>
                   <th className="px-4 py-3">Nome</th>
                   <th className="px-4 py-3">CPF</th>
                   <th className="px-4 py-3">Nascimento</th>
@@ -146,6 +153,12 @@ export function PatientList() {
                     className="cursor-pointer border-b border-lotus-50 align-top hover:bg-lotus-50/70"
                     onClick={() => router.push(`/app/patients/${row.id}`)}
                   >
+                    <td
+                      className="px-4 py-3"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
+                    </td>
                     <td className="px-4 py-3">
                       <Link href={`/app/patients/${row.id}`} className="block hover:text-lotus-700">
                         <p className="font-medium text-lotus-900">{row.fullName}</p>

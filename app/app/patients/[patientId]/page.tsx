@@ -5,12 +5,13 @@ export default function PatientDetailPage({
   searchParams,
 }: {
   params: { patientId: string };
-  searchParams?: { foto?: string };
+  searchParams?: { foto?: string; atualizado?: string };
 }) {
   return (
     <PatientDetail
       patientId={params.patientId}
       photoUploadFailed={searchParams?.foto === "falhou"}
+      updated={searchParams?.atualizado === "1"}
     />
   );
 }

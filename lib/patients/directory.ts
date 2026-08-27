@@ -44,6 +44,8 @@ export type PatientCreateContext = {
   createdBy: string;
 };
 
+export type PatientUpdateInput = PatientCreateInput;
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function asString(value: unknown): string | null {
@@ -107,6 +109,17 @@ function mapPhotoError(error: { code?: string; message?: string }): string {
     return "A sessão atual não possui permissão para alterar a fotografia.";
   }
   return "Não foi possível alterar a fotografia. Tente novamente.";
+}
+
+function mapUpdateError(error: { code?: string; message?: string }): string {
+  const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  if (error.code === "23505" || text.includes("duplicate") || text.includes("unique")) {
+    return "Já existe uma paciente cadastrada com este CPF.";
+  }
+  if (isRlsError(error) || error.code === "PGRST116") {
+    return "A sessão atual não possui permissão para alterar este cadastro.";
+  }
+  return "Não foi possível alterar o cadastro da paciente. Tente novamente.";
 }
 
 function isMissingPhotoPathColumn(error: { code?: string; message?: string }) {
@@ -275,6 +288,47 @@ export async function createPatient(
   }
   const row = toRow(data as Record<string, unknown>);
   if (!row) throw new Error("Não foi possível cadastrar a paciente. Tente novamente.");
+  return row;
+}
+
+export async function updatePatient(
+  supabase: SupabaseClient,
+  patientId: string,
+  input: PatientUpdateInput,
+): Promise<PatientListRow> {
+  const message = validatePatientCreateInput(input);
+  if (message) throw new Error(message);
+  if (!patientId) {
+    throw new Error("Não foi possível identificar a paciente.");
+  }
+
+  const fullName = input.fullName.trim();
+  const socialName = input.socialName.trim();
+  const cpfDigits = onlyDigits(input.cpf);
+  const phoneDigits = onlyDigits(input.phone);
+  const email = input.email.trim();
+  const birthDate = input.birthDate.trim();
+
+  const { data, error } = await supabase
+    .from("patients")
+    .update({
+      full_name: fullName,
+      social_name: socialName.length > 0 ? socialName : null,
+      cpf: cpfDigits.length === 11 ? cpfDigits : null,
+      birth_date: birthDate.length > 0 ? birthDate : null,
+      phone: phoneDigits.length > 0 ? phoneDigits : null,
+      email: email.length > 0 ? email : null,
+    })
+    .eq("id", patientId)
+    .select(PATIENT_LIST_COLUMNS)
+    .single();
+
+  if (error) {
+    logPatientError("update", error);
+    throw new Error(mapUpdateError(error));
+  }
+  const row = toRow(data as Record<string, unknown>);
+  if (!row) throw new Error("Não foi possível alterar o cadastro da paciente. Tente novamente.");
   return row;
 }
 

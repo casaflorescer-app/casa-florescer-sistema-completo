@@ -19,9 +19,11 @@ import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platf
 export function PatientDetail({
   patientId,
   photoUploadFailed = false,
+  updated = false,
 }: {
   patientId: string;
   photoUploadFailed?: boolean;
+  updated?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [row, setRow] = useState<PatientListRow | null>(null);
@@ -30,7 +32,9 @@ export function PatientDetail({
   const [notice, setNotice] = useState<string | null>(
     photoUploadFailed
       ? "Cadastro realizado, mas a fotografia não pôde ser salva. Tente novamente nesta tela."
-      : null,
+      : updated
+        ? "Cadastro atualizado com sucesso."
+        : null,
   );
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoStatus, setPhotoStatus] = useState<"none" | "loading" | "ready" | "error">("none");
@@ -139,7 +143,12 @@ export function PatientDetail({
         <Link href="/app/patients" className={`${ghostButtonClass} inline-flex items-center`}>
           Voltar para pacientes
         </Link>
-        <Link href="/app/patients/new" className={`${buttonClass} inline-flex items-center`}>
+        {row ? (
+          <Link href={`/app/patients/${patientId}/edit`} className={`${buttonClass} inline-flex items-center`}>
+            Editar cadastro
+          </Link>
+        ) : null}
+        <Link href="/app/patients/new" className={`${ghostButtonClass} inline-flex items-center`}>
           Nova paciente
         </Link>
       </div>

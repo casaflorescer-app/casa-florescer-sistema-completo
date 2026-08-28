@@ -60,6 +60,40 @@ export function eddFromLmp(lmpIso: string) {
   return `${y}-${m}-${d}`;
 }
 
+export type GestationalAge = {
+  weeks: number;
+  days: number;
+  totalDays: number;
+};
+
+/** Idade gestacional derivada (DUM → data de referência). Não persistir. */
+export function gestationalAgeFromLmp(
+  lmpIso: string,
+  onDate = new Date(),
+): GestationalAge | null {
+  if (!lmpIso) return null;
+  const lmp = new Date(`${lmpIso}T00:00:00`);
+  if (Number.isNaN(lmp.getTime())) return null;
+  const start = new Date(onDate.getFullYear(), onDate.getMonth(), onDate.getDate());
+  const diffMs = start.getTime() - lmp.getTime();
+  if (diffMs < 0) return null;
+  const totalDays = Math.floor(diffMs / 86_400_000);
+  return {
+    weeks: Math.floor(totalDays / 7),
+    days: totalDays % 7,
+    totalDays,
+  };
+}
+
+export function formatGestationalAge(lmpIso: string, onDate = new Date()) {
+  const age = gestationalAgeFromLmp(lmpIso, onDate);
+  if (!age) return "—";
+  const weekLabel = age.weeks === 1 ? "semana" : "semanas";
+  if (age.days === 0) return `${age.weeks} ${weekLabel}`;
+  const dayLabel = age.days === 1 ? "dia" : "dias";
+  return `${age.weeks} ${weekLabel} e ${age.days} ${dayLabel}`;
+}
+
 export function formatIsoDateBr(iso: string) {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");

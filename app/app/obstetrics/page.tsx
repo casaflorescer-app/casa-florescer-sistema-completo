@@ -1,11 +1,5 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { PregnancyBoard } from "@/components/pregnancies/PregnancyBoard";
 
 export default function ObstetricsPage() {
-  return (
-    <ModulePlaceholder
-      title="Obstetrícia"
-      area="clinica"
-      description="Módulo em implementação. Disponível apenas para membership médico."
-    />
-  );
+  return <PregnancyBoard />;
 }

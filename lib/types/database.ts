@@ -152,6 +152,20 @@ export type ObstetricFollowup = {
   notes: string | null;
 };
 
+export type PregnancyStatus = "in_care" | "closed" | "transferred" | "cancelled";
+export type PregnancyRisk = "habitual" | "high";
+export type PregnancyEventKind =
+  | "created"
+  | "updated"
+  | "principal_changed"
+  | "backup_changed"
+  | "practice_changed"
+  | "closed"
+  | "transferred"
+  | "cancelled"
+  | "backup_access_granted"
+  | "backup_access_revoked";
+
 export type DailyCapacity = {
   id: string;
   professional_id: string;

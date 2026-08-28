@@ -19,6 +19,7 @@ import {
 } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
+import { PatientPregnancies } from "@/components/pregnancies/PatientPregnancies";
 
 export function PatientDetail({
   patientId,
@@ -330,6 +331,8 @@ export function PatientDetail({
               ) : null}
             </dl>
           </section>
+
+          <PatientPregnancies patientId={patientId} />
         </>
       ) : null}
     </div>

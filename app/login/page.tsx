@@ -25,14 +25,14 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-[#4A1D34]/35" aria-hidden />
 
-      <div className="relative z-10 w-full max-w-md isolate rounded-2xl border border-white/50 bg-white/70 p-8 shadow-2xl backdrop-blur-lg">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-[#9B406C]/20 bg-[#F7E3E9]/85 p-8 shadow-2xl backdrop-blur-lg">
         <div className="flex flex-col items-center text-center">
           <img
             src={logo}
             alt="Casa Florescer"
             width={88}
             height={88}
-            className="h-20 w-20 bg-transparent object-contain mix-blend-multiply"
+            className="h-20 w-20 bg-transparent object-contain"
           />
           <h1
             className={`${playfair.className} mt-4 text-2xl font-semibold tracking-[0.18em] text-[#9B406C]`}

@@ -27,6 +27,7 @@ import {
   type PregnancyEventRow,
   type PregnancyRow,
 } from "@/lib/pregnancies/directory";
+import { PregnancyProceduresPanel } from "@/components/pregnancies/PregnancyProceduresPanel";
 import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 
 export function PregnancyDetail({
@@ -370,6 +371,16 @@ export function PregnancyDetail({
               <Item label="Observações" value={row.notes ?? "—"} />
             </dl>
           </section>
+
+          <PregnancyProceduresPanel
+            pregnancyId={row.id}
+            practiceId={row.practiceId}
+            primaryProfessionalId={row.primaryProfessionalId}
+            backupProfessionalId={row.backupProfessionalId}
+            primaryName={row.primaryName}
+            backupName={row.backupName}
+            nameByProfessionalId={eventNames}
+          />
 
           <section className="card mt-6 max-w-xl" aria-labelledby="pregnancy-history-title">
             <h2 id="pregnancy-history-title" className="font-semibold text-lotus-900">

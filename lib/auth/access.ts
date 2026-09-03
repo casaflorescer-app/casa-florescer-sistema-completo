@@ -44,6 +44,60 @@ export function canManageProfessionalPolicy(
   );
 }
 
+/**
+ * B2 UI — repasse entre médicas.
+ * NÃO usar canViewCarePolicies: flag da secretária não concede acesso financeiro.
+ * Owner/admin: consulta. Principal e retaguarda envolvida: leitura.
+ */
+export function canViewProcedurePayout(
+  auth: AuthorizationContext,
+  practiceId: string,
+  principalProfessionalId: string,
+  backupProfessionalId: string | null,
+): boolean {
+  const atPractice = auth.memberships.filter((item) => item.practiceId === practiceId);
+  if (atPractice.some((item) => item.role === "owner" || item.role === "admin")) {
+    return true;
+  }
+  return atPractice.some((item) => {
+    if (item.role !== "physician" || !item.professional?.id) return false;
+    if (item.professional.id === principalProfessionalId) return true;
+    if (backupProfessionalId && item.professional.id === backupProfessionalId) return true;
+    return false;
+  });
+}
+
+/** Somente a médica principal gerencia valor/status do repasse. Owner/admin não. */
+export function canManageProcedurePayout(
+  auth: AuthorizationContext,
+  practiceId: string,
+  principalProfessionalId: string,
+): boolean {
+  return auth.memberships.some(
+    (item) =>
+      item.practiceId === practiceId &&
+      item.role === "physician" &&
+      item.professional?.id === principalProfessionalId,
+  );
+}
+
+/** Retaguarda envolvida pode editar apenas observações (D1-B). */
+export function canEditProcedurePayoutNotes(
+  auth: AuthorizationContext,
+  practiceId: string,
+  principalProfessionalId: string,
+  backupProfessionalId: string | null,
+): boolean {
+  if (canManageProcedurePayout(auth, practiceId, principalProfessionalId)) return true;
+  if (!backupProfessionalId) return false;
+  return auth.memberships.some(
+    (item) =>
+      item.practiceId === practiceId &&
+      item.role === "physician" &&
+      item.professional?.id === backupProfessionalId,
+  );
+}
+
 export function isPatientPortalUser(auth: AuthorizationContext): boolean {
   return Boolean(auth.patientAccount);
 }

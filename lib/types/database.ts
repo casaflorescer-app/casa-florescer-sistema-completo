@@ -308,3 +308,46 @@ export type ProfessionalCarePolicyVersion = {
   created_by: string | null;
   created_at: string;
 };
+
+/** B2 — ocorrência de procedimento na gestação (não é política comercial). */
+export type PregnancyProcedure = {
+  id: string;
+  organization_id: string;
+  practice_id: string;
+  pregnancy_id: string;
+  procedure_id: string;
+  procedure_code: string;
+  performed_by_professional_id: string;
+  performed_as: "principal" | "backup";
+  backup_grant_id: string | null;
+  performed_at: string;
+  notes: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** B2 — repasse opcional principal → retaguarda (amount_cents). */
+export type PregnancyProcedurePayout = {
+  id: string;
+  organization_id: string;
+  practice_id: string;
+  pregnancy_id: string;
+  pregnancy_procedure_id: string;
+  principal_professional_id: string;
+  backup_professional_id: string;
+  amount_cents: number;
+  status: "pending" | "settled" | "cancelled";
+  effective_on: string | null;
+  notes: string | null;
+  cancel_reason: string | null;
+  created_by: string;
+  updated_by: string | null;
+  settled_at: string | null;
+  settled_by: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  created_at: string;
+  updated_at: string;
+};

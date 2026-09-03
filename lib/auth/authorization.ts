@@ -54,6 +54,7 @@ export type AuthorizationMembership = {
   canCashier: boolean;
   canScheduleAnyPractice: boolean;
   canManageStock: boolean;
+  canViewCarePolicies: boolean;
   professional: AuthorizationProfessional | null;
 };
 
@@ -223,6 +224,7 @@ function toMembership(
     canCashier: asBoolean(row.can_cashier),
     canScheduleAnyPractice: asBoolean(row.can_schedule_any_practice),
     canManageStock: asBoolean(row.can_manage_stock),
+    canViewCarePolicies: asBoolean(row.can_view_care_policies),
     professional,
   };
 }
@@ -253,7 +255,7 @@ export async function loadAuthorizationContext(
       supabase
         .from("user_practice_roles")
         .select(
-          "id, practice_id, role, clinical_access, can_cashier, can_schedule_any_practice, can_manage_stock, practice_units ( id, organization_id, kind, code, name, specialty, isolation_label, is_active )",
+          "id, practice_id, role, clinical_access, can_cashier, can_schedule_any_practice, can_manage_stock, can_view_care_policies, practice_units ( id, organization_id, kind, code, name, specialty, isolation_label, is_active )",
         )
         .eq("user_id", authUser.id),
       supabase
@@ -311,11 +313,26 @@ export async function loadAuthorizationContext(
       const plainRoles = await supabase
         .from("user_practice_roles")
         .select(
-          "id, practice_id, role, clinical_access, can_cashier, can_schedule_any_practice, can_manage_stock",
+          "id, practice_id, role, clinical_access, can_cashier, can_schedule_any_practice, can_manage_stock, can_view_care_policies",
         )
         .eq("user_id", authUser.id);
       if (plainRoles.error) {
-        errors.push(classifyError(plainRoles.error, "user_practice_roles"));
+        const withoutFlag = await supabase
+          .from("user_practice_roles")
+          .select(
+            "id, practice_id, role, clinical_access, can_cashier, can_schedule_any_practice, can_manage_stock",
+          )
+          .eq("user_id", authUser.id);
+        if (withoutFlag.error) {
+          errors.push(classifyError(withoutFlag.error, "user_practice_roles"));
+        } else {
+          context.memberships = (withoutFlag.data ?? []).flatMap((row) => {
+            const practiceId = asString(row.practice_id);
+            const role = parseStaffRole(row.role);
+            if (!practiceId || !role) return [];
+            return [toMembership(row as Record<string, unknown>, practiceId, role, null, professionals)];
+          });
+        }
       } else {
         context.memberships = (plainRoles.data ?? []).flatMap((row) => {
           const practiceId = asString(row.practice_id);

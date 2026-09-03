@@ -62,6 +62,7 @@ export type UserPracticeRole = {
   can_cashier: boolean;
   can_schedule_any_practice: boolean;
   can_manage_stock: boolean;
+  can_view_care_policies: boolean;
 };
 
 export type PracticeUnit = {
@@ -280,4 +281,30 @@ export type StockAudit = {
   counted_by: string;
   counted_at: string;
   notes: string | null;
+};
+
+export type ProfessionalCarePolicy = {
+  id: string;
+  professional_id: string;
+  practice_id: string;
+  organization_id: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type ProfessionalCarePolicyVersion = {
+  id: string;
+  policy_id: string;
+  professional_id: string;
+  practice_id: string;
+  organization_id: string;
+  version_number: number;
+  normal_birth_cents: number;
+  cesarean_cents: number;
+  requires_availability_for_prenatal: boolean;
+  allows_prenatal_exception: boolean;
+  effective_from: string;
+  effective_to: string | null;
+  created_by: string | null;
+  created_at: string;
 };

@@ -12,7 +12,7 @@ import {
 
 const STAFF_ROLES: AppRole[] = STAFF_ROLE_OPTIONS.map((item) => item.value);
 const MEMBERSHIP_COLUMNS =
-  "id, user_id, role, clinical_access, practice_id, practice_units ( name, code, kind, organization_id )" as const;
+  "id, user_id, role, clinical_access, can_view_care_policies, practice_id, practice_units ( name, code, kind, organization_id )" as const;
 
 function asString(value: unknown) {
   return typeof value === "string" ? value : null;
@@ -89,16 +89,16 @@ function toMembership(row: Record<string, unknown>): PlatformMembership | null {
     practiceKind: practice.kind,
     role,
     clinicalAccess: asString(row.clinical_access) ?? "none",
+    canViewCarePolicies: asBoolean(row.can_view_care_policies),
   };
 }
 
 export async function listPlatformUsers(supabase: SupabaseClient): Promise<PlatformUser[]> {
-  let rolesResult = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS);
-  if (rolesResult.error) {
-    rolesResult = await supabase
-      .from("user_practice_roles")
-      .select("id, user_id, role, clinical_access, practice_id");
-  }
+  const rolesPrimary = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS);
+  const rolesFallback = rolesPrimary.error
+    ? await supabase.from("user_practice_roles").select("id, user_id, role, clinical_access, practice_id")
+    : null;
+  const rolesResult = rolesPrimary.error ? rolesFallback : rolesPrimary;
 
   const [profilesResult, orgsResult, adminsResult] = await Promise.all([
     supabase
@@ -111,7 +111,7 @@ export async function listPlatformUsers(supabase: SupabaseClient): Promise<Platf
 
   if (profilesResult.error) throw new Error(mapDbError(profilesResult.error));
   if (orgsResult.error) throw new Error(mapDbError(orgsResult.error));
-  if (rolesResult.error) throw new Error(mapDbError(rolesResult.error));
+  if (!rolesResult || rolesResult.error) throw new Error(mapDbError(rolesResult?.error ?? null));
   const activeAdmins = new Set(
     (adminsResult.error ? [] : adminsResult.data ?? [])
       .filter((row) => row.revoked_at == null)
@@ -290,16 +290,17 @@ export async function listUserMemberships(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<PlatformMembership[]> {
-  let result = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS).eq("user_id", userId);
-  if (result.error) {
-    result = await supabase
-      .from("user_practice_roles")
-      .select("id, user_id, role, clinical_access, practice_id")
-      .eq("user_id", userId);
-  }
-  if (result.error) {
-    logMembershipError("list", result.error);
-    throw new Error(mapMembershipError(result.error));
+  const primary = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS).eq("user_id", userId);
+  const fallback = primary.error
+    ? await supabase
+        .from("user_practice_roles")
+        .select("id, user_id, role, clinical_access, practice_id")
+        .eq("user_id", userId)
+    : null;
+  const result = primary.error ? fallback : primary;
+  if (!result || result.error) {
+    logMembershipError("list", result?.error ?? { message: "unknown" });
+    throw new Error(mapMembershipError(result?.error ?? {}));
   }
   return (result.data ?? []).flatMap((row) => {
     const membership = toMembership(row as Record<string, unknown>);
@@ -370,5 +371,20 @@ export async function deleteMembership(supabase: SupabaseClient, membershipId: s
   if (error) {
     logMembershipError("delete", error);
     throw new Error(mapMembershipError(error));
+  }
+}
+
+export async function setSecretaryCarePolicyView(
+  supabase: SupabaseClient,
+  membershipId: string,
+  enabled: boolean,
+) {
+  const { error } = await supabase.rpc("set_secretary_care_policy_view", {
+    p_membership_id: membershipId,
+    p_enabled: enabled,
+  });
+  if (error) {
+    logMembershipError("care_policy_view", error);
+    throw new Error(error.message || mapMembershipError(error));
   }
 }

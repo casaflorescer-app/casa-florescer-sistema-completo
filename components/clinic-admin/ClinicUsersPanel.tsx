@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { listPlatformUsers, setProfileActive } from "@/lib/platform/users";
-import type { PlatformUser } from "@/lib/platform/types";
+import { listPlatformUsers, setProfileActive, setSecretaryCarePolicyView } from "@/lib/platform/users";
+import type { PlatformMembership, PlatformUser } from "@/lib/platform/types";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { roleLabels } from "@/lib/auth/app-nav";
 import { formatDateTime } from "@/lib/platform/format";
@@ -62,6 +62,40 @@ export function ClinicUsersPanel() {
     }
   }
 
+  async function toggleCarePolicyView(user: PlatformUser, membership: PlatformMembership) {
+    const supabase = createClient();
+    if (!supabase) return;
+    try {
+      await setSecretaryCarePolicyView(supabase, membership.id, !membership.canViewCarePolicies);
+      setUsers((current) =>
+        current.map((item) =>
+          item.id !== user.id
+            ? item
+            : {
+                ...item,
+                memberships: item.memberships.map((entry) =>
+                  entry.id === membership.id
+                    ? { ...entry, canViewCarePolicies: !entry.canViewCarePolicies }
+                    : entry,
+                ),
+              },
+        ),
+      );
+      setNotice(
+        membership.canViewCarePolicies
+          ? "Permissão de visualizar políticas revogada."
+          : "Permissão de visualizar políticas concedida.",
+      );
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível alterar a permissão.");
+    }
+  }
+
+  const secretaries = users.filter((item) =>
+    item.memberships.some((membership) => membership.role === "secretary"),
+  );
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
@@ -118,6 +152,50 @@ export function ClinicUsersPanel() {
           </tbody>
         </table>
       </div>
+
+      <section className="mt-10">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-lotus-500">
+          Permissões comerciais da secretária
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-lotus-700">
+          Independente do prontuário, das gestações, da agenda e dos exames. Controla somente a
+          consulta da política padrão e dos valores de atendimento nesta prática. Nenhuma secretária
+          comum publica ou altera política.
+        </p>
+        {secretaries.length === 0 && !loading ? (
+          <p className="mt-4 text-sm text-lotus-600">Nenhuma secretária comum vinculada.</p>
+        ) : null}
+        <div className="mt-4 space-y-3">
+          {secretaries.map((user) => (
+            <article key={user.id} className="rounded-2xl border border-lotus-100 bg-white p-4">
+              <p className="font-medium text-lotus-900">{user.fullName}</p>
+              <p className="text-sm text-lotus-600">{user.email}</p>
+              <ul className="mt-3 space-y-2">
+                {user.memberships
+                  .filter((membership) => membership.role === "secretary")
+                  .map((membership) => (
+                    <li key={membership.id}>
+                      <label className="flex items-start gap-2 text-sm text-lotus-800">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={membership.canViewCarePolicies}
+                          onChange={() => void toggleCarePolicyView(user, membership)}
+                        />
+                        <span>
+                          Visualizar políticas e valores de atendimento
+                          <span className="mt-0.5 block text-xs text-lotus-600">
+                            {membership.practiceName}
+                          </span>
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

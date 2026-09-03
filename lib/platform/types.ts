@@ -15,6 +15,7 @@ export type PlatformMembership = {
   practiceKind: PracticeKind | null;
   role: AppRole;
   clinicalAccess: string;
+  canViewCarePolicies: boolean;
 };
 
 export type PlatformPractice = {

@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/app/admin/permissions", label: "Permissões" },
   { href: "/app/admin/audit", label: "Auditoria" },
   { href: "/app/admin/settings", label: "Configurações da clínica" },
+  { href: "/app/care-policies", label: "Política de atendimento" },
 ];
 
 export default function ClinicAdminHomePage() {

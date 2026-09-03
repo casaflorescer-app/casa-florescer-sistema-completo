@@ -1,5 +1,6 @@
 import type { AuthorizationContext, StaffRole } from "@/lib/auth/authorization";
 import {
+  canViewCarePolicies,
   hasStaffRole,
   isClinicStaff,
   isPatientPortalUser,
@@ -31,6 +32,7 @@ const clinicStaff = (auth: AuthorizationContext) => isClinicStaff(auth);
 const physician = (auth: AuthorizationContext) => hasStaffRole(auth, "physician");
 const clinicManagers = (auth: AuthorizationContext) =>
   hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin");
+const carePolicyViewers = (auth: AuthorizationContext) => canViewCarePolicies(auth);
 
 export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
@@ -100,6 +102,12 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
           auth.memberships.some((item) => item.canManageStock),
       },
       { id: "reports", label: "Financeiro e relatórios", href: "/app/reports", visible: clinicManagers },
+      {
+        id: "care-policies",
+        label: "Política de atendimento",
+        href: "/app/care-policies",
+        visible: carePolicyViewers,
+      },
     ],
   },
   {

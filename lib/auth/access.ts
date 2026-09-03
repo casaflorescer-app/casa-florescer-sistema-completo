@@ -18,6 +18,32 @@ export function isClinicStaff(auth: AuthorizationContext): boolean {
   return hasAnyStaffRole(auth, CLINIC_STAFF);
 }
 
+/** UI da política comercial (B1). Não substitui RLS. Secretária comum só com flag. */
+export function canManageCarePolicies(auth: AuthorizationContext): boolean {
+  return hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin") || hasStaffRole(auth, "physician");
+}
+
+export function canViewCarePolicies(auth: AuthorizationContext): boolean {
+  if (canManageCarePolicies(auth)) return true;
+  return auth.memberships.some(
+    (item) => item.role === "secretary" && item.canViewCarePolicies,
+  );
+}
+
+export function canManageProfessionalPolicy(
+  auth: AuthorizationContext,
+  practiceId: string,
+  professionalId: string,
+): boolean {
+  const atPractice = auth.memberships.filter((item) => item.practiceId === practiceId);
+  if (atPractice.some((item) => item.role === "owner" || item.role === "admin")) {
+    return true;
+  }
+  return atPractice.some(
+    (item) => item.role === "physician" && item.professional?.id === professionalId,
+  );
+}
+
 export function isPatientPortalUser(auth: AuthorizationContext): boolean {
   return Boolean(auth.patientAccount);
 }
@@ -72,6 +98,10 @@ const PATH_RULES: PathRule[] = [
   {
     prefix: "/app/specialties",
     allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
+  },
+  {
+    prefix: "/app/care-policies",
+    allow: (auth) => canViewCarePolicies(auth),
   },
   {
     prefix: "/app/agenda",

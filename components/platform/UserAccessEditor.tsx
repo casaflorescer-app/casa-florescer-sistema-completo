@@ -7,6 +7,7 @@ import {
   deleteMembership,
   listPracticeUnits,
   listUserMemberships,
+  setSecretaryCarePolicyView,
 } from "@/lib/platform/users";
 import {
   STAFF_ROLE_OPTIONS,
@@ -136,6 +137,28 @@ export function UserAccessEditor({
     }
   }
 
+  async function toggleCarePolicyView(membership: PlatformMembership) {
+    if (busy) return;
+    const supabase = createClient();
+    if (!supabase) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await setSecretaryCarePolicyView(supabase, membership.id, !membership.canViewCarePolicies);
+      setNotice(
+        membership.canViewCarePolicies
+          ? "Permissão de visualizar políticas revogada."
+          : "Permissão de visualizar políticas concedida.",
+      );
+      await loadAccess();
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível alterar a permissão.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="card mt-4 space-y-4 text-sm text-lotus-800" aria-labelledby="edit-access-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -169,6 +192,7 @@ export function UserAccessEditor({
               <tr>
                 <th className="px-4 py-3">Prática</th>
                 <th className="px-4 py-3">Função</th>
+                <th className="px-4 py-3">Permissão comercial</th>
                 <th className="px-4 py-3">Ações</th>
               </tr>
             </thead>
@@ -182,6 +206,27 @@ export function UserAccessEditor({
                       {kind ? <p className="text-xs text-lotus-600">{kind}</p> : null}
                     </td>
                     <td className="px-4 py-3">{roleLabel(item.role)}</td>
+                    <td className="px-4 py-3">
+                      {item.role === "secretary" ? (
+                        <label className="flex items-start gap-2 text-sm text-lotus-800">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={item.canViewCarePolicies}
+                            disabled={busy}
+                            onChange={() => void toggleCarePolicyView(item)}
+                          />
+                          <span>
+                            Visualizar políticas e valores de atendimento
+                            <span className="mt-0.5 block text-xs text-lotus-600">
+                              Permissão comercial desta prática. Não é acesso clínico.
+                            </span>
+                          </span>
+                        </label>
+                      ) : (
+                        <span className="text-lotus-500">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {confirmId === item.id ? (
                         <div className="space-y-2">

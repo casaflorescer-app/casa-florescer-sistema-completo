@@ -22,7 +22,7 @@ export async function requireRole(role: UiRole) {
 
 export async function requireStaff() {
   const session = await requireSession();
-  if (session.uiRole === "patient") redirect("/paciente");
+  if (session.uiRole === "patient") redirect("/app/portal");
   return session;
 }
 

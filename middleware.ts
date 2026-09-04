@@ -3,6 +3,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 import {
   AUTHENTICATED_HOME,
   isAuthEntryPath,
+  isLegacyPortalPath,
   isPublicPath,
 } from "@/lib/auth/paths";
 
@@ -40,7 +41,19 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    url.searchParams.set("next", pathname);
+    // Legado → login com next=/app (evita round-trip e open-redirect via next)
+    url.searchParams.set(
+      "next",
+      isLegacyPortalPath(pathname) ? AUTHENTICATED_HOME : pathname,
+    );
+    return NextResponse.redirect(url);
+  }
+
+  // B3.2: superfície oficial única — portais legados redirecionam para /app
+  if (isLegacyPortalPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = AUTHENTICATED_HOME;
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

@@ -1,3 +1,4 @@
+import { AUTHENTICATED_HOME } from "./auth/paths";
 import type { AppRole } from "./types/database";
 import type { SessionContext, UiRole } from "./types/domain";
 import {
@@ -28,19 +29,21 @@ export function resolveUiRole(
   return null;
 }
 
+/** Prefixo legado (preview/_dynamic). Fluxo oficial usa /app via middleware. */
 const ROLE_PREFIX: Record<UiRole, string> = {
-  physician: "/medica",
-  secretary: "/secretaria",
-  manager: "/gestao",
-  patient: "/paciente",
+  physician: "/app",
+  secretary: "/app",
+  manager: "/app",
+  patient: "/app/portal",
 };
 
 export function homeForRole(role: UiRole, permissions?: ModuleId[]): string {
+  if (role === "patient") return "/app/portal";
   const ids = permissions ?? defaultModulesForRole(role);
-  if (role === "patient") return "/paciente";
-  return firstSidebarHref(role, ids) ?? "/login";
+  return firstSidebarHref(role, ids) ?? AUTHENTICATED_HOME;
 }
 
+/** ACL preview/_dynamic. Autorização oficial: AppRouteGuard + RLS. */
 export function canAccessPath(
   role: UiRole,
   pathname: string,
@@ -48,26 +51,38 @@ export function canAccessPath(
 ): boolean {
   if (pathname === "/" || pathname.startsWith("/login")) return true;
   if (isMasterAdminRole(role)) return true;
+
   if (role === "patient") {
-    return pathname === "/paciente" || pathname.startsWith("/paciente/");
+    return (
+      pathname === "/app/portal" ||
+      pathname.startsWith("/app/portal/") ||
+      pathname === "/app" ||
+      pathname === "/app/dashboard"
+    );
   }
-  if (pathname.startsWith("/paciente")) return false;
+
+  // Portais legados isolados — preview não deve tratá-los como área ativa
+  if (
+    pathname.startsWith("/medica") ||
+    pathname.startsWith("/secretaria") ||
+    pathname.startsWith("/gestao") ||
+    pathname.startsWith("/paciente")
+  ) {
+    return false;
+  }
+
+  if (pathname === "/app" || pathname.startsWith("/app/")) {
+    const mod = moduleByPath(pathname);
+    if (!mod) return true;
+    return hasModule(permissions, mod.id);
+  }
 
   const prefix = ROLE_PREFIX[role];
   const inOwnArea = pathname === prefix || pathname.startsWith(`${prefix}/`);
-
-  if (role !== "manager" && !inOwnArea) return false;
+  if (!inOwnArea) return false;
 
   const mod = moduleByPath(pathname);
-  if (!mod) {
-    return (
-      inOwnArea ||
-      (role === "manager" &&
-        (pathname.startsWith("/medica") ||
-          pathname.startsWith("/secretaria") ||
-          pathname.startsWith("/gestao")))
-    );
-  }
+  if (!mod) return true;
   return hasModule(permissions, mod.id);
 }
 

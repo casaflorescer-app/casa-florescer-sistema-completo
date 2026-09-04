@@ -18,16 +18,16 @@ export type AppModule = {
 };
 
 export const APP_MODULES: AppModule[] = [
-  { id: "agenda", label: "Agenda", href: "/secretaria/agenda", description: "Consultas do dia" },
-  { id: "pacientes", label: "Cadastro de Paciente", href: "/secretaria/pacientes", description: "Ficha e contato" },
-  { id: "exames", label: "Exames", href: "/secretaria/exames", description: "Solicitação e retirada" },
-  { id: "prontuario", label: "Prontuário", href: "/medica/prontuario", description: "Histórico obstétrico" },
-  { id: "obstetrico", label: "Programação obstétrica", href: "/medica", description: "Datas prováveis de parto" },
-  { id: "capacidade", label: "Capacidade", href: "/medica/capacidade", description: "Teto diário" },
-  { id: "estoque", label: "Estoque", href: "/gestao/estoque", description: "Casa inteira, por setor" },
-  { id: "auditoria", label: "Auditoria", href: "/gestao/auditoria", description: "Conferência de estoque" },
-  { id: "contratos", label: "Contratos e Sublocações", href: "/gestao/contratos", description: "Aluguel com água, luz e internet" },
-  { id: "permissoes", label: "Usuários", href: "/gestao/usuarios", description: "Colaboradores e módulos" },
+  { id: "agenda", label: "Agenda", href: "/app/agenda", description: "Consultas do dia" },
+  { id: "pacientes", label: "Cadastro de Paciente", href: "/app/patients", description: "Ficha e contato" },
+  { id: "exames", label: "Exames", href: "/app/exams", description: "Solicitação e retirada" },
+  { id: "prontuario", label: "Prontuário", href: "/app/records", description: "Histórico obstétrico" },
+  { id: "obstetrico", label: "Programação obstétrica", href: "/app/obstetrics", description: "Datas prováveis de parto" },
+  { id: "capacidade", label: "Capacidade", href: "/app", description: "Teto diário (módulo futuro)" },
+  { id: "estoque", label: "Estoque", href: "/app/inventory", description: "Casa inteira, por setor" },
+  { id: "auditoria", label: "Auditoria", href: "/app/admin/audit", description: "Trilha de auditoria" },
+  { id: "contratos", label: "Contratos e Sublocações", href: "/app/rentals", description: "Aluguel com água, luz e internet" },
+  { id: "permissoes", label: "Usuários", href: "/app/admin/users", description: "Colaboradores e módulos" },
 ];
 
 export const MODULE_IDS = APP_MODULES.map((item) => item.id);
@@ -88,7 +88,7 @@ export function canAccessModule(
 export function moduleByPath(pathname: string): AppModule | undefined {
   const exact = APP_MODULES.find((item) => item.href === pathname);
   if (exact) return exact;
-  return APP_MODULES.filter((item) => item.href !== "/medica")
+  return APP_MODULES.filter((item) => item.href !== "/app")
     .filter((item) => pathname.startsWith(`${item.href}/`) || pathname === item.href)
     .sort((a, b) => b.href.length - a.href.length)[0];
 }

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { mapAuthError } from "@/lib/auth/errors";
-import { AUTHENTICATED_HOME } from "@/lib/auth/paths";
+import { resolveAuthenticatedPath } from "@/lib/auth/paths";
 
 const inputClass =
   "w-full rounded-xl border border-rose-100 bg-white py-3 pl-11 pr-4 text-sm text-rose-900 outline-none transition placeholder:text-rose-900/35 focus:border-rose-300 focus:ring-2 focus:ring-rose-300/70";
@@ -59,9 +59,7 @@ export function LoginForm() {
         return;
       }
 
-      const next = searchParams.get("next");
-      const destination =
-        next && next.startsWith("/") && !next.startsWith("//") ? next : AUTHENTICATED_HOME;
+      const destination = resolveAuthenticatedPath(searchParams.get("next"));
       router.replace(destination);
       router.refresh();
     } catch (err) {

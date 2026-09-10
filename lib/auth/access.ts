@@ -205,6 +205,23 @@ export function canAccessAppPath(
   pathname: string,
 ): boolean {
   const path = normalizePath(pathname);
+  if (path === "/unauthorized") return true;
+
+  // Perfil inativo: sessão Auth pode existir, mas operação no /app é negada na UI.
+  // RLS já bloqueia via has_practice_role (exige profiles.is_active).
+  if (auth.profile && !auth.profile.isActive) {
+    return false;
+  }
+
+  // Sem membership, sem portal paciente e sem SYSTEM_ADMIN → sem superfície operacional.
+  if (
+    auth.memberships.length === 0 &&
+    !auth.patientAccount &&
+    !auth.isSystemAdmin
+  ) {
+    return false;
+  }
+
   const rule = SORTED_RULES.find((item) => {
     if (item.exact) return path === item.prefix;
     return path === item.prefix || path.startsWith(`${item.prefix}/`);

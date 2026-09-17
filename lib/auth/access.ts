@@ -120,8 +120,9 @@ type PathRule = {
 };
 
 /**
- * Regras de UI/rota. Não substituem RLS.
- * SYSTEM_ADMIN não recebe clínica automaticamente.
+ * Regras de rota compartilhadas (server + client).
+ * Usadas por canAccessAppPath → requireAppRouteAccess (B3.4.1) e AppRouteGuard.
+ * Não substituem RLS/RPC. SYSTEM_ADMIN não recebe clínica automaticamente.
  */
 const PATH_RULES: PathRule[] = [
   { prefix: "/unauthorized", exact: true, allow: () => true },
@@ -200,6 +201,10 @@ const PATH_RULES: PathRule[] = [
 
 const SORTED_RULES = [...PATH_RULES].sort((a, b) => b.prefix.length - a.prefix.length);
 
+/**
+ * Decisão pura de acesso à rota (server e client).
+ * Inativo / sem membership / PATH_RULES — mesma fonte para B3.4.1 e AppRouteGuard.
+ */
 export function canAccessAppPath(
   auth: AuthorizationContext,
   pathname: string,
@@ -207,8 +212,8 @@ export function canAccessAppPath(
   const path = normalizePath(pathname);
   if (path === "/unauthorized") return true;
 
-  // Perfil inativo: sessão Auth pode existir, mas operação no /app é negada na UI.
-  // RLS já bloqueia via has_practice_role (exige profiles.is_active).
+  // Perfil inativo: sessão Auth pode existir, mas /app é negado (server + UI).
+  // RLS também bloqueia via has_practice_role (exige profiles.is_active).
   if (auth.profile && !auth.profile.isActive) {
     return false;
   }

@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { AppLoadingShell, AppShell } from "@/components/layout/AppShell";
 import { resolveAppRouteAccess } from "@/lib/auth/guards";
 
+/** ACL client/UX. Autorização server-side: requireAppRouteAccess (B3.4.1). Dados: RLS/RPC. */
 export function AppRouteGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/app";
   const router = useRouter();

@@ -1,6 +1,9 @@
 /** Landing autenticada — superfície operacional oficial. */
 export const AUTHENTICATED_HOME = "/app";
 
+/** Pathname da request injetado pelo middleware para o guard server-side (B3.4.1). */
+export const APP_PATHNAME_HEADER = "x-casa-pathname";
+
 /** Portais legados (mock/protótipo). Isolados na B3.2 — código preservado. */
 export const LEGACY_PORTAL_PREFIXES = [
   "/medica",

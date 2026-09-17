@@ -11,7 +11,12 @@ export async function requireSession(): Promise<SessionContext> {
   return session;
 }
 
-/** Autenticação de sessão. A autorização de rota da FASE 6 está em AppWorkspace. */
+/**
+ * Somente autenticação de sessão (não aplica o papel).
+ * Autorização server-side de /app: requireAppRouteAccess (B3.4.1).
+ * Autorização client/UX: AppRouteGuard + PATH_RULES.
+ * Dados: RLS/RPC.
+ */
 export async function requireRole(_role: UiRole) {
   return requireSession();
 }
@@ -20,7 +25,10 @@ export async function requireStaff() {
   return requireSession();
 }
 
-/** Autenticação de sessão. Módulos novos usam AppRouteGuard + memberships. */
+/**
+ * Somente autenticação de sessão (não aplica o módulo).
+ * Autorização server-side de /app: requireAppRouteAccess (B3.4.1).
+ */
 export async function requireModule(_moduleId: ModuleId) {
   return requireSession();
 }

@@ -139,7 +139,36 @@ export type Appointment = {
   ends_at: string;
   status: AppointmentStatus;
   urgency_note: string | null;
+  source: string;
+  checkin_at: string | null;
+  checked_in_by: string | null;
   created_by: string;
+};
+
+export type Encounter = {
+  id: string;
+  organization_id: string;
+  practice_id: string;
+  appointment_id: string | null;
+  patient_id: string;
+  professional_id: string;
+  procedure_id: string | null;
+  status: EncounterStatus;
+  signed_at: string | null;
+  signed_by: string | null;
+  created_at: string;
+};
+
+export type ClinicalNote = {
+  id: string;
+  encounter_id: string;
+  organization_id: string;
+  practice_id: string;
+  body_ciphertext: string;
+  template_code: string | null;
+  version: number;
+  created_by: string;
+  created_at: string;
 };
 
 export type ObstetricFollowup = {

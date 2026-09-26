@@ -1,11 +1,5 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { AgendaPage } from "@/components/attendance/AgendaPage";
 
-export default function AgendaPage() {
-  return (
-    <ModulePlaceholder
-      title="Agenda"
-      area="clinica"
-      description="Módulo em implementação."
-    />
-  );
+export default function Page() {
+  return <AgendaPage />;
 }

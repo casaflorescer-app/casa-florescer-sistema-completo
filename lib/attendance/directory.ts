@@ -5,6 +5,8 @@ import type {
   AppointmentKind,
   AppointmentStatus,
   EncounterStatus,
+  PregnancyRisk,
+  PregnancyStatus,
 } from "@/lib/types/database";
 import {
   DEFAULT_NOTE_TEMPLATE,
@@ -15,6 +17,7 @@ import {
   type CreateAppointmentInput,
   type EncounterPractice,
   type EncounterRow,
+  type PregnancyContext,
 } from "@/lib/attendance/types";
 
 export {
@@ -35,6 +38,7 @@ export type {
   EncounterPractice,
   EncounterRow,
   OperationalAppointmentStatus,
+  PregnancyContext,
 } from "@/lib/attendance/types";
 
 export const APPOINTMENT_COLUMNS =
@@ -83,6 +87,13 @@ const ENCOUNTER_STATUS_SET = new Set<string>([
 
 const APPOINTMENT_KIND_SET = new Set<string>(["consultation", "procedure"]);
 
+const PREGNANCY_STATUS_SET = new Set<string>(["in_care", "closed", "transferred", "cancelled"]);
+
+const PREGNANCY_RISK_SET = new Set<string>(["habitual", "high"]);
+
+const PREGNANCY_CONTEXT_COLUMNS =
+  "id, status, lmp_date, calculated_edd, clinical_edd, risk, primary_professional_id, backup_professional_id" as const;
+
 function asAppointmentStatus(value: unknown): AppointmentStatus | null {
   return typeof value === "string" && APPOINTMENT_STATUS_SET.has(value)
     ? (value as AppointmentStatus)
@@ -101,10 +112,42 @@ function asAppointmentKind(value: unknown): AppointmentKind | null {
     : null;
 }
 
+function asPregnancyStatus(value: unknown): PregnancyStatus | null {
+  return typeof value === "string" && PREGNANCY_STATUS_SET.has(value)
+    ? (value as PregnancyStatus)
+    : null;
+}
+
+function asPregnancyRisk(value: unknown): PregnancyRisk | null {
+  return typeof value === "string" && PREGNANCY_RISK_SET.has(value)
+    ? (value as PregnancyRisk)
+    : null;
+}
+
+function toPregnancyContext(value: Record<string, unknown>): PregnancyContext | null {
+  const id = asString(value.id);
+  const status = asPregnancyStatus(value.status);
+  const primaryProfessionalId = asString(value.primary_professional_id);
+  if (!id || !status || !primaryProfessionalId) return null;
+  return {
+    id,
+    status,
+    lmpDate: asString(value.lmp_date),
+    estimatedDueDate: asString(value.calculated_edd),
+    clinicalDueDate: asString(value.clinical_edd),
+    risk: asPregnancyRisk(value.risk),
+    primaryProfessionalId,
+    backupProfessionalId: asString(value.backup_professional_id),
+  };
+}
+
 export function mapAttendanceRpcError(error: { message?: string } | null): string {
   const message = error?.message ?? "";
   if (message.includes("NOT_AUTHENTICATED")) return "Sessão expirada. Entre novamente.";
   if (message.includes("PROFILE_INACTIVE")) return "Perfil inativo.";
+  if (message.includes("PREGNANCY_LINK_FORBIDDEN")) {
+    return "Usuário sem permissão para vincular esta gestação.";
+  }
   if (message.includes("FORBIDDEN") || message.includes("NOT_AUTHORIZED")) {
     return "Usuário sem permissão para esta operação.";
   }
@@ -133,10 +176,19 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   }
   if (message.includes("ENCOUNTER_NOT_FOUND")) return "Atendimento não encontrado.";
   if (message.includes("ENCOUNTER_NOT_OPEN")) {
-    return "O atendimento não está aberto para edição.";
+    return "O atendimento precisa estar aberto.";
   }
   if (message.includes("ENCOUNTER_OWNER_REQUIRED")) {
     return "Somente a médica responsável pelo atendimento pode continuar.";
+  }
+  if (message.includes("PREGNANCY_LINK_ONLY_RPC")) {
+    return "Vínculo obstétrico deve ser realizado pela operação autorizada.";
+  }
+  if (message.includes("PREGNANCY_NOT_IN_CARE")) {
+    return "A gestação não está disponível para acompanhamento.";
+  }
+  if (message.includes("ENCOUNTER_SIGNED_PREGNANCY_LOCKED")) {
+    return "Atendimento assinado não permite alteração do vínculo obstétrico.";
   }
   if (message.includes("ENCOUNTER_SIGNED_LOCKED")) {
     return "Atendimento assinado não pode ser reaberto.";
@@ -523,6 +575,63 @@ export async function clinicalNoteUpsert(
   if (error) return { noteId: null, error: mapAttendanceRpcError(error) };
   return {
     noteId: typeof data === "string" ? data : null,
+    error: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Obstetric link — leitura e RPCs de vínculo. Sem update direto em encounters.
+// ---------------------------------------------------------------------------
+
+export async function getEncounterPregnancy(
+  supabase: SupabaseClient,
+  encounterId: string,
+): Promise<PregnancyContext | null> {
+  const { data: encounter, error: encounterError } = await supabase
+    .from("encounters")
+    .select("pregnancy_id")
+    .eq("id", encounterId)
+    .maybeSingle();
+  if (encounterError || !encounter) return null;
+
+  const pregnancyId = asString((encounter as { pregnancy_id?: unknown }).pregnancy_id);
+  if (!pregnancyId) return null;
+
+  const { data: pregnancy, error: pregnancyError } = await supabase
+    .from("pregnancies")
+    .select(PREGNANCY_CONTEXT_COLUMNS)
+    .eq("id", pregnancyId)
+    .maybeSingle();
+  if (pregnancyError || !pregnancy) return null;
+  return toPregnancyContext(pregnancy as Record<string, unknown>);
+}
+
+export async function linkEncounterToPregnancy(
+  supabase: SupabaseClient,
+  encounterId: string,
+  pregnancyId: string,
+): Promise<{ encounterId: string | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("link_encounter_to_pregnancy", {
+    p_encounter_id: encounterId,
+    p_pregnancy_id: pregnancyId,
+  });
+  if (error) return { encounterId: null, error: mapAttendanceRpcError(error) };
+  return {
+    encounterId: typeof data === "string" ? data : null,
+    error: null,
+  };
+}
+
+export async function unlinkEncounterFromPregnancy(
+  supabase: SupabaseClient,
+  encounterId: string,
+): Promise<{ encounterId: string | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("unlink_encounter_from_pregnancy", {
+    p_encounter_id: encounterId,
+  });
+  if (error) return { encounterId: null, error: mapAttendanceRpcError(error) };
+  return {
+    encounterId: typeof data === "string" ? data : null,
     error: null,
   };
 }

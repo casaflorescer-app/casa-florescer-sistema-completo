@@ -153,6 +153,7 @@ export type Encounter = {
   patient_id: string;
   professional_id: string;
   procedure_id: string | null;
+  pregnancy_id: string | null;
   status: EncounterStatus;
   signed_at: string | null;
   signed_by: string | null;

@@ -4,6 +4,8 @@ import type {
   AppointmentKind,
   AppointmentStatus,
   EncounterStatus,
+  PregnancyRisk,
+  PregnancyStatus,
 } from "@/lib/types/database";
 
 export const APPOINTMENT_STATUSES = [
@@ -93,6 +95,18 @@ export type EncounterPractice = {
   id: string;
   name: string;
   code: string;
+};
+
+/** Contexto obstétrico lido a partir do vínculo opcional do atendimento. */
+export type PregnancyContext = {
+  id: string;
+  status: PregnancyStatus;
+  lmpDate: string | null;
+  estimatedDueDate: string | null;
+  clinicalDueDate: string | null;
+  risk: PregnancyRisk | null;
+  primaryProfessionalId: string;
+  backupProfessionalId: string | null;
 };
 
 export type EncounterRow = {

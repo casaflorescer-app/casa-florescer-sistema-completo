@@ -13,6 +13,7 @@ import {
   type AppointmentRow,
   type ClinicalNoteRow,
   type CreateAppointmentInput,
+  type EncounterPractice,
   type EncounterRow,
 } from "@/lib/attendance/types";
 
@@ -31,6 +32,7 @@ export type {
   AppointmentRow,
   ClinicalNoteRow,
   CreateAppointmentInput,
+  EncounterPractice,
   EncounterRow,
   OperationalAppointmentStatus,
 } from "@/lib/attendance/types";
@@ -46,6 +48,16 @@ export const CLINICAL_NOTE_COLUMNS =
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function toEncounterPractice(value: unknown, practiceId: string): EncounterPractice | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const id = asString(row.id);
+  const name = asString(row.name);
+  const code = asString(row.code);
+  if (!id || !name || !code || id !== practiceId) return null;
+  return { id, name, code };
 }
 
 function asNumber(value: unknown): number | null {
@@ -234,6 +246,7 @@ export function toEncounterRow(
     createdAt,
     patientName: extras?.patientName ?? null,
     professionalName: extras?.professionalName ?? null,
+    practice: toEncounterPractice(value.practice_units, practiceId),
   };
 }
 
@@ -389,7 +402,7 @@ export async function getEncounter(
 ): Promise<EncounterRow | null> {
   const { data, error } = await supabase
     .from("encounters")
-    .select(ENCOUNTER_COLUMNS)
+    .select(`${ENCOUNTER_COLUMNS}, practice_units ( id, name, code )`)
     .eq("id", encounterId)
     .maybeSingle();
   if (error || !data) return null;

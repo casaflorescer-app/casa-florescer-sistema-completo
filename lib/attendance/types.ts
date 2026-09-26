@@ -89,6 +89,12 @@ export type AppointmentRow = {
   roomName?: string | null;
 };
 
+export type EncounterPractice = {
+  id: string;
+  name: string;
+  code: string;
+};
+
 export type EncounterRow = {
   id: string;
   organizationId: string;
@@ -103,6 +109,8 @@ export type EncounterRow = {
   createdAt: string;
   patientName?: string | null;
   professionalName?: string | null;
+  /** Prática do próprio encounter, quando a leitura inclui o vínculo. */
+  practice?: EncounterPractice | null;
 };
 
 export type ClinicalNoteRow = {

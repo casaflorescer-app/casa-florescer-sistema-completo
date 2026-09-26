@@ -26,7 +26,10 @@ export function EncounterHeader({
             Atendimento
           </p>
           <h1 className="page-title mt-1">{patientName ?? "Paciente"}</h1>
-          <p className="mt-2 text-sm text-lotus-700">
+          {encounter.practice?.name ? (
+            <p className="mt-2 text-sm text-lotus-700">Prática · {encounter.practice.name}</p>
+          ) : null}
+          <p className="mt-1 text-sm text-lotus-700">
             {professionalName ?? "Profissional"} · {formatDateTime(encounter.createdAt)}
           </p>
           {encounter.signedAt ? (

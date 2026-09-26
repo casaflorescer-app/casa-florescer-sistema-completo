@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { hasStaffRole } from "@/lib/auth/access";
 import { usePracticeUi } from "@/components/layout/PracticeUi";
 import { StatusMessage, buttonClass } from "@/components/platform/Ui";
 import { createClient } from "@/lib/supabase/client";
@@ -217,6 +218,7 @@ export function AgendaPage() {
   }
 
   const canCreate = Boolean(supabase && organizationId && selectedPracticeId && userId);
+  const canStartEncounter = authorization ? hasStaffRole(authorization, "physician") : false;
 
   return (
     <div>
@@ -284,6 +286,7 @@ export function AgendaPage() {
         rows={labeledRows}
         loading={loading || authorizationLoading}
         busyId={busyId}
+        canStartEncounter={canStartEncounter}
         onSetStatus={onSetStatus}
         onStartEncounter={onStartEncounter}
       />

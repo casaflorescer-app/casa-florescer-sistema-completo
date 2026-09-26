@@ -9,11 +9,13 @@ const ghostActionClass = `${ghostButtonClass} px-3 py-1.5 text-xs`;
 export function AppointmentCard({
   row,
   busy,
+  canStartEncounter,
   onSetStatus,
   onStartEncounter,
 }: {
   row: AppointmentRow;
   busy: boolean;
+  canStartEncounter: boolean;
   onSetStatus: (appointmentId: string, status: OperationalAppointmentStatus) => void;
   onStartEncounter: (appointmentId: string) => void;
 }) {
@@ -77,14 +79,16 @@ export function AppointmentCard({
         {row.status === "checked_in" ? (
           <>
             <p className="text-sm text-lotus-700">Aguardar a médica</p>
-            <button
-              type="button"
-              className={actionClass}
-              disabled={busy}
-              onClick={() => onStartEncounter(row.id)}
-            >
-              Iniciar atendimento
-            </button>
+            {canStartEncounter ? (
+              <button
+                type="button"
+                className={actionClass}
+                disabled={busy}
+                onClick={() => onStartEncounter(row.id)}
+              >
+                Iniciar atendimento
+              </button>
+            ) : null}
           </>
         ) : null}
       </div>

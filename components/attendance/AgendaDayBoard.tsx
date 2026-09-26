@@ -7,6 +7,7 @@ export function AgendaDayBoard({
   rows,
   loading,
   busyId,
+  canStartEncounter,
   onSetStatus,
   onStartEncounter,
 }: {
@@ -14,6 +15,7 @@ export function AgendaDayBoard({
   rows: AppointmentRow[];
   loading: boolean;
   busyId: string | null;
+  canStartEncounter: boolean;
   onSetStatus: (appointmentId: string, status: OperationalAppointmentStatus) => void;
   onStartEncounter: (appointmentId: string) => void;
 }) {
@@ -33,6 +35,7 @@ export function AgendaDayBoard({
               <AppointmentCard
                 row={row}
                 busy={busyId === row.id}
+                canStartEncounter={canStartEncounter}
                 onSetStatus={onSetStatus}
                 onStartEncounter={onStartEncounter}
               />

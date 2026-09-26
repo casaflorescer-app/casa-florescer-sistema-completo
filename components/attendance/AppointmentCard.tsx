@@ -3,8 +3,8 @@ import { buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { APPOINTMENT_KIND_LABEL, formatClock } from "@/components/attendance/agenda-display";
 import { AppointmentStatusBadge } from "@/components/attendance/AppointmentStatusBadge";
 
-const actionClass = `${buttonClass} px-3 py-1.5 text-xs`;
-const ghostActionClass = `${ghostButtonClass} px-3 py-1.5 text-xs`;
+const actionClass = buttonClass;
+const ghostActionClass = ghostButtonClass;
 
 export function AppointmentCard({
   row,

@@ -8,7 +8,7 @@ import { mapAuthError } from "@/lib/auth/errors";
 import { resolveAuthenticatedPath } from "@/lib/auth/paths";
 
 const inputClass =
-  "w-full rounded-xl border border-rose-100 bg-white py-3 pl-11 pr-4 text-sm text-rose-900 outline-none transition placeholder:text-rose-900/35 focus:border-rose-300 focus:ring-2 focus:ring-rose-300/70";
+  "w-full rounded-xl border border-rose-100 bg-white py-3 pl-11 pr-4 text-base text-rose-900 outline-none transition placeholder:text-rose-900/35 focus:border-rose-300 focus:ring-2 focus:ring-rose-300/70";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);

@@ -15,7 +15,7 @@ export default function LoginPage() {
   const logo = publicAsset("/brand/logo-florescer.png");
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="relative flex min-h-screen items-center justify-center px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <RedirectIfSession />
 
       <div
@@ -25,7 +25,7 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-[#4A1D34]/35" aria-hidden />
 
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-[#9B406C]/20 bg-[#F7E3E9]/85 p-8 shadow-2xl backdrop-blur-lg">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-[#9B406C]/20 bg-[#F7E3E9]/85 p-5 shadow-2xl backdrop-blur-lg sm:p-8">
         <div className="flex flex-col items-center text-center">
           <img
             src={logo}

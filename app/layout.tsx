@@ -6,17 +6,23 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Casa Florescer",
-  description: "Agenda, recepção e acompanhamento da Casa Florescer.",
+  description: "Sistema de gestão clínica Casa Florescer",
   applicationName: "Casa Florescer",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     title: "Casa Florescer",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   icons: {
-    icon: "/icons/favicon-32.png",
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
     apple: "/icons/apple-touch-icon.png",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 

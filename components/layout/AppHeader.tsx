@@ -26,7 +26,7 @@ export function AppHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
-          className="rounded-lg border border-lotus-100 px-2 py-1 text-sm text-lotus-800 lg:hidden"
+          className="min-h-11 shrink-0 rounded-lg border border-lotus-100 px-3 text-sm text-lotus-800 lg:hidden"
           onClick={onMenuToggle}
           aria-label="Abrir menu"
         >
@@ -54,7 +54,7 @@ export function AppHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
         <button
           type="button"
           onClick={() => void handleSignOut()}
-          className="shrink-0 text-sm text-lotus-600 transition-colors hover:text-lotus-900"
+          className="min-h-11 shrink-0 px-2 text-sm text-lotus-600 transition-colors hover:text-lotus-900"
         >
           Sair
         </button>

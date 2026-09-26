@@ -13,6 +13,7 @@ function isAssetPath(pathname: string) {
     pathname.startsWith("/brand") ||
     pathname.startsWith("/icons") ||
     pathname.startsWith("/images") ||
+    pathname === "/manifest.json" ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/sw.js" ||
     pathname.includes(".")

@@ -6,16 +6,19 @@ import {
   clinicalNoteUpsert,
   encounterSign,
   getEncounter,
+  getEncounterPregnancy,
   getLatestClinicalNote,
   listClinicalNotes,
   type ClinicalNoteRow,
   type EncounterRow,
+  type PregnancyContext,
 } from "@/lib/attendance/directory";
 import { listPatients } from "@/lib/patients/directory";
 import { listProfessionalLabels } from "@/lib/pregnancies/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage } from "@/components/platform/Ui";
 import { ClinicalNoteEditor } from "@/components/attendance/ClinicalNoteEditor";
+import { ContextAssistencial } from "@/components/attendance/ContextAssistencial";
 import { EncounterActions } from "@/components/attendance/EncounterActions";
 import { EncounterHeader } from "@/components/attendance/EncounterHeader";
 import {
@@ -35,6 +38,9 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [savedSoap, setSavedSoap] = useState<SoapNote>(EMPTY_SOAP);
   const [patientName, setPatientName] = useState<string | null>(null);
   const [professionalName, setProfessionalName] = useState<string | null>(null);
+  const [pregnancy, setPregnancy] = useState<PregnancyContext | null>(null);
+  const [pregnancyLinked, setPregnancyLinked] = useState(false);
+  const [primaryProfessionalName, setPrimaryProfessionalName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,15 +56,20 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     const row = await getEncounter(supabase, encounterId);
     if (!row) {
       setEncounter(null);
+      setPregnancy(null);
+      setPregnancyLinked(false);
+      setPrimaryProfessionalName(null);
       setError("Atendimento não encontrado ou sem permissão de leitura.");
       setLoading(false);
       return;
     }
-    const [latest, history, patients, professionals] = await Promise.all([
+    const [latest, history, patients, professionals, pregnancyContext, linkRow] = await Promise.all([
       getLatestClinicalNote(supabase, encounterId),
       listClinicalNotes(supabase, encounterId),
       listPatients(supabase).catch(() => []),
       listProfessionalLabels(supabase, row.practiceId).catch(() => []),
+      getEncounterPregnancy(supabase, encounterId),
+      supabase.from("encounters").select("pregnancy_id").eq("id", encounterId).maybeSingle(),
     ]);
     const nextSoap = soapFromBody(latest?.body);
     setEncounter(row);
@@ -68,6 +79,17 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     setPatientName(patients.find((item) => item.id === row.patientId)?.fullName ?? null);
     setProfessionalName(
       professionals.find((item) => item.id === row.professionalId)?.fullName ?? null,
+    );
+    const pregnancyId = linkRow.data?.pregnancy_id;
+    setPregnancy(pregnancyContext);
+    setPregnancyLinked(
+      Boolean(linkRow.error) || (typeof pregnancyId === "string" && pregnancyId.length > 0),
+    );
+    setPrimaryProfessionalName(
+      pregnancyContext
+        ? professionals.find((item) => item.id === pregnancyContext.primaryProfessionalId)?.fullName ??
+            null
+        : null,
     );
     setError(null);
     setLoading(false);
@@ -145,6 +167,14 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         encounter={encounter}
         patientName={patientName}
         professionalName={professionalName}
+        assistential={
+          <ContextAssistencial
+            pregnancy={pregnancy}
+            pregnancyLinked={pregnancyLinked}
+            encounterAt={encounter.createdAt}
+            primaryProfessionalName={primaryProfessionalName}
+          />
+        }
       />
       <div className="mt-4">
         <StatusMessage error={error} notice={notice} />

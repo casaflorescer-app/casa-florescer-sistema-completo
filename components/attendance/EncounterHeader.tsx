@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ENCOUNTER_STATUS_LABEL, type EncounterRow } from "@/lib/attendance/directory";
 import { formatDateTime } from "@/lib/platform/format";
@@ -13,10 +14,12 @@ export function EncounterHeader({
   encounter,
   patientName,
   professionalName,
+  assistential,
 }: {
   encounter: EncounterRow;
   patientName: string | null;
   professionalName: string | null;
+  assistential?: ReactNode;
 }) {
   return (
     <header className="card">
@@ -44,6 +47,7 @@ export function EncounterHeader({
           {ENCOUNTER_STATUS_LABEL[encounter.status]}
         </span>
       </div>
+      {assistential}
       <p className="mt-4 text-sm">
         <Link href="/app/agenda" className="text-lotus-800 underline-offset-2 hover:underline">
           Voltar para a agenda

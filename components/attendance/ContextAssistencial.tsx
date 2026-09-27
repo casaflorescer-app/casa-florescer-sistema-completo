@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   PREGNANCY_RISK_LABEL,
   PREGNANCY_STATUS_LABEL,
@@ -42,12 +43,14 @@ export function ContextAssistencial({
   pregnancyLinked,
   encounterAt,
   primaryProfessionalName,
+  actions,
 }: {
   pregnancy: PregnancyContext | null;
   /** true quando encounters.pregnancy_id está preenchido. */
   pregnancyLinked: boolean;
   encounterAt: string | null;
   primaryProfessionalName: string | null;
+  actions?: ReactNode;
 }) {
   const prenatal = pregnancy != null;
   const restricted = !prenatal && pregnancyLinked;
@@ -81,6 +84,7 @@ export function ContextAssistencial({
           {restricted ? "Acesso restrito ao contexto obstétrico." : "Consulta ginecológica"}
         </p>
       )}
+      {actions ? <div className="mt-3">{actions}</div> : null}
     </section>
   );
 }

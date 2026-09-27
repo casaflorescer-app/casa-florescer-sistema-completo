@@ -146,10 +146,13 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   if (message.includes("NOT_AUTHENTICATED")) return "Sessão expirada. Entre novamente.";
   if (message.includes("PROFILE_INACTIVE")) return "Perfil inativo.";
   if (message.includes("PREGNANCY_LINK_FORBIDDEN")) {
-    return "Usuário sem permissão para vincular esta gestação.";
+    return "Você não possui autorização para vincular esta gestação ao atendimento.";
+  }
+  if (message.includes("PREGNANCY_LINK_ABSENT")) {
+    return "Este atendimento não possui gestação vinculada.";
   }
   if (message.includes("FORBIDDEN") || message.includes("NOT_AUTHORIZED")) {
-    return "Usuário sem permissão para esta operação.";
+    return "Você não possui permissão para realizar esta operação.";
   }
   if (message.includes("APPOINTMENT_NOT_FOUND")) return "Agendamento não encontrado.";
   if (message.includes("APPOINTMENT_TERMINAL")) {
@@ -185,10 +188,10 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
     return "Vínculo obstétrico deve ser realizado pela operação autorizada.";
   }
   if (message.includes("PREGNANCY_NOT_IN_CARE")) {
-    return "A gestação não está disponível para acompanhamento.";
+    return "A gestação selecionada não está em acompanhamento.";
   }
   if (message.includes("ENCOUNTER_SIGNED_PREGNANCY_LOCKED")) {
-    return "Atendimento assinado não permite alteração do vínculo obstétrico.";
+    return "Não é possível alterar o vínculo de um atendimento já assinado.";
   }
   if (message.includes("ENCOUNTER_SIGNED_LOCKED")) {
     return "Atendimento assinado não pode ser reaberto.";

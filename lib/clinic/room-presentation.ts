@@ -18,14 +18,3 @@ export function roomNature(input: {
   if (input.roomKind === "sublet_consultorio") return "locada";
   return input.isHouse ? "propria" : "locada";
 }
-
-/**
- * A sala própria não tem profissional titular no banco.
- * O nome gravado na sala é o rótulo operacional já definido pela clínica.
- * Só associa quando o nome termina exatamente com o nome do profissional.
- */
-export function roomNameEndsWithProfessional(roomName: string, fullName: string): boolean {
-  const name = fullName.trim();
-  if (name.length < 3) return false;
-  return roomName.trim().endsWith(name);
-}

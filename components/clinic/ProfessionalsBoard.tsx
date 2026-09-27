@@ -3,18 +3,14 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StatusMessage } from "@/components/platform/Ui";
-import {
-  ROOM_NATURE_LABEL,
-  roomNameEndsWithProfessional,
-  roomNature,
-  type RoomNature,
-} from "@/lib/clinic/room-presentation";
+import { ROOM_NATURE_LABEL, roomNature, type RoomNature } from "@/lib/clinic/room-presentation";
 
 type RoomRow = {
   id: string;
   name: string;
   roomKind: string | null;
   isHouse: boolean;
+  occupantProfessionalId: string | null;
 };
 
 type ContractRow = {
@@ -62,7 +58,7 @@ export function ProfessionalsBoard() {
           ),
         supabase
           .from("rooms")
-          .select("id, name, room_kind, is_house, status")
+          .select("id, name, room_kind, is_house, status, occupant_professional_id")
           .eq("status", "active"),
         supabase
           .from("rental_contracts")
@@ -87,6 +83,8 @@ export function ProfessionalsBoard() {
             name,
             roomKind: typeof record.room_kind === "string" ? record.room_kind : null,
             isHouse: record.is_house === true,
+            occupantProfessionalId:
+              typeof record.occupant_professional_id === "string" ? record.occupant_professional_id : null,
           },
         ];
       });
@@ -115,17 +113,13 @@ export function ProfessionalsBoard() {
         const specialty = typeof practice?.specialty === "string" ? practice.specialty.trim() : "";
         const council = typeof record.council_type === "string" ? record.council_type.trim() : "";
         const isActive = profile?.is_active;
-        const contract = contracts.find((entry) => entry.tenantProfessionalId === id);
-        const contractedRoom = contract ? rooms.find((room) => room.id === contract.roomId) : undefined;
-        const namedMatches = rooms.filter(
-          (room) =>
-            room.roomKind !== "procedure" &&
-            room.roomKind !== "pharmacy" &&
-            room.roomKind !== "reception" &&
-            fullName.length > 0 &&
-            roomNameEndsWithProfessional(room.name, fullName),
-        );
-        const room = contractedRoom ?? (namedMatches.length === 1 ? namedMatches[0] : null);
+        const occupied = rooms.filter((room) => room.occupantProfessionalId === id);
+        const contracted = contracts.filter((entry) => entry.tenantProfessionalId === id);
+        const contractedRoom =
+          occupied.length === 0 && contracted.length === 1
+            ? rooms.find((room) => room.id === contracted[0]?.roomId)
+            : undefined;
+        const room = occupied.length === 1 ? occupied[0] : (contractedRoom ?? null);
         return [
           {
             id,

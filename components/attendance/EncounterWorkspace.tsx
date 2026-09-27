@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
@@ -21,11 +22,16 @@ import {
 import { listPatients } from "@/lib/patients/directory";
 import { formatIsoDateBr } from "@/lib/patients/format";
 import {
+  describePregnancyEvent,
   listPatientPregnancies,
+  listPregnancyEvents,
   listProfessionalLabels,
+  listProfileNames,
+  PREGNANCY_EVENT_LABEL,
   PREGNANCY_RISK_LABEL,
   PREGNANCY_STATUS_LABEL,
   type PregnancyRow,
+  type ProfessionalLabel,
 } from "@/lib/pregnancies/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
@@ -33,6 +39,10 @@ import { ClinicalNoteEditor } from "@/components/attendance/ClinicalNoteEditor";
 import { ContextAssistencial } from "@/components/attendance/ContextAssistencial";
 import { EncounterActions } from "@/components/attendance/EncounterActions";
 import { EncounterHeader } from "@/components/attendance/EncounterHeader";
+import {
+  ObstetricHistory,
+  type ObstetricHistoryItem,
+} from "@/components/attendance/ObstetricHistory";
 import {
   PregnancyLinkDialog,
   type PregnancyLinkChoice,
@@ -63,6 +73,37 @@ function choiceDate(value: string | null): string {
   if (!value) return "—";
   const formatted = formatIsoDateBr(value.slice(0, 10));
   return formatted || "—";
+}
+
+async function readObstetricHistory(
+  supabase: SupabaseClient,
+  pregnancyId: string,
+  labels: ProfessionalLabel[],
+): Promise<{ items: ObstetricHistoryItem[]; error: string | null }> {
+  try {
+    const events = await listPregnancyEvents(supabase, pregnancyId);
+    const visible = await listProfessionalLabels(supabase).catch(() => labels);
+    const names = new Map(labels.map((item) => [item.id, item.fullName]));
+    for (const item of visible) names.set(item.id, item.fullName);
+    const actors = await listProfileNames(
+      supabase,
+      events.map((item) => item.actorId).filter((id): id is string => Boolean(id)),
+    );
+    return {
+      items: events.map((item) => ({
+        id: item.id,
+        label: PREGNANCY_EVENT_LABEL[item.kind],
+        occurredAt: item.occurredAt,
+        detail: describePregnancyEvent(item, names, actors),
+      })),
+      error: null,
+    };
+  } catch (caught) {
+    return {
+      items: [],
+      error: caught instanceof Error ? caught.message : "Não foi possível carregar o histórico da gestação.",
+    };
+  }
 }
 
 function toLinkChoice(row: PregnancyRow): PregnancyLinkChoice {
@@ -97,6 +138,8 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [obstetricHistory, setObstetricHistory] = useState<ObstetricHistoryItem[]>([]);
+  const [obstetricHistoryError, setObstetricHistoryError] = useState<string | null>(null);
 
   const load = useCallback(async (quiet = false) => {
     if (!supabase) {
@@ -111,6 +154,8 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       setPregnancy(null);
       setPregnancyLinked(false);
       setPrimaryProfessionalName(null);
+      setObstetricHistory([]);
+      setObstetricHistoryError(null);
       setError("Atendimento não encontrado ou sem permissão de leitura.");
       setLoading(false);
       return;
@@ -143,6 +188,11 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             null
         : null,
     );
+    const obstetric = pregnancyContext
+      ? await readObstetricHistory(supabase, pregnancyContext.id, professionals)
+      : { items: [], error: null };
+    setObstetricHistory(obstetric.items);
+    setObstetricHistoryError(obstetric.error);
     setError(null);
     setLoading(false);
   }, [encounterId, supabase]);
@@ -165,6 +215,11 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             null
         : null,
     );
+    const obstetric = pregnancyContext
+      ? await readObstetricHistory(supabase, pregnancyContext.id, professionals)
+      : { items: [], error: null };
+    setObstetricHistory(obstetric.items);
+    setObstetricHistoryError(obstetric.error);
   }, [encounter, supabase]);
 
   useEffect(() => {
@@ -357,6 +412,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
           onUnlink={() => void onUnlink()}
         />
       ) : null}
+      {pregnancy ? <ObstetricHistory items={obstetricHistory} error={obstetricHistoryError} /> : null}
       <div className="mt-4">
         <StatusMessage error={error} notice={notice} />
       </div>

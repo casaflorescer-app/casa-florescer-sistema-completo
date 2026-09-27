@@ -28,7 +28,13 @@ function toRoom(value: Record<string, unknown>): AgendaRoomOption | null {
   const name = typeof value.name === "string" && value.name.trim() ? value.name.trim() : null;
   const code = typeof value.code === "string" ? value.code : "";
   if (!id || !name) return null;
-  return { id, name, code };
+  return {
+    id,
+    name,
+    code,
+    roomKind: typeof value.room_kind === "string" ? value.room_kind : null,
+    isHouse: value.is_house === true,
+  };
 }
 
 export function AgendaPage() {
@@ -42,6 +48,7 @@ export function AgendaPage() {
   const [patients, setPatients] = useState<PatientListRow[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalLabel[]>([]);
   const [rooms, setRooms] = useState<AgendaRoomOption[]>([]);
+  const [procedureNames, setProcedureNames] = useState<Map<string, string>>(new Map());
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -70,20 +77,26 @@ export function AgendaPage() {
     return map;
   }, [professionals]);
 
-  const roomNames = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const item of rooms) map.set(item.id, item.name);
+  const roomById = useMemo(() => {
+    const map = new Map<string, AgendaRoomOption>();
+    for (const item of rooms) map.set(item.id, item);
     return map;
   }, [rooms]);
 
   const labelRow = useCallback(
-    (row: AppointmentRow): AppointmentRow => ({
-      ...row,
-      patientName: patientNames.get(row.patientId) ?? row.patientName ?? null,
-      professionalName: professionalNames.get(row.professionalId) ?? row.professionalName ?? null,
-      roomName: roomNames.get(row.roomId) ?? row.roomName ?? null,
-    }),
-    [patientNames, professionalNames, roomNames],
+    (row: AppointmentRow): AppointmentRow => {
+      const room = roomById.get(row.roomId);
+      return {
+        ...row,
+        patientName: patientNames.get(row.patientId) ?? row.patientName ?? null,
+        professionalName: professionalNames.get(row.professionalId) ?? row.professionalName ?? null,
+        roomName: room?.name ?? row.roomName ?? null,
+        roomKind: room?.roomKind ?? row.roomKind ?? null,
+        roomIsHouse: room?.isHouse ?? row.roomIsHouse ?? false,
+        procedureName: row.procedureId ? procedureNames.get(row.procedureId) ?? row.procedureName ?? null : null,
+      };
+    },
+    [patientNames, procedureNames, professionalNames, roomById],
   );
 
   useEffect(() => {
@@ -125,12 +138,29 @@ export function AgendaPage() {
           listProfessionalLabels(supabase, selectedPracticeId),
           supabase
             .from("rooms")
-            .select("id, name, code, status")
+            .select("id, name, code, status, room_kind, is_house")
             .eq("organization_id", organizationId)
             .eq("status", "active")
             .order("name"),
         ]);
         if (cancelled) return;
+        const procedureIds = [
+          ...new Set(
+            appointmentRows.flatMap((row) => (row.procedureId ? [row.procedureId] : [])),
+          ),
+        ];
+        const names = new Map<string, string>();
+        if (procedureIds.length > 0) {
+          const procedures = await supabase.from("procedures").select("id, name").in("id", procedureIds);
+          if (!procedures.error) {
+            for (const item of procedures.data ?? []) {
+              const record = item as { id?: string; name?: string };
+              if (record.id && record.name?.trim()) names.set(record.id, record.name.trim());
+            }
+          }
+        }
+        if (cancelled) return;
+        setProcedureNames(names);
         if (roomResult.error) {
           setRooms([]);
           setError("Não foi possível carregar as salas.");

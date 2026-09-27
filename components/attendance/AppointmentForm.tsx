@@ -15,6 +15,8 @@ export type AgendaRoomOption = {
   id: string;
   name: string;
   code: string;
+  roomKind?: string | null;
+  isHouse?: boolean;
 };
 
 export function AppointmentForm({

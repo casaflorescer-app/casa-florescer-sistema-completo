@@ -40,7 +40,7 @@ export function PatientPregnancies({ patientId }: { patientId: string }) {
   const hasActive = rows.some((row) => row.status === "in_care");
 
   return (
-    <section className="card mt-6 max-w-xl md:max-w-4xl" aria-labelledby="patient-pregnancies-title">
+    <section className="card mt-6 min-w-0" aria-labelledby="patient-pregnancies-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="patient-pregnancies-title" className="font-semibold text-lotus-900">
@@ -86,7 +86,7 @@ export function PatientPregnancies({ patientId }: { patientId: string }) {
                 >
                   <p className="font-medium text-lotus-900">{pregnancyLabel(row)}</p>
                   <p className="mt-1 text-sm text-lotus-700">{PREGNANCY_STATUS_LABEL[row.status]}</p>
-                  <dl className="mt-3 grid gap-2 text-sm text-lotus-800">
+                  <dl className="mt-3 grid grid-cols-2 gap-2 text-sm text-lotus-800">
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-lotus-500">Principal</dt>
                       <dd>{row.primaryName ?? "—"}</dd>
@@ -109,8 +109,8 @@ export function PatientPregnancies({ patientId }: { patientId: string }) {
             ))}
           </ul>
 
-          <div className="mt-4 hidden overflow-x-auto rounded-xl border border-lotus-100 md:block">
-            <table className="min-w-full text-left text-sm">
+          <div className="mt-4 hidden min-w-0 overflow-x-auto rounded-xl border border-lotus-100 md:block">
+            <table className="w-full text-left text-sm">
               <thead className="border-b border-lotus-100 text-xs uppercase tracking-wide text-lotus-500">
                 <tr>
                   <th className="px-3 py-2">Gestação</th>

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
@@ -16,7 +15,6 @@ import { StatusMessage, buttonClass, fieldClass } from "@/components/platform/Ui
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 
 export function PatientList() {
-  const router = useRouter();
   const [rows, setRows] = useState<PatientListRow[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -96,70 +94,72 @@ export function PatientList() {
           <ul className="mt-6 space-y-3 md:hidden">
             {filtered.map((row) => (
               <li key={row.id}>
-                <div className="card flex gap-3 hover:border-lotus-200">
-                  <div className="pt-0.5">
-                    <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
+                <article className="card">
+                  <div className="flex gap-3">
+                    <div className="pt-0.5">
+                      <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-lotus-900">{row.fullName}</p>
+                      {row.socialName ? (
+                        <p className="mt-0.5 text-sm text-lotus-600">{row.socialName}</p>
+                      ) : null}
+                      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-lotus-800">
+                        <div>
+                          <dt className="text-xs uppercase tracking-wide text-lotus-500">CPF</dt>
+                          <dd>{maskCpf(row.cpf)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs uppercase tracking-wide text-lotus-500">Nascimento</dt>
+                          <dd>{row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs uppercase tracking-wide text-lotus-500">Telefone</dt>
+                          <dd>{row.phone ? formatPhone(row.phone) : "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs uppercase tracking-wide text-lotus-500">Cadastro</dt>
+                          <dd>{formatDateTime(row.createdAt)}</dd>
+                        </div>
+                        <div className="col-span-2">
+                          <dt className="text-xs uppercase tracking-wide text-lotus-500">E-mail</dt>
+                          <dd className="break-all">{row.email ?? "—"}</dd>
+                        </div>
+                      </dl>
+                      <Link
+                        href={`/app/patients/${row.id}`}
+                        className="mt-3 inline-flex text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
+                      >
+                        Ver detalhes
+                      </Link>
+                    </div>
                   </div>
-                  <Link href={`/app/patients/${row.id}`} className="min-w-0 flex-1">
-                    <p className="font-semibold text-lotus-900">{row.fullName}</p>
-                    {row.socialName ? (
-                      <p className="mt-0.5 text-sm text-lotus-600">{row.socialName}</p>
-                    ) : null}
-                    <dl className="mt-3 grid gap-2 text-sm text-lotus-800">
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-lotus-500">CPF</dt>
-                        <dd>{maskCpf(row.cpf)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-lotus-500">Nascimento</dt>
-                        <dd>{row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-lotus-500">Telefone</dt>
-                        <dd>{row.phone ? formatPhone(row.phone) : "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-lotus-500">E-mail</dt>
-                        <dd className="break-all">{row.email ?? "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-lotus-500">Cadastro</dt>
-                        <dd>{formatDateTime(row.createdAt)}</dd>
-                      </div>
-                    </dl>
-                  </Link>
-                </div>
+                </article>
               </li>
             ))}
           </ul>
 
-          <div className="mt-6 hidden overflow-x-auto rounded-2xl border border-lotus-100 bg-white md:block">
-            <table className="min-w-full text-left text-sm">
+          <div className="mt-6 hidden min-w-0 max-w-full overflow-x-auto rounded-2xl border border-lotus-100 bg-white md:block">
+            <table className="w-full text-left text-sm">
               <thead className="border-b border-lotus-100 text-xs uppercase tracking-wide text-lotus-500">
                 <tr>
-                  <th className="px-4 py-3">Foto</th>
-                  <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">CPF</th>
-                  <th className="px-4 py-3">Nascimento</th>
-                  <th className="px-4 py-3">Telefone</th>
-                  <th className="px-4 py-3">E-mail</th>
-                  <th className="px-4 py-3">Cadastro</th>
+                  <th className="px-3 py-3">Foto</th>
+                  <th className="px-3 py-3">Nome</th>
+                  <th className="px-3 py-3">CPF</th>
+                  <th className="px-3 py-3">Nascimento</th>
+                  <th className="px-3 py-3">Telefone</th>
+                  <th className="hidden px-3 py-3 xl:table-cell">E-mail</th>
+                  <th className="hidden px-3 py-3 xl:table-cell">Cadastro</th>
+                  <th className="whitespace-nowrap px-3 py-3">Ação</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="cursor-pointer border-b border-lotus-50 align-top hover:bg-lotus-50/70"
-                    onClick={() => router.push(`/app/patients/${row.id}`)}
-                  >
-                    <td
-                      className="px-4 py-3"
-                      onClick={(event) => event.stopPropagation()}
-                    >
+                  <tr key={row.id} className="border-b border-lotus-50 align-top hover:bg-lotus-50/70">
+                    <td className="px-3 py-3">
                       <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3">
                       <Link href={`/app/patients/${row.id}`} className="block hover:text-lotus-700">
                         <p className="font-medium text-lotus-900">{row.fullName}</p>
                         {row.socialName ? (
@@ -167,15 +167,29 @@ export function PatientList() {
                         ) : null}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">{maskCpf(row.cpf)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-3 py-3">{maskCpf(row.cpf)}</td>
+                    <td className="whitespace-nowrap px-3 py-3">
                       {row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-3 py-3">
                       {row.phone ? formatPhone(row.phone) : "—"}
                     </td>
-                    <td className="px-4 py-3">{row.email ?? "—"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(row.createdAt)}</td>
+                    <td className="hidden max-w-[16rem] px-3 py-3 xl:table-cell">
+                      <span className="block truncate" title={row.email ?? undefined}>
+                        {row.email ?? "—"}
+                      </span>
+                    </td>
+                    <td className="hidden whitespace-nowrap px-3 py-3 xl:table-cell">
+                      {formatDateTime(row.createdAt)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                      <Link
+                        href={`/app/patients/${row.id}`}
+                        className="inline-flex min-h-11 items-center text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
+                      >
+                        Ver detalhes
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

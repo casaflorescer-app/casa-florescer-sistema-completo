@@ -1,11 +1,5 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { RoomsBoard } from "@/components/clinic/RoomsBoard";
 
 export default function RoomsPage() {
-  return (
-    <ModulePlaceholder
-      title="Salas"
-      area="clinica"
-      description="Módulo em implementação. Administradores técnicos veem a estrutura; o uso clínico continua vinculado à prática."
-    />
-  );
+  return <RoomsBoard />;
 }

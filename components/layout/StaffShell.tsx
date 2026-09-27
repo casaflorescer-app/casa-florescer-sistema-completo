@@ -44,11 +44,11 @@ export function AuthenticatedShell({
         </div>
       </header>
       {session.uiRole ? (
-        <div className="lg:grid lg:grid-cols-[260px_1fr]">
+        <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside className="border-b border-lotus-100 bg-white lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r">
             <SidebarNav />
           </aside>
-          <main className="view-enter mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+          <main className="view-enter min-w-0 w-full px-4 py-6 lg:px-8">
             {children}
           </main>
         </div>

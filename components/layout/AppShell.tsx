@@ -21,13 +21,13 @@ export function AppShell({
     <PracticeUiProvider memberships={authorization.memberships}>
       <div className="min-h-screen bg-lotus-50">
         <AppHeader onMenuToggle={() => setMenuOpen((open) => !open)} />
-        <div className="lg:grid lg:grid-cols-[260px_1fr]">
+        <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
           <AppSidebar
             sections={sections}
             open={menuOpen}
             onNavigate={() => setMenuOpen(false)}
           />
-          <main className="view-enter mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <main className="view-enter min-w-0 w-full overflow-x-clip px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:px-8">
             {children}
           </main>
         </div>

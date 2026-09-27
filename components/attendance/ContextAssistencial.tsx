@@ -65,7 +65,7 @@ export function ContextAssistencial({
         </span>
       </div>
       {prenatal ? (
-        <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <Field label="DUM" value={formatClinicalDate(pregnancy.lmpDate)} />
           <Field label="DPP" value={formatClinicalDate(dueDate(pregnancy))} />
           <Field

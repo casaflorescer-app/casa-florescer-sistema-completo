@@ -2,6 +2,7 @@ import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attenda
 import { buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { APPOINTMENT_KIND_LABEL, formatClock } from "@/components/attendance/agenda-display";
 import { AppointmentStatusBadge } from "@/components/attendance/AppointmentStatusBadge";
+import { ROOM_NATURE_LABEL, roomNature } from "@/lib/clinic/room-presentation";
 
 const actionClass = buttonClass;
 const ghostActionClass = ghostButtonClass;
@@ -24,26 +25,49 @@ export function AppointmentCard({
     onSetStatus(row.id, "cancelled");
   }
 
+  const procedureLabel = row.procedureName?.trim() || APPOINTMENT_KIND_LABEL[row.kind];
+  const nature = row.roomName
+    ? roomNature({ roomKind: row.roomKind, isHouse: row.roomIsHouse === true })
+    : null;
+
   return (
-    <article className="card">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-lotus-800">
+    <article className="card min-w-0">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[7.5rem_minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,0.9fr)_minmax(0,1fr)_auto] xl:items-start">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Horário</p>
+          <p className="mt-1 text-sm font-semibold text-lotus-900">
             {formatClock(row.startsAt)}–{formatClock(row.endsAt)}
           </p>
-          <h2 className="mt-1 text-base font-semibold text-lotus-900">
-            {row.patientName ?? "Paciente"}
-          </h2>
-          <p className="mt-1 text-sm text-lotus-700">
-            {row.professionalName ?? "Profissional"} · {APPOINTMENT_KIND_LABEL[row.kind]}
-            {row.roomName ? ` · ${row.roomName}` : ""}
-          </p>
-          {row.urgencyNote ? (
-            <p className="mt-2 text-sm text-lotus-800">{row.urgencyNote}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Médica</p>
+          <p className="mt-1 text-sm font-semibold text-lotus-900">{row.professionalName ?? "Profissional"}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Sala</p>
+          <p className="mt-1 text-sm text-lotus-900">{row.roomName ?? "—"}</p>
+          {nature ? (
+            <p className="mt-1">
+              <span className="inline-flex rounded-full border border-lotus-200 bg-lotus-50 px-2.5 py-0.5 text-xs font-semibold text-lotus-800">
+                {nature === "compartilhada" ? "Uso compartilhado" : ROOM_NATURE_LABEL[nature]}
+              </span>
+            </p>
           ) : null}
         </div>
-        <AppointmentStatusBadge status={row.status} />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Paciente</p>
+          <h2 className="mt-1 text-sm font-semibold text-lotus-900">{row.patientName ?? "Paciente"}</h2>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Procedimento</p>
+          <p className="mt-1 text-sm text-lotus-900">{procedureLabel}</p>
+        </div>
+        <div className="sm:justify-self-end">
+          <AppointmentStatusBadge status={row.status} />
+        </div>
       </div>
+
+      {row.urgencyNote ? <p className="mt-3 text-sm text-lotus-800">{row.urgencyNote}</p> : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {row.status === "scheduled" ? (

@@ -253,11 +253,11 @@ export function PregnancyDetail({
             </form>
           ) : null}
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="pregnancy-summary-title">
+          <section className="card mt-6" aria-labelledby="pregnancy-summary-title">
             <h2 id="pregnancy-summary-title" className="font-semibold text-lotus-900">
               Acompanhamento
             </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800 sm:grid-cols-2 xl:grid-cols-4">
               <Item label="Paciente" value={row.patientName ?? "—"} strong />
               <Item label="Prática" value={row.practiceName ?? "—"} />
               <Item label="Médica principal" value={row.primaryName ?? "—"} />
@@ -271,15 +271,15 @@ export function PregnancyDetail({
             </dl>
           </section>
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="pregnancy-share-title">
+          <section className="card mt-6" aria-labelledby="pregnancy-share-title">
             <h2 id="pregnancy-share-title" className="font-semibold text-lotus-900">
               Compartilhamento com a retaguarda
             </h2>
             <p className="mt-2 text-sm text-lotus-600">
-              Cadastrar a retaguarda não libera o acesso. A médica principal autoriza expressamente
+              Cadastrar a retaguarda não libera o acesso.               A médica principal autoriza expressamente
               somente esta gestação.
             </p>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800 sm:grid-cols-2">
               <Item
                 label="Situação"
                 value={
@@ -341,11 +341,11 @@ export function PregnancyDetail({
             ) : null}
           </section>
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="pregnancy-dates-title">
+          <section className="card mt-6" aria-labelledby="pregnancy-dates-title">
             <h2 id="pregnancy-dates-title" className="font-semibold text-lotus-900">
               Datas obstétricas
             </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+            <dl className="mt-4 grid gap-4 text-sm text-lotus-800 sm:grid-cols-2 xl:grid-cols-4">
               <Item label="Número da gestação" value={row.pregnancyNumber ? `${row.pregnancyNumber}ª` : "—"} />
               <Item label="DUM" value={row.lmpDate ? formatIsoDateBr(row.lmpDate) : "—"} />
               <Item
@@ -382,7 +382,7 @@ export function PregnancyDetail({
             nameByProfessionalId={eventNames}
           />
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="pregnancy-history-title">
+          <section className="card mt-6" aria-labelledby="pregnancy-history-title">
             <h2 id="pregnancy-history-title" className="font-semibold text-lotus-900">
               Histórico
             </h2>

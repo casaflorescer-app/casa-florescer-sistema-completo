@@ -89,6 +89,10 @@ export type AppointmentRow = {
   patientName?: string | null;
   professionalName?: string | null;
   roomName?: string | null;
+  /** Nome do procedimento já cadastrado. Ausente quando o horário não tem procedure_id. */
+  procedureName?: string | null;
+  roomKind?: string | null;
+  roomIsHouse?: boolean;
 };
 
 export type EncounterPractice = {

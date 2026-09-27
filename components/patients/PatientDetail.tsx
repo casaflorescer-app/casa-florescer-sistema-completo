@@ -45,6 +45,7 @@ export function PatientDetail({
   const [photoStatus, setPhotoStatus] = useState<"none" | "loading" | "ready" | "error">("none");
   const [busy, setBusy] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   async function loadPatient() {
     const supabase = createClient();
@@ -164,7 +165,7 @@ export function PatientDetail({
 
       {!loading && row ? (
         <>
-          <section className="card mt-6 max-w-xl" aria-labelledby="patient-photo-title">
+          <section className="card mt-6" aria-labelledby="patient-photo-title">
             <h2 id="patient-photo-title" className="font-semibold text-lotus-900">
               Fotografia
             </h2>
@@ -181,66 +182,75 @@ export function PatientDetail({
                 if (file) void handleReplace(file);
               }}
             />
-            {photoStatus === "loading" ? (
-              <p className="mt-3 text-sm text-lotus-600">Carregando fotografia…</p>
-            ) : null}
-            {photoStatus === "error" ? (
-              <p className="mt-3 text-sm text-rose-800">Não foi possível carregar a fotografia.</p>
-            ) : null}
-            {photoStatus === "none" ? (
-              <p className="mt-3 text-sm text-lotus-600">Sem fotografia.</p>
-            ) : null}
-            {photoStatus === "ready" && photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={photoUrl}
-                alt={`Fotografia de ${row.fullName}`}
-                className="mt-3 h-40 w-40 rounded-2xl object-cover border border-lotus-100"
-              />
-            ) : null}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={ghostButtonClass}
-                disabled={busy}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {row.photoPath ? "Alterar fotografia" : "Adicionar fotografia"}
-              </button>
-              {row.photoPath ? (
-                confirmRemove ? (
-                  <>
-                    <button type="button" className={buttonClass} disabled={busy} onClick={() => void handleRemove()}>
-                      {busy ? "Removendo…" : "Confirmar remoção"}
-                    </button>
-                    <button
-                      type="button"
-                      className={ghostButtonClass}
-                      disabled={busy}
-                      onClick={() => setConfirmRemove(false)}
-                    >
-                      Cancelar
-                    </button>
-                  </>
-                ) : (
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              {photoStatus === "ready" && photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoUrl}
+                  alt={`Fotografia de ${row.fullName}`}
+                  className="h-24 w-24 rounded-2xl border border-lotus-100 object-cover"
+                />
+              ) : (
+                <span
+                  className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-lotus-100 bg-lotus-50 text-xs text-lotus-500"
+                  aria-hidden="true"
+                >
+                  Foto
+                </span>
+              )}
+              <div className="min-w-0">
+                {photoStatus === "loading" ? (
+                  <p className="text-sm text-lotus-600">Carregando fotografia…</p>
+                ) : null}
+                {photoStatus === "error" ? (
+                  <p className="text-sm text-rose-800">Não foi possível carregar a fotografia.</p>
+                ) : null}
+                {photoStatus === "none" ? <p className="text-sm text-lotus-700">Sem fotografia</p> : null}
+                <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
                     className={ghostButtonClass}
                     disabled={busy}
-                    onClick={() => setConfirmRemove(true)}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    Remover fotografia
+                    {row.photoPath ? "Alterar fotografia" : "Adicionar fotografia"}
                   </button>
-                )
-              ) : null}
+                  {row.photoPath ? (
+                    confirmRemove ? (
+                      <>
+                        <button type="button" className={buttonClass} disabled={busy} onClick={() => void handleRemove()}>
+                          {busy ? "Removendo…" : "Confirmar remoção"}
+                        </button>
+                        <button
+                          type="button"
+                          className={ghostButtonClass}
+                          disabled={busy}
+                          onClick={() => setConfirmRemove(false)}
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className={ghostButtonClass}
+                        disabled={busy}
+                        onClick={() => setConfirmRemove(true)}
+                      >
+                        Remover fotografia
+                      </button>
+                    )
+                  ) : null}
+                </div>
+              </div>
             </div>
           </section>
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="patient-identity-title">
+          <section className="card mt-4" aria-labelledby="patient-identity-title">
             <h2 id="patient-identity-title" className="font-semibold text-lotus-900">
               Identificação
             </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+            <dl className="mt-4 grid grid-cols-1 gap-4 text-sm text-lotus-800 sm:grid-cols-2 xl:grid-cols-4">
               <DetailItem label="Nome completo" value={row.fullName} strong />
               {row.socialName ? <DetailItem label="Nome social" value={row.socialName} /> : null}
               <DetailItem label="CPF" value={maskCpf(row.cpf)} />
@@ -249,88 +259,104 @@ export function PatientDetail({
             </dl>
           </section>
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="patient-contact-title">
+          <section className="card mt-4" aria-labelledby="patient-contact-title">
             <h2 id="patient-contact-title" className="font-semibold text-lotus-900">
               Contato
             </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+            <dl className="mt-4 grid grid-cols-1 gap-4 text-sm text-lotus-800 sm:grid-cols-2 xl:grid-cols-3">
               <DetailItem label="Telefone" value={row.phone ? formatPhone(row.phone) : "—"} />
               <DetailItem label="E-mail" value={row.email ?? "—"} breakAll />
               <DetailItem label="Canal preferencial" value={PREFERRED_CHANNEL_LABEL[row.preferredChannel]} />
             </dl>
           </section>
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="patient-address-title">
-            <h2 id="patient-address-title" className="font-semibold text-lotus-900">
-              Endereço
-            </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
-              <DetailItem label="Logradouro" value={displayText(row.addressStreet)} />
-              <DetailItem label="Número" value={displayText(row.addressNumber)} />
-              <DetailItem label="Complemento" value={displayText(row.addressComplement)} />
-              <DetailItem label="Bairro" value={displayText(row.addressDistrict)} />
-              <DetailItem label="Cidade" value={displayText(row.addressCity)} />
-              <DetailItem label="UF" value={displayText(row.addressState)} />
-              <DetailItem label="CEP" value={row.addressCep ? formatCep(row.addressCep) : "—"} />
-            </dl>
-          </section>
+          <div className="mt-4">
+            <button
+              type="button"
+              className={ghostButtonClass}
+              aria-expanded={showDetails}
+              aria-controls="patient-extra-details"
+              onClick={() => setShowDetails((open) => !open)}
+            >
+              {showDetails ? "Ocultar detalhes" : "Ver detalhes"}
+            </button>
+          </div>
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="patient-care-title">
-            <h2 id="patient-care-title" className="font-semibold text-lotus-900">
-              Atendimento
-            </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
-              <DetailItem
-                label="Especialidades"
-                value={
-                  row.careSpecialties.length > 0
-                    ? row.careSpecialties.map((item) => CARE_SPECIALTY_LABEL[item]).join(", ")
-                    : "Não informado"
-                }
-              />
-            </dl>
-          </section>
+          {showDetails ? (
+            <div id="patient-extra-details" className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <section className="card" aria-labelledby="patient-address-title">
+                <h2 id="patient-address-title" className="font-semibold text-lotus-900">
+                  Endereço
+                </h2>
+                <dl className="mt-4 grid grid-cols-1 gap-4 text-sm text-lotus-800 sm:grid-cols-2">
+                  <DetailItem label="Logradouro" value={displayText(row.addressStreet)} />
+                  <DetailItem label="Número" value={displayText(row.addressNumber)} />
+                  <DetailItem label="Complemento" value={displayText(row.addressComplement)} />
+                  <DetailItem label="Bairro" value={displayText(row.addressDistrict)} />
+                  <DetailItem label="Cidade" value={displayText(row.addressCity)} />
+                  <DetailItem label="UF" value={displayText(row.addressState)} />
+                  <DetailItem label="CEP" value={row.addressCep ? formatCep(row.addressCep) : "—"} />
+                </dl>
+              </section>
 
-          <section className="card mt-6 max-w-xl" aria-labelledby="patient-reception-title">
-            <h2 id="patient-reception-title" className="font-semibold text-lotus-900">
-              Recepção
-            </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
-              <DetailItem label="Observações" value={displayText(row.receptionNotes)} />
-            </dl>
-          </section>
-
-          <section className="card mt-6 max-w-xl" aria-labelledby="patient-billing-title">
-            <h2 id="patient-billing-title" className="font-semibold text-lotus-900">
-              Faturamento
-            </h2>
-            <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
-              <DetailItem
-                label="Modalidade"
-                value={row.billingModality ? BILLING_MODALITY_LABEL[row.billingModality] : "Não informado"}
-              />
-              {row.billingModality === "private" ? (
-                <DetailItem
-                  label="Forma de pagamento"
-                  value={
-                    row.privatePaymentMethod
-                      ? PRIVATE_PAYMENT_METHOD_LABEL[row.privatePaymentMethod]
-                      : "—"
-                  }
-                />
-              ) : null}
-              {row.billingModality === "insurance" ? (
-                <>
-                  <DetailItem label="Convênio" value={displayText(row.insuranceName)} />
-                  <DetailItem label="Carteirinha" value={displayText(row.insuranceCardNumber)} />
+              <section className="card" aria-labelledby="patient-care-title">
+                <h2 id="patient-care-title" className="font-semibold text-lotus-900">
+                  Atendimento
+                </h2>
+                <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
                   <DetailItem
-                    label="Validade"
-                    value={row.insuranceValidUntil ? formatIsoDateBr(row.insuranceValidUntil) : "—"}
+                    label="Especialidades"
+                    value={
+                      row.careSpecialties.length > 0
+                        ? row.careSpecialties.map((item) => CARE_SPECIALTY_LABEL[item]).join(", ")
+                        : "Não informado"
+                    }
                   />
-                </>
-              ) : null}
-            </dl>
-          </section>
+                </dl>
+              </section>
+
+              <section className="card" aria-labelledby="patient-reception-title">
+                <h2 id="patient-reception-title" className="font-semibold text-lotus-900">
+                  Recepção
+                </h2>
+                <dl className="mt-4 grid gap-4 text-sm text-lotus-800">
+                  <DetailItem label="Observações" value={displayText(row.receptionNotes)} />
+                </dl>
+              </section>
+
+              <section className="card" aria-labelledby="patient-billing-title">
+                <h2 id="patient-billing-title" className="font-semibold text-lotus-900">
+                  Faturamento
+                </h2>
+                <dl className="mt-4 grid grid-cols-1 gap-4 text-sm text-lotus-800 sm:grid-cols-2">
+                  <DetailItem
+                    label="Modalidade"
+                    value={row.billingModality ? BILLING_MODALITY_LABEL[row.billingModality] : "Não informado"}
+                  />
+                  {row.billingModality === "private" ? (
+                    <DetailItem
+                      label="Forma de pagamento"
+                      value={
+                        row.privatePaymentMethod
+                          ? PRIVATE_PAYMENT_METHOD_LABEL[row.privatePaymentMethod]
+                          : "—"
+                      }
+                    />
+                  ) : null}
+                  {row.billingModality === "insurance" ? (
+                    <>
+                      <DetailItem label="Convênio" value={displayText(row.insuranceName)} />
+                      <DetailItem label="Carteirinha" value={displayText(row.insuranceCardNumber)} />
+                      <DetailItem
+                        label="Validade"
+                        value={row.insuranceValidUntil ? formatIsoDateBr(row.insuranceValidUntil) : "—"}
+                      />
+                    </>
+                  ) : null}
+                </dl>
+              </section>
+            </div>
+          ) : null}
 
           <PatientPregnancies patientId={patientId} />
         </>

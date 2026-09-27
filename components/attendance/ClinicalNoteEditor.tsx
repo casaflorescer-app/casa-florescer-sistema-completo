@@ -27,7 +27,7 @@ export function ClinicalNoteEditor({
           ? "Atendimento assinado. A evolução fica somente para leitura."
           : "Registro mínimo do atendimento. Salve antes de assinar."}
       </p>
-      <div className="mt-4 grid gap-4">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {FIELDS.map((field) => (
           <label key={field.key} className={labelClass}>
             {field.label}

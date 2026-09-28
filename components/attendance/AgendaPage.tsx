@@ -22,6 +22,7 @@ import { dayBoundsIso, todayInputDate } from "@/components/attendance/agenda-dis
 import { AgendaDayBoard } from "@/components/attendance/AgendaDayBoard";
 import { AgendaFilters } from "@/components/attendance/AgendaFilters";
 import { AppointmentForm, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
+import { parseRoomOccupancy, type RoomOccupancy } from "@/lib/clinic/room-occupancy";
 
 function toRoom(value: Record<string, unknown>): AgendaRoomOption | null {
   const id = typeof value.id === "string" ? value.id : null;
@@ -48,6 +49,7 @@ export function AgendaPage() {
   const [patients, setPatients] = useState<PatientListRow[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalLabel[]>([]);
   const [rooms, setRooms] = useState<AgendaRoomOption[]>([]);
+  const [occupancy, setOccupancy] = useState<RoomOccupancy[]>([]);
   const [procedureNames, setProcedureNames] = useState<Map<string, string>>(new Map());
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -111,6 +113,7 @@ export function AgendaPage() {
       setPatients([]);
       setProfessionals([]);
       setRooms([]);
+      setOccupancy([]);
       setLoading(false);
       setError(authorization ? "Nenhuma prática selecionada." : null);
       return;
@@ -126,7 +129,7 @@ export function AgendaPage() {
     setLoading(true);
     void (async () => {
       try {
-        const [appointmentRows, patientRows, professionalRows, roomResult] = await Promise.all([
+        const [appointmentRows, patientRows, professionalRows, roomResult, occupancyResult] = await Promise.all([
           listAppointments(supabase, {
             practiceId: selectedPracticeId,
             from: bounds.from,
@@ -142,6 +145,10 @@ export function AgendaPage() {
             .eq("organization_id", organizationId)
             .eq("status", "active")
             .order("name"),
+          supabase
+            .from("room_occupancy_labels")
+            .select("room_id, organization_id, professional_id, professional_name, occupancy")
+            .eq("organization_id", organizationId),
         ]);
         if (cancelled) return;
         const procedureIds = [
@@ -173,6 +180,14 @@ export function AgendaPage() {
           );
           setError(null);
         }
+        setOccupancy(
+          occupancyResult.error
+            ? []
+            : (occupancyResult.data ?? []).flatMap((item) => {
+                const row = parseRoomOccupancy(item);
+                return row ? [row] : [];
+              }),
+        );
         setPatients(patientRows);
         setProfessionals(professionalRows);
         setRows(appointmentRows);
@@ -297,6 +312,7 @@ export function AgendaPage() {
           patients={patients}
           professionals={professionals}
           rooms={rooms}
+          occupancy={occupancy}
           busy={formBusy}
           onBusy={setFormBusy}
           onCancel={() => setShowForm(false)}

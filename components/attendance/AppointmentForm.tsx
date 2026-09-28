@@ -8,6 +8,10 @@ import type { PatientListRow } from "@/lib/patients/directory";
 import type { AppointmentKind } from "@/lib/types/database";
 import { buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import { APPOINTMENT_KIND_LABEL, localDateTimeIso } from "@/components/attendance/agenda-display";
+import {
+  singleOccupancyForProfessional,
+  type RoomOccupancy,
+} from "@/lib/clinic/room-occupancy";
 
 const labelClass = "text-sm font-medium text-lotus-800";
 
@@ -28,6 +32,7 @@ export function AppointmentForm({
   patients,
   professionals,
   rooms,
+  occupancy,
   busy,
   onBusy,
   onCreated,
@@ -41,6 +46,7 @@ export function AppointmentForm({
   patients: PatientListRow[];
   professionals: ProfessionalLabel[];
   rooms: AgendaRoomOption[];
+  occupancy: RoomOccupancy[];
   busy: boolean;
   onBusy: (value: boolean) => void;
   onCreated: (message: string, bookedDate: string) => void;
@@ -95,7 +101,16 @@ export function AppointmentForm({
     onCreated("Agendamento criado.", date);
   }
 
+  const suggested = singleOccupancyForProfessional(occupancy, professionalId);
+  const suggestedRoom = suggested ? rooms.find((room) => room.id === suggested.roomId) : undefined;
   const blocked = patients.length === 0 || professionals.length === 0 || rooms.length === 0;
+
+  function chooseProfessional(nextProfessionalId: string) {
+    setProfessionalId(nextProfessionalId);
+    const nextRoom = singleOccupancyForProfessional(occupancy, nextProfessionalId);
+    const room = nextRoom ? rooms.find((item) => item.id === nextRoom.roomId) : undefined;
+    setRoomId(room?.id ?? "");
+  }
 
   return (
     <form className="card mt-6" onSubmit={(event) => void onSubmit(event)}>
@@ -141,7 +156,7 @@ export function AppointmentForm({
           <select
             className={fieldClass}
             value={professionalId}
-            onChange={(event) => setProfessionalId(event.target.value)}
+            onChange={(event) => chooseProfessional(event.target.value)}
             required
           >
             <option value="">Selecione</option>
@@ -177,6 +192,11 @@ export function AppointmentForm({
               </option>
             ))}
           </select>
+          {suggestedRoom && roomId === suggestedRoom.id ? (
+            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
+              Sala fixa sugerida. A sala de procedimentos continua disponível.
+            </span>
+          ) : null}
         </label>
         <label className={labelClass}>
           Hora inicial

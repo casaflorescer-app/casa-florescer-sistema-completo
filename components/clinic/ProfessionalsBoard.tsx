@@ -4,18 +4,13 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StatusMessage } from "@/components/platform/Ui";
 import { ROOM_NATURE_LABEL, roomNature, type RoomNature } from "@/lib/clinic/room-presentation";
+import { parseRoomOccupancy, singleOccupancyForProfessional } from "@/lib/clinic/room-occupancy";
 
 type RoomRow = {
   id: string;
   name: string;
   roomKind: string | null;
   isHouse: boolean;
-  occupantProfessionalId: string | null;
-};
-
-type ContractRow = {
-  roomId: string;
-  tenantProfessionalId: string;
 };
 
 type ProfessionalCard = {
@@ -50,23 +45,19 @@ export function ProfessionalsBoard() {
     }
 
     void (async () => {
-      const [professionals, roomsResult, contractsResult] = await Promise.all([
+      const [professionals, roomsResult, occupancyResult] = await Promise.all([
         supabase
           .from("professionals")
           .select(
             "id, council_type, practice_id, profiles(full_name, is_active), practice_units(specialty)",
           ),
+        supabase.from("rooms").select("id, name, room_kind, is_house, status").eq("status", "active"),
         supabase
-          .from("rooms")
-          .select("id, name, room_kind, is_house, status, occupant_professional_id")
-          .eq("status", "active"),
-        supabase
-          .from("rental_contracts")
-          .select("room_id, tenant_professional_id, status, is_active")
-          .eq("is_active", true),
+          .from("room_occupancy_labels")
+          .select("room_id, professional_id, professional_name, occupancy"),
       ]);
 
-      if (professionals.error || roomsResult.error) {
+      if (professionals.error || roomsResult.error || occupancyResult.error) {
         setRows([]);
         setError("Não foi possível carregar os profissionais.");
         return;
@@ -83,25 +74,14 @@ export function ProfessionalsBoard() {
             name,
             roomKind: typeof record.room_kind === "string" ? record.room_kind : null,
             isHouse: record.is_house === true,
-            occupantProfessionalId:
-              typeof record.occupant_professional_id === "string" ? record.occupant_professional_id : null,
           },
         ];
       });
 
-      const contracts: ContractRow[] = contractsResult.error
-        ? []
-        : (contractsResult.data ?? []).flatMap((item) => {
-            const record = item as Record<string, unknown>;
-            const roomId = typeof record.room_id === "string" ? record.room_id : null;
-            const tenantProfessionalId =
-              typeof record.tenant_professional_id === "string" ? record.tenant_professional_id : null;
-            const status = typeof record.status === "string" ? record.status : "";
-            if (!roomId || !tenantProfessionalId) return [];
-            if (record.is_active !== true) return [];
-            if (status !== "active" && status !== "scheduled") return [];
-            return [{ roomId, tenantProfessionalId }];
-          });
+      const occupancy = (occupancyResult.data ?? []).flatMap((item) => {
+        const row = parseRoomOccupancy(item);
+        return row ? [row] : [];
+      });
 
       const cards = (professionals.data ?? []).flatMap((item) => {
         const record = item as Record<string, unknown>;
@@ -113,13 +93,8 @@ export function ProfessionalsBoard() {
         const specialty = typeof practice?.specialty === "string" ? practice.specialty.trim() : "";
         const council = typeof record.council_type === "string" ? record.council_type.trim() : "";
         const isActive = profile?.is_active;
-        const occupied = rooms.filter((room) => room.occupantProfessionalId === id);
-        const contracted = contracts.filter((entry) => entry.tenantProfessionalId === id);
-        const contractedRoom =
-          occupied.length === 0 && contracted.length === 1
-            ? rooms.find((room) => room.id === contracted[0]?.roomId)
-            : undefined;
-        const room = occupied.length === 1 ? occupied[0] : (contractedRoom ?? null);
+        const assigned = singleOccupancyForProfessional(occupancy, id);
+        const room = assigned ? rooms.find((entry) => entry.id === assigned.roomId) : undefined;
         return [
           {
             id,

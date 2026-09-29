@@ -1,6 +1,10 @@
 import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attendance/directory";
 import { buttonClass, ghostButtonClass } from "@/components/platform/Ui";
-import { APPOINTMENT_KIND_LABEL, formatClock } from "@/components/attendance/agenda-display";
+import {
+  APPOINTMENT_KIND_LABEL,
+  canEditAppointmentStatus,
+  formatClock,
+} from "@/components/attendance/agenda-display";
 import { AppointmentStatusBadge } from "@/components/attendance/AppointmentStatusBadge";
 import { ROOM_NATURE_LABEL, roomNature } from "@/lib/clinic/room-presentation";
 
@@ -11,12 +15,18 @@ export function AppointmentCard({
   row,
   busy,
   canStartEncounter,
+  canEdit,
+  editing,
+  onEdit,
   onSetStatus,
   onStartEncounter,
 }: {
   row: AppointmentRow;
   busy: boolean;
   canStartEncounter: boolean;
+  canEdit: boolean;
+  editing: boolean;
+  onEdit: (appointmentId: string) => void;
   onSetStatus: (appointmentId: string, status: OperationalAppointmentStatus) => void;
   onStartEncounter: (appointmentId: string) => void;
 }) {
@@ -29,6 +39,7 @@ export function AppointmentCard({
   const nature = row.roomName
     ? roomNature({ roomKind: row.roomKind, isHouse: row.roomIsHouse === true })
     : null;
+  const showEdit = canEdit && canEditAppointmentStatus(row.status);
 
   return (
     <article className="card min-w-0">
@@ -41,7 +52,9 @@ export function AppointmentCard({
         </div>
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Médica</p>
-          <p className="mt-1 text-sm font-semibold text-lotus-900">{row.professionalName ?? "Profissional"}</p>
+          <p className="mt-1 text-sm font-semibold text-lotus-900">
+            {row.professionalName ?? "Profissional"}
+          </p>
         </div>
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Sala</p>
@@ -70,6 +83,16 @@ export function AppointmentCard({
       {row.urgencyNote ? <p className="mt-3 text-sm text-lotus-800">{row.urgencyNote}</p> : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
+        {showEdit ? (
+          <button
+            type="button"
+            className={ghostActionClass}
+            disabled={busy || editing}
+            onClick={() => onEdit(row.id)}
+          >
+            {editing ? "Editando…" : "Editar"}
+          </button>
+        ) : null}
         {row.status === "scheduled" ? (
           <>
             <button

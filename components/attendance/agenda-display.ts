@@ -43,3 +43,25 @@ export function formatDayLabel(date: string): string {
     month: "long",
   });
 }
+
+/** yyyy-mm-dd no fuso local a partir de ISO timestamptz. */
+export function isoToInputDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** HH:mm no fuso local a partir de ISO timestamptz. */
+export function isoToInputTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${hour}:${minute}`;
+}
+
+export function canEditAppointmentStatus(status: string): boolean {
+  return status === "scheduled" || status === "confirmed";
+}

@@ -159,6 +159,18 @@ export type CreateAppointmentInput = {
   createdBy: string;
 };
 
+export type UpdateAppointmentInput = {
+  appointmentId: string;
+  patientId: string;
+  professionalId: string;
+  roomId: string;
+  procedureId: string;
+  kind: AppointmentKind;
+  startsAt: string;
+  endsAt: string;
+  urgencyNote?: string | null;
+};
+
 export type AppointmentListFilter = {
   practiceId: string;
   /** ISO timestamptz inclusive lower bound. */

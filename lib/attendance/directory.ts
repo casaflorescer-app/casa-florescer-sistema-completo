@@ -18,6 +18,7 @@ import {
   type EncounterPractice,
   type EncounterRow,
   type PregnancyContext,
+  type UpdateAppointmentInput,
 } from "@/lib/attendance/types";
 
 export {
@@ -39,6 +40,7 @@ export type {
   EncounterRow,
   OperationalAppointmentStatus,
   PregnancyContext,
+  UpdateAppointmentInput,
 } from "@/lib/attendance/types";
 
 export const APPOINTMENT_COLUMNS =
@@ -176,6 +178,30 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   }
   if (message.includes("APPOINTMENT_NOT_ATTENDABLE")) {
     return "Este agendamento não pode ser atendido.";
+  }
+  if (message.includes("APPOINTMENT_NOT_EDITABLE")) {
+    return "Este agendamento não pode mais ser editado.";
+  }
+  if (message.includes("APPOINTMENT_HAS_ENCOUNTER")) {
+    return "Este agendamento já possui atendimento clínico e não pode ser editado.";
+  }
+  if (message.includes("APPOINTMENT_PROFESSIONAL_OVERLAP")) {
+    return "A profissional já possui agendamento neste horário.";
+  }
+  if (message.includes("APPOINTMENT_ROOM_OVERLAP")) {
+    return "Já existe agendamento nesta sala no mesmo horário.";
+  }
+  if (message.includes("APPOINTMENT_UPDATE_INVALID_RANGE")) {
+    return "O horário de término deve ser após o início.";
+  }
+  if (message.includes("APPOINTMENT_UPDATE_INVALID")) {
+    return "Informe paciente, profissional, procedimento, sala e horários válidos.";
+  }
+  if (message.includes("APPOINTMENT_UPDATE_STATUS_LOCKED")) {
+    return "A edição não altera o status do agendamento.";
+  }
+  if (message.includes("APPOINTMENT_UPDATE_SCOPE_LOCKED")) {
+    return "Não é permitido alterar o escopo deste agendamento.";
   }
   if (message.includes("ENCOUNTER_NOT_FOUND")) return "Atendimento não encontrado.";
   if (message.includes("ENCOUNTER_NOT_OPEN")) {
@@ -412,12 +438,42 @@ export async function createAppointment(
   if (error) {
     return {
       row: null,
-      error: error.message.includes("appointments_room_no_overlap")
-        ? "Já existe agendamento nesta sala no mesmo horário."
-        : error.message || "Não foi possível criar o agendamento.",
+      error: error.message.includes("appointments_professional_no_overlap")
+        ? "A profissional já possui agendamento neste horário."
+        : error.message.includes("appointments_room_no_overlap")
+          ? "Já existe agendamento nesta sala no mesmo horário."
+          : error.message || "Não foi possível criar o agendamento.",
     };
   }
   return { row: toAppointmentRow(data as Record<string, unknown>), error: null };
+}
+
+export async function updateAppointment(
+  supabase: SupabaseClient,
+  input: UpdateAppointmentInput,
+): Promise<{ row: AppointmentRow | null; error: string | null }> {
+  if (input.endsAt <= input.startsAt) {
+    return { row: null, error: "O horário de término deve ser após o início." };
+  }
+  const { data, error } = await supabase.rpc("appointment_update", {
+    p_appointment_id: input.appointmentId,
+    p_patient_id: input.patientId,
+    p_professional_id: input.professionalId,
+    p_room_id: input.roomId,
+    p_procedure_id: input.procedureId,
+    p_kind: input.kind,
+    p_starts_at: input.startsAt,
+    p_ends_at: input.endsAt,
+    p_urgency_note: input.urgencyNote ?? null,
+  });
+  if (error) return { row: null, error: mapAttendanceRpcError(error) };
+  if (!data || typeof data !== "object") {
+    return { row: null, error: "Resposta inválida do servidor." };
+  }
+  return {
+    row: toAppointmentRow(data as Record<string, unknown>),
+    error: null,
+  };
 }
 
 export async function appointmentSetStatus(

@@ -22,6 +22,7 @@ import { dayBoundsIso, todayInputDate } from "@/components/attendance/agenda-dis
 import { AgendaDayBoard } from "@/components/attendance/AgendaDayBoard";
 import { AgendaFilters } from "@/components/attendance/AgendaFilters";
 import { AppointmentForm, type AgendaProcedureOption, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
+import { EditAppointmentForm } from "@/components/attendance/EditAppointmentForm";
 import { parseRoomOccupancy, type RoomOccupancy } from "@/lib/clinic/room-occupancy";
 
 function toRoom(value: Record<string, unknown>): AgendaRoomOption | null {
@@ -53,6 +54,7 @@ export function AgendaPage() {
   const [occupancy, setOccupancy] = useState<RoomOccupancy[]>([]);
   const [procedureNames, setProcedureNames] = useState<Map<string, string>>(new Map());
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [formBusy, setFormBusy] = useState(false);
@@ -286,6 +288,7 @@ export function AgendaPage() {
 
   const canCreate = Boolean(supabase && organizationId && selectedPracticeId && userId);
   const canStartEncounter = authorization ? hasStaffRole(authorization, "physician") : false;
+  const editingRow = editingId ? labeledRows.find((item) => item.id === editingId) ?? null : null;
 
   return (
     <div>
@@ -307,8 +310,11 @@ export function AgendaPage() {
         <button
           type="button"
           className={buttonClass}
-          disabled={!canCreate || formBusy}
-          onClick={() => setShowForm((open) => !open)}
+          disabled={!canCreate || formBusy || Boolean(editingId)}
+          onClick={() => {
+            setEditingId(null);
+            setShowForm((open) => !open);
+          }}
         >
           Novo atendimento
         </button>
@@ -350,12 +356,42 @@ export function AgendaPage() {
         />
       ) : null}
 
+      {editingRow && supabase ? (
+        <EditAppointmentForm
+          key={editingRow.id}
+          supabase={supabase}
+          appointment={editingRow}
+          patients={patients}
+          professionals={professionals}
+          rooms={rooms}
+          procedures={procedures}
+          occupancy={occupancy}
+          busy={formBusy}
+          onBusy={setFormBusy}
+          onCancel={() => setEditingId(null)}
+          onSaved={(message, bookedDate) => {
+            setEditingId(null);
+            setNotice(message);
+            setDate(bookedDate);
+            setProfessionalId("");
+            setStatus("");
+            setReloadKey((value) => value + 1);
+          }}
+        />
+      ) : null}
+
       <AgendaDayBoard
         date={date}
         rows={labeledRows}
         loading={loading || authorizationLoading}
         busyId={busyId}
         canStartEncounter={canStartEncounter}
+        canEdit={canCreate}
+        editingId={editingId}
+        onEdit={(appointmentId) => {
+          setShowForm(false);
+          setEditingId(appointmentId);
+        }}
         onSetStatus={onSetStatus}
         onStartEncounter={onStartEncounter}
       />

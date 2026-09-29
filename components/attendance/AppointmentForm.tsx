@@ -8,6 +8,7 @@ import type { PatientListRow } from "@/lib/patients/directory";
 import type { AppointmentKind } from "@/lib/types/database";
 import { buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import { APPOINTMENT_KIND_LABEL, localDateTimeIso } from "@/components/attendance/agenda-display";
+import { procedureNameMatchesQuery } from "@/components/attendance/procedure-search";
 import {
   singleOccupancyForProfessional,
   type RoomOccupancy,
@@ -131,10 +132,13 @@ export function AppointmentForm({
     setRoomId(roomFor(nextKind, professionalId));
   }
 
-  const query = procedureQuery.trim().toLocaleLowerCase("pt-BR");
+  const matchedProcedures = procedures.filter((item) =>
+    procedureNameMatchesQuery(item.name, procedureQuery),
+  );
   const visibleProcedures = [...procedures]
-    .filter((item) => item.id === procedureId || item.name.toLocaleLowerCase("pt-BR").includes(query))
+    .filter((item) => item.id === procedureId || procedureNameMatchesQuery(item.name, procedureQuery))
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const noProcedureMatch = Boolean(procedureQuery.trim()) && matchedProcedures.length === 0;
   const suggested = singleOccupancyForProfessional(occupancy, professionalId);
   const suggestedRoom = suggested ? rooms.find((room) => room.id === suggested.roomId) : undefined;
   const blocked =
@@ -231,6 +235,11 @@ export function AppointmentForm({
               </option>
             ))}
           </select>
+          {noProcedureMatch ? (
+            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
+              Nenhum procedimento encontrado.
+            </span>
+          ) : null}
         </label>
         <label className={labelClass}>
           Data

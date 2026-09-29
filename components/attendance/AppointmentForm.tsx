@@ -23,6 +23,11 @@ export type AgendaRoomOption = {
   isHouse?: boolean;
 };
 
+export type AgendaProcedureOption = {
+  id: string;
+  name: string;
+};
+
 export function AppointmentForm({
   supabase,
   organizationId,
@@ -32,6 +37,7 @@ export function AppointmentForm({
   patients,
   professionals,
   rooms,
+  procedures,
   occupancy,
   busy,
   onBusy,
@@ -46,6 +52,7 @@ export function AppointmentForm({
   patients: PatientListRow[];
   professionals: ProfessionalLabel[];
   rooms: AgendaRoomOption[];
+  procedures: AgendaProcedureOption[];
   occupancy: RoomOccupancy[];
   busy: boolean;
   onBusy: (value: boolean) => void;
@@ -59,13 +66,15 @@ export function AppointmentForm({
   const [startsAt, setStartsAt] = useState("08:00");
   const [endsAt, setEndsAt] = useState("08:30");
   const [kind, setKind] = useState<AppointmentKind>("consultation");
+  const [procedureId, setProcedureId] = useState("");
+  const [procedureQuery, setProcedureQuery] = useState("");
   const [urgencyNote, setUrgencyNote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!patientId || !professionalId || !roomId) {
-      setError("Informe paciente, profissional e sala.");
+    if (!patientId || !professionalId || !procedureId || !roomId) {
+      setError("Informe paciente, profissional, procedimento e sala.");
       return;
     }
     const startIso = localDateTimeIso(date, startsAt);
@@ -90,6 +99,7 @@ export function AppointmentForm({
       startsAt: startIso,
       endsAt: endIso,
       kind,
+      procedureId,
       urgencyNote: urgencyNote.trim() || null,
       createdBy,
     });
@@ -101,16 +111,34 @@ export function AppointmentForm({
     onCreated("Agendamento criado.", date);
   }
 
-  const suggested = singleOccupancyForProfessional(occupancy, professionalId);
-  const suggestedRoom = suggested ? rooms.find((room) => room.id === suggested.roomId) : undefined;
-  const blocked = patients.length === 0 || professionals.length === 0 || rooms.length === 0;
+  const procedureRoom = rooms.filter((room) => room.roomKind === "procedure");
+  const sharedProcedureRoom = procedureRoom.length === 1 ? procedureRoom[0] : undefined;
+
+  function roomFor(nextKind: AppointmentKind, nextProfessionalId: string): string {
+    if (nextKind === "procedure" && sharedProcedureRoom) return sharedProcedureRoom.id;
+    const fixed = singleOccupancyForProfessional(occupancy, nextProfessionalId);
+    const room = fixed ? rooms.find((item) => item.id === fixed.roomId) : undefined;
+    return room?.id ?? "";
+  }
 
   function chooseProfessional(nextProfessionalId: string) {
     setProfessionalId(nextProfessionalId);
-    const nextRoom = singleOccupancyForProfessional(occupancy, nextProfessionalId);
-    const room = nextRoom ? rooms.find((item) => item.id === nextRoom.roomId) : undefined;
-    setRoomId(room?.id ?? "");
+    setRoomId(roomFor(kind, nextProfessionalId));
   }
+
+  function chooseKind(nextKind: AppointmentKind) {
+    setKind(nextKind);
+    setRoomId(roomFor(nextKind, professionalId));
+  }
+
+  const query = procedureQuery.trim().toLocaleLowerCase("pt-BR");
+  const visibleProcedures = [...procedures]
+    .filter((item) => item.id === procedureId || item.name.toLocaleLowerCase("pt-BR").includes(query))
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const suggested = singleOccupancyForProfessional(occupancy, professionalId);
+  const suggestedRoom = suggested ? rooms.find((room) => room.id === suggested.roomId) : undefined;
+  const blocked =
+    patients.length === 0 || professionals.length === 0 || rooms.length === 0 || procedures.length === 0;
 
   return (
     <form className="card mt-6" onSubmit={(event) => void onSubmit(event)}>
@@ -132,6 +160,9 @@ export function AppointmentForm({
       ) : null}
       {rooms.length === 0 ? (
         <p className="mt-4 text-sm text-lotus-700">Nenhuma sala visível nesta organização.</p>
+      ) : null}
+      {procedures.length === 0 ? (
+        <p className="mt-4 text-sm text-lotus-700">Nenhum procedimento visível nesta prática.</p>
       ) : null}
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -168,6 +199,40 @@ export function AppointmentForm({
           </select>
         </label>
         <label className={labelClass}>
+          Tipo
+          <select
+            className={fieldClass}
+            value={kind}
+            onChange={(event) => chooseKind(event.target.value as AppointmentKind)}
+          >
+            <option value="consultation">{APPOINTMENT_KIND_LABEL.consultation}</option>
+            <option value="procedure">{APPOINTMENT_KIND_LABEL.procedure}</option>
+          </select>
+        </label>
+        <label className={labelClass}>
+          Procedimento
+          <input
+            className={fieldClass}
+            value={procedureQuery}
+            onChange={(event) => setProcedureQuery(event.target.value)}
+            placeholder="Digite para pesquisar"
+            aria-label="Pesquisar procedimento"
+          />
+          <select
+            className={`${fieldClass} mt-2`}
+            value={procedureId}
+            onChange={(event) => setProcedureId(event.target.value)}
+            required
+          >
+            <option value="">Selecione</option>
+            {visibleProcedures.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={labelClass}>
           Data
           <input
             type="date"
@@ -176,27 +241,6 @@ export function AppointmentForm({
             onChange={(event) => setDate(event.target.value)}
             required
           />
-        </label>
-        <label className={labelClass}>
-          Sala
-          <select
-            className={fieldClass}
-            value={roomId}
-            onChange={(event) => setRoomId(event.target.value)}
-            required
-          >
-            <option value="">Selecione</option>
-            {rooms.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          {suggestedRoom && roomId === suggestedRoom.id ? (
-            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
-              Sala fixa sugerida. A sala de procedimentos continua disponível.
-            </span>
-          ) : null}
         </label>
         <label className={labelClass}>
           Hora inicial
@@ -219,15 +263,30 @@ export function AppointmentForm({
           />
         </label>
         <label className={labelClass}>
-          Tipo
+          Sala
           <select
             className={fieldClass}
-            value={kind}
-            onChange={(event) => setKind(event.target.value as AppointmentKind)}
+            value={roomId}
+            onChange={(event) => setRoomId(event.target.value)}
+            required
           >
-            <option value="consultation">{APPOINTMENT_KIND_LABEL.consultation}</option>
-            <option value="procedure">{APPOINTMENT_KIND_LABEL.procedure}</option>
+            <option value="">Selecione</option>
+            {rooms.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
+          {kind === "procedure" && sharedProcedureRoom && roomId === sharedProcedureRoom.id ? (
+            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
+              Sala de procedimentos sugerida. O uso é compartilhado.
+            </span>
+          ) : null}
+          {kind === "consultation" && suggestedRoom && roomId === suggestedRoom.id ? (
+            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
+              Sala fixa sugerida. A sala de procedimentos continua disponível.
+            </span>
+          ) : null}
         </label>
         <label className={`${labelClass} sm:col-span-2`}>
           Observação

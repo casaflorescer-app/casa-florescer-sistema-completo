@@ -21,7 +21,7 @@ import type { AppointmentStatus } from "@/lib/types/database";
 import { dayBoundsIso, todayInputDate } from "@/components/attendance/agenda-display";
 import { AgendaDayBoard } from "@/components/attendance/AgendaDayBoard";
 import { AgendaFilters } from "@/components/attendance/AgendaFilters";
-import { AppointmentForm, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
+import { AppointmentForm, type AgendaProcedureOption, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
 import { parseRoomOccupancy, type RoomOccupancy } from "@/lib/clinic/room-occupancy";
 
 function toRoom(value: Record<string, unknown>): AgendaRoomOption | null {
@@ -49,6 +49,7 @@ export function AgendaPage() {
   const [patients, setPatients] = useState<PatientListRow[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalLabel[]>([]);
   const [rooms, setRooms] = useState<AgendaRoomOption[]>([]);
+  const [procedures, setProcedures] = useState<AgendaProcedureOption[]>([]);
   const [occupancy, setOccupancy] = useState<RoomOccupancy[]>([]);
   const [procedureNames, setProcedureNames] = useState<Map<string, string>>(new Map());
   const [showForm, setShowForm] = useState(false);
@@ -113,6 +114,7 @@ export function AgendaPage() {
       setPatients([]);
       setProfessionals([]);
       setRooms([]);
+      setProcedures([]);
       setOccupancy([]);
       setLoading(false);
       setError(authorization ? "Nenhuma prática selecionada." : null);
@@ -129,7 +131,8 @@ export function AgendaPage() {
     setLoading(true);
     void (async () => {
       try {
-        const [appointmentRows, patientRows, professionalRows, roomResult, occupancyResult] = await Promise.all([
+        const [appointmentRows, patientRows, professionalRows, roomResult, procedureResult, occupancyResult] =
+          await Promise.all([
           listAppointments(supabase, {
             practiceId: selectedPracticeId,
             from: bounds.from,
@@ -144,6 +147,11 @@ export function AgendaPage() {
             .select("id, name, code, status, room_kind, is_house")
             .eq("organization_id", organizationId)
             .eq("status", "active")
+            .order("name"),
+          supabase
+            .from("procedures")
+            .select("id, name, practice_id, is_shared, organization_id")
+            .eq("organization_id", organizationId)
             .order("name"),
           supabase
             .from("room_occupancy_labels")
@@ -186,6 +194,20 @@ export function AgendaPage() {
             : (occupancyResult.data ?? []).flatMap((item) => {
                 const row = parseRoomOccupancy(item);
                 return row ? [row] : [];
+              }),
+        );
+        setProcedures(
+          procedureResult.error
+            ? []
+            : (procedureResult.data ?? []).flatMap((item) => {
+                const record = item as Record<string, unknown>;
+                const id = typeof record.id === "string" ? record.id : null;
+                const name = typeof record.name === "string" ? record.name.trim() : "";
+                const procedurePracticeId = typeof record.practice_id === "string" ? record.practice_id : null;
+                const shared = record.is_shared === true;
+                if (!id || !name) return [];
+                if (procedurePracticeId !== selectedPracticeId && !shared) return [];
+                return [{ id, name }];
               }),
         );
         setPatients(patientRows);
@@ -312,6 +334,7 @@ export function AgendaPage() {
           patients={patients}
           professionals={professionals}
           rooms={rooms}
+          procedures={procedures}
           occupancy={occupancy}
           busy={formBusy}
           onBusy={setFormBusy}

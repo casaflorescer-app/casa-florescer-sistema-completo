@@ -44,7 +44,7 @@ export type {
 } from "@/lib/attendance/types";
 
 export const APPOINTMENT_COLUMNS =
-  "id, organization_id, practice_id, room_id, patient_id, professional_id, procedure_id, kind, starts_at, ends_at, status, urgency_note, source, checkin_at, checked_in_by, created_by" as const;
+  "id, organization_id, practice_id, room_id, patient_id, professional_id, procedure_id, kind, starts_at, ends_at, scheduled_starts_at, scheduled_ends_at, status, urgency_note, source, checkin_at, checked_in_by, arrival_at, arrival_recorded_by, actual_start_at, actual_start_recorded_by, actual_end_at, actual_end_recorded_by, created_by" as const;
 
 export const ENCOUNTER_COLUMNS =
   "id, organization_id, practice_id, appointment_id, patient_id, professional_id, procedure_id, status, signed_at, signed_by, created_at" as const;
@@ -203,6 +203,18 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   if (message.includes("APPOINTMENT_UPDATE_SCOPE_LOCKED")) {
     return "Não é permitido alterar o escopo deste agendamento.";
   }
+  if (message.includes("APPOINTMENT_SCHEDULED_SNAPSHOT_LOCKED")) {
+    return "O horário originalmente agendado não pode ser alterado.";
+  }
+  if (message.includes("APPOINTMENT_ARRIVAL_LOCKED")) {
+    return "A chegada já foi registrada e não pode ser alterada.";
+  }
+  if (message.includes("APPOINTMENT_ACTUAL_START_LOCKED")) {
+    return "O início clínico já foi registrado e não pode ser alterado.";
+  }
+  if (message.includes("APPOINTMENT_ACTUAL_END_LOCKED")) {
+    return "O término clínico já foi registrado e não pode ser alterado.";
+  }
   if (message.includes("ENCOUNTER_NOT_FOUND")) return "Atendimento não encontrado.";
   if (message.includes("ENCOUNTER_NOT_OPEN")) {
     return "O atendimento precisa estar aberto.";
@@ -279,11 +291,19 @@ export function toAppointmentRow(
     kind,
     startsAt,
     endsAt,
+    scheduledStartsAt: asString(value.scheduled_starts_at) ?? startsAt,
+    scheduledEndsAt: asString(value.scheduled_ends_at) ?? endsAt,
     status,
     urgencyNote: asString(value.urgency_note),
     source: asString(value.source) ?? "reception",
     checkinAt: asString(value.checkin_at),
     checkedInBy: asString(value.checked_in_by),
+    arrivalAt: asString(value.arrival_at),
+    arrivalRecordedBy: asString(value.arrival_recorded_by),
+    actualStartAt: asString(value.actual_start_at),
+    actualStartRecordedBy: asString(value.actual_start_recorded_by),
+    actualEndAt: asString(value.actual_end_at),
+    actualEndRecordedBy: asString(value.actual_end_recorded_by),
     createdBy,
     patientName: extras?.patientName ?? null,
     professionalName: extras?.professionalName ?? null,
@@ -428,6 +448,8 @@ export async function createAppointment(
       kind: input.kind ?? "consultation",
       starts_at: input.startsAt,
       ends_at: input.endsAt,
+      scheduled_starts_at: input.startsAt,
+      scheduled_ends_at: input.endsAt,
       urgency_note: input.urgencyNote ?? null,
       source: input.source ?? "reception",
       created_by: input.createdBy,

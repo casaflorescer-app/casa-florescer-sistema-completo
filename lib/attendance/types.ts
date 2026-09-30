@@ -78,13 +78,26 @@ export type AppointmentRow = {
   professionalId: string;
   procedureId: string | null;
   kind: AppointmentKind;
+  /** Horário administrativo atual (criação/edição). */
   startsAt: string;
   endsAt: string;
+  /** Snapshot do compromisso agendado (imutável após criação / primeiro backfill C032.1). */
+  scheduledStartsAt: string;
+  scheduledEndsAt: string;
   status: AppointmentStatus;
   urgencyNote: string | null;
   source: string;
   checkinAt: string | null;
   checkedInBy: string | null;
+  /** Chegada física — distinto de check-in. */
+  arrivalAt: string | null;
+  arrivalRecordedBy: string | null;
+  /** Início clínico efetivo — distinto de signed_at. */
+  actualStartAt: string | null;
+  actualStartRecordedBy: string | null;
+  /** Término clínico efetivo — não preenchido pela assinatura. */
+  actualEndAt: string | null;
+  actualEndRecordedBy: string | null;
   createdBy: string;
   patientName?: string | null;
   professionalName?: string | null;

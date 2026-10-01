@@ -1,10 +1,12 @@
 import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attendance/directory";
+import type { AppointmentPredictionView } from "@/lib/attendance/appointment-prediction";
 import { formatDayLabel } from "@/components/attendance/agenda-display";
 import { AppointmentCard } from "@/components/attendance/AppointmentCard";
 
 export function AgendaDayBoard({
   date,
   rows,
+  predictions,
   loading,
   busyId,
   canStartEncounter,
@@ -16,6 +18,7 @@ export function AgendaDayBoard({
 }: {
   date: string;
   rows: AppointmentRow[];
+  predictions: Map<string, AppointmentPredictionView>;
   loading: boolean;
   busyId: string | null;
   canStartEncounter: boolean;
@@ -40,6 +43,7 @@ export function AgendaDayBoard({
             <li key={row.id}>
               <AppointmentCard
                 row={row}
+                prediction={predictions.get(row.id) ?? null}
                 busy={busyId === row.id}
                 canStartEncounter={canStartEncounter}
                 canEdit={canEdit}

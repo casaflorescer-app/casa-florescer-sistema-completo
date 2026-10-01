@@ -12,6 +12,8 @@ import {
   appointmentSetStatus,
   encounterOpenFromAppointment,
   listAppointments,
+  recalculateDayPredictions,
+  type AppointmentPredictionView,
   type AppointmentRow,
   type OperationalAppointmentStatus,
 } from "@/lib/attendance/directory";
@@ -47,6 +49,9 @@ export function AgendaPage() {
   const [professionalId, setProfessionalId] = useState("");
   const [status, setStatus] = useState<AppointmentStatus | "">("");
   const [rows, setRows] = useState<AppointmentRow[]>([]);
+  const [predictions, setPredictions] = useState<Map<string, AppointmentPredictionView>>(
+    () => new Map(),
+  );
   const [patients, setPatients] = useState<PatientListRow[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalLabel[]>([]);
   const [rooms, setRooms] = useState<AgendaRoomOption[]>([]);
@@ -113,6 +118,7 @@ export function AgendaPage() {
     }
     if (!selectedPracticeId || !organizationId) {
       setRows([]);
+      setPredictions(new Map());
       setPatients([]);
       setProfessionals([]);
       setRooms([]);
@@ -215,9 +221,23 @@ export function AgendaPage() {
         setPatients(patientRows);
         setProfessionals(professionalRows);
         setRows(appointmentRows);
+
+        const predictionResult = await recalculateDayPredictions(supabase, {
+          organizationId,
+          practiceId: selectedPracticeId,
+          appointments: appointmentRows,
+          persist: true,
+        });
+        if (cancelled) return;
+        const nextPredictions = new Map<string, AppointmentPredictionView>();
+        for (const item of predictionResult.predictions) {
+          nextPredictions.set(item.appointmentId, item);
+        }
+        setPredictions(nextPredictions);
       } catch (err: unknown) {
         if (cancelled) return;
         setRows([]);
+        setPredictions(new Map());
         setError(err instanceof Error ? err.message : "Não foi possível carregar a agenda.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -272,6 +292,8 @@ export function AgendaPage() {
         }
         return current.map((item) => (item.id === appointmentId ? result.row! : item));
       });
+      // Recalcula cadeia (cancelamento / check-in / confirmação) sem polling agressivo.
+      setReloadKey((value) => value + 1);
     });
   }
 
@@ -281,6 +303,23 @@ export function AgendaPage() {
       if (result.error || !result.encounterId) {
         setError(result.error ?? "Não foi possível iniciar o atendimento.");
         return;
+      }
+      // Recalcula cadeia com início clínico efetivo antes de sair da agenda.
+      if (organizationId && selectedPracticeId) {
+        const bounds = dayBoundsIso(date);
+        if (bounds) {
+          const latest = await listAppointments(supabase, {
+            practiceId: selectedPracticeId,
+            from: bounds.from,
+            to: bounds.to,
+          });
+          await recalculateDayPredictions(supabase, {
+            organizationId,
+            practiceId: selectedPracticeId,
+            appointments: latest,
+            persist: true,
+          });
+        }
       }
       router.push(`/app/records/${result.encounterId}`);
     });
@@ -383,6 +422,7 @@ export function AgendaPage() {
       <AgendaDayBoard
         date={date}
         rows={labeledRows}
+        predictions={predictions}
         loading={loading || authorizationLoading}
         busyId={busyId}
         canStartEncounter={canStartEncounter}

@@ -193,3 +193,18 @@ export type AppointmentListFilter = {
   professionalId?: string;
   status?: AppointmentStatus | AppointmentStatus[];
 };
+
+/** Última versão persistida em appointment_predictions (staff). */
+export type AppointmentPredictionRow = {
+  id: string;
+  appointmentId: string;
+  organizationId: string;
+  practiceId: string;
+  predictionVersion: number;
+  predictedStartsAt: string;
+  predictedEndsAt: string;
+  /** Interno — não expor à paciente. */
+  predictionReason: string | null;
+  calculatedAt: string;
+  createdBy: string | null;
+};

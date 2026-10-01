@@ -1,10 +1,12 @@
 import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attendance/directory";
+import type { AppointmentPredictionView } from "@/lib/attendance/appointment-prediction";
 import { buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import {
   APPOINTMENT_KIND_LABEL,
   canEditAppointmentStatus,
   formatClock,
 } from "@/components/attendance/agenda-display";
+import { AppointmentPredictionSummary } from "@/components/attendance/AppointmentPredictionSummary";
 import { AppointmentStatusBadge } from "@/components/attendance/AppointmentStatusBadge";
 import { ROOM_NATURE_LABEL, roomNature } from "@/lib/clinic/room-presentation";
 
@@ -13,6 +15,7 @@ const ghostActionClass = ghostButtonClass;
 
 export function AppointmentCard({
   row,
+  prediction,
   busy,
   canStartEncounter,
   canEdit,
@@ -22,6 +25,7 @@ export function AppointmentCard({
   onStartEncounter,
 }: {
   row: AppointmentRow;
+  prediction?: AppointmentPredictionView | null;
   busy: boolean;
   canStartEncounter: boolean;
   canEdit: boolean;
@@ -81,6 +85,8 @@ export function AppointmentCard({
       </div>
 
       {row.urgencyNote ? <p className="mt-3 text-sm text-lotus-800">{row.urgencyNote}</p> : null}
+
+      <AppointmentPredictionSummary prediction={prediction} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {showEdit ? (

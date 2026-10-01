@@ -12,6 +12,7 @@ import {
   DEFAULT_NOTE_TEMPLATE,
   isOperationalAppointmentStatus,
   type AppointmentListFilter,
+  type AppointmentPredictionRow,
   type AppointmentRow,
   type ClinicalNoteRow,
   type CreateAppointmentInput,
@@ -20,6 +21,12 @@ import {
   type PregnancyContext,
   type UpdateAppointmentInput,
 } from "@/lib/attendance/types";
+import {
+  computeAgendaPredictions,
+  type AppointmentPredictionView,
+  type HistoricalDurationSample,
+  type PredictionAppointment,
+} from "@/lib/attendance/appointment-prediction";
 
 export {
   APPOINTMENT_STATUSES,
@@ -33,6 +40,7 @@ export {
 } from "@/lib/attendance/types";
 export type {
   AppointmentListFilter,
+  AppointmentPredictionRow,
   AppointmentRow,
   ClinicalNoteRow,
   CreateAppointmentInput,
@@ -42,6 +50,7 @@ export type {
   PregnancyContext,
   UpdateAppointmentInput,
 } from "@/lib/attendance/types";
+export type { AppointmentPredictionView } from "@/lib/attendance/appointment-prediction";
 
 export const APPOINTMENT_COLUMNS =
   "id, organization_id, practice_id, room_id, patient_id, professional_id, procedure_id, kind, starts_at, ends_at, scheduled_starts_at, scheduled_ends_at, status, urgency_note, source, checkin_at, checked_in_by, arrival_at, arrival_recorded_by, actual_start_at, actual_start_recorded_by, actual_end_at, actual_end_recorded_by, created_by" as const;
@@ -714,5 +723,223 @@ export async function unlinkEncounterFromPregnancy(
   return {
     encounterId: typeof data === "string" ? data : null,
     error: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// C032.2 — Previsões (leitura staff + append versionado via RPC)
+// ---------------------------------------------------------------------------
+
+export const APPOINTMENT_PREDICTION_COLUMNS =
+  "id, appointment_id, organization_id, practice_id, prediction_version, predicted_starts_at, predicted_ends_at, prediction_reason, calculated_at, created_by" as const;
+
+export function toAppointmentPredictionRow(
+  value: Record<string, unknown>,
+): AppointmentPredictionRow | null {
+  const id = asString(value.id);
+  const appointmentId = asString(value.appointment_id);
+  const organizationId = asString(value.organization_id);
+  const practiceId = asString(value.practice_id);
+  const predictionVersion = asNumber(value.prediction_version);
+  const predictedStartsAt = asString(value.predicted_starts_at);
+  const predictedEndsAt = asString(value.predicted_ends_at);
+  const calculatedAt = asString(value.calculated_at);
+  if (
+    !id ||
+    !appointmentId ||
+    !organizationId ||
+    !practiceId ||
+    predictionVersion == null ||
+    !predictedStartsAt ||
+    !predictedEndsAt ||
+    !calculatedAt
+  ) {
+    return null;
+  }
+  return {
+    id,
+    appointmentId,
+    organizationId,
+    practiceId,
+    predictionVersion,
+    predictedStartsAt,
+    predictedEndsAt,
+    predictionReason: asString(value.prediction_reason),
+    calculatedAt,
+    createdBy: asString(value.created_by),
+  };
+}
+
+function toPredictionAppointment(row: AppointmentRow): PredictionAppointment {
+  return {
+    id: row.id,
+    organizationId: row.organizationId,
+    practiceId: row.practiceId,
+    professionalId: row.professionalId,
+    procedureId: row.procedureId,
+    startsAt: row.startsAt,
+    endsAt: row.endsAt,
+    status: row.status,
+    actualStartAt: row.actualStartAt,
+    actualEndAt: row.actualEndAt,
+  };
+}
+
+/** Catálogo duration_min da organização (uma consulta). */
+export async function listProcedureDurationMinutes(
+  supabase: SupabaseClient,
+  organizationId: string,
+): Promise<Map<string, number>> {
+  const { data, error } = await supabase
+    .from("procedures")
+    .select("id, duration_min")
+    .eq("organization_id", organizationId);
+  const map = new Map<string, number>();
+  if (error || !data) return map;
+  for (const raw of data) {
+    const row = raw as { id?: unknown; duration_min?: unknown };
+    const id = asString(row.id);
+    const minutes = asNumber(row.duration_min);
+    if (id && minutes != null && minutes > 0) map.set(id, minutes);
+  }
+  return map;
+}
+
+/**
+ * Amostras históricas efetivas (actual_start + actual_end) da prática.
+ * Sem inventar dados; usadas só se >= MIN_HISTORICAL_SAMPLES no motor.
+ */
+export async function listHistoricalDurationSamples(
+  supabase: SupabaseClient,
+  practiceId: string,
+  limit = 500,
+): Promise<HistoricalDurationSample[]> {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("procedure_id, professional_id, practice_id, actual_start_at, actual_end_at")
+    .eq("practice_id", practiceId)
+    .not("actual_start_at", "is", null)
+    .not("actual_end_at", "is", null)
+    .not("procedure_id", "is", null)
+    .order("actual_end_at", { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  const samples: HistoricalDurationSample[] = [];
+  for (const raw of data) {
+    const row = raw as Record<string, unknown>;
+    const procedureId = asString(row.procedure_id);
+    const professionalId = asString(row.professional_id);
+    const rowPracticeId = asString(row.practice_id);
+    const start = asString(row.actual_start_at);
+    const end = asString(row.actual_end_at);
+    if (!procedureId || !professionalId || !rowPracticeId || !start || !end) continue;
+    const durationMin = Math.round(
+      (new Date(end).getTime() - new Date(start).getTime()) / 60_000,
+    );
+    if (durationMin <= 0) continue;
+    samples.push({
+      procedureId,
+      professionalId,
+      practiceId: rowPracticeId,
+      durationMin,
+    });
+  }
+  return samples;
+}
+
+/** Última versão por appointment_id (staff SELECT). */
+export async function listLatestAppointmentPredictions(
+  supabase: SupabaseClient,
+  appointmentIds: string[],
+): Promise<Map<string, AppointmentPredictionRow>> {
+  const map = new Map<string, AppointmentPredictionRow>();
+  if (appointmentIds.length === 0) return map;
+  const { data, error } = await supabase
+    .from("appointment_predictions")
+    .select(APPOINTMENT_PREDICTION_COLUMNS)
+    .in("appointment_id", appointmentIds)
+    .order("prediction_version", { ascending: false });
+  if (error || !data) return map;
+  for (const raw of data) {
+    const row = toAppointmentPredictionRow(raw as Record<string, unknown>);
+    if (!row || map.has(row.appointmentId)) continue;
+    map.set(row.appointmentId, row);
+  }
+  return map;
+}
+
+export async function appendAppointmentPredictions(
+  supabase: SupabaseClient,
+  items: Array<{
+    appointmentId: string;
+    predictedStartsAt: string;
+    predictedEndsAt: string;
+    predictionReason: string | null;
+  }>,
+): Promise<{ rows: AppointmentPredictionRow[]; error: string | null }> {
+  if (items.length === 0) return { rows: [], error: null };
+  const { data, error } = await supabase.rpc("appointment_predictions_append", {
+    p_items: items.map((item) => ({
+      appointment_id: item.appointmentId,
+      predicted_starts_at: item.predictedStartsAt,
+      predicted_ends_at: item.predictedEndsAt,
+      prediction_reason: item.predictionReason,
+    })),
+  });
+  if (error) return { rows: [], error: mapAttendanceRpcError(error) };
+  const rows = Array.isArray(data)
+    ? data
+        .map((raw) => toAppointmentPredictionRow(raw as Record<string, unknown>))
+        .filter((item): item is AppointmentPredictionRow => Boolean(item))
+    : [];
+  return { rows, error: null };
+}
+
+/**
+ * Calcula previsões do dia e persiste versões novas (sem tocar starts_at).
+ * Retorna o view model operacional para a UI.
+ */
+export async function recalculateDayPredictions(
+  supabase: SupabaseClient,
+  input: {
+    organizationId: string;
+    practiceId: string;
+    appointments: AppointmentRow[];
+    persist?: boolean;
+  },
+): Promise<{
+  predictions: AppointmentPredictionView[];
+  persisted: number;
+  error: string | null;
+}> {
+  const [catalog, historical] = await Promise.all([
+    listProcedureDurationMinutes(supabase, input.organizationId),
+    listHistoricalDurationSamples(supabase, input.practiceId),
+  ]);
+
+  const predictions = computeAgendaPredictions({
+    appointments: input.appointments.map(toPredictionAppointment),
+    catalogDurationMin: catalog,
+    historicalSamples: historical,
+  });
+
+  if (!input.persist || predictions.length === 0) {
+    return { predictions, persisted: 0, error: null };
+  }
+
+  const append = await appendAppointmentPredictions(
+    supabase,
+    predictions.map((item) => ({
+      appointmentId: item.appointmentId,
+      predictedStartsAt: item.predictedStartsAt,
+      predictedEndsAt: item.predictedEndsAt,
+      predictionReason: item.predictionReason,
+    })),
+  );
+
+  return {
+    predictions,
+    persisted: append.rows.length,
+    error: append.error,
   };
 }

@@ -7,7 +7,7 @@
  * - Previsão é camada separada (appointment_predictions / view model)
  * - arrival_at / checkin_at NÃO deslocam a cadeia sozinhos
  * - Cadeia por profissional (não mistura agendas)
- * - Bloqueios operacionais: preparados via AgendaBlockInterval (sem UI/módulo nesta etapa)
+ * - Bloqueios operacionais: AgendaBlockInterval (profissional e/ou sala; endsAt obrigatório)
  *
  * Critério histórico:
  * MIN_HISTORICAL_SAMPLES = 5 observações com actual_start_at e actual_end_at
@@ -25,11 +25,15 @@ export type DurationSource =
   | "scheduled_window";
 
 export type AgendaBlockInterval = {
-  professionalId: string;
+  /** Alvo profissional (opcional se roomId estiver presente). */
+  professionalId?: string | null;
+  /** Alvo sala (opcional se professionalId estiver presente). */
+  roomId?: string | null;
   startsAt: string;
   endsAt: string;
-  /** Motivo interno futuro (parto externo, emergência). Não expor à paciente. */
+  /** Motivo interno (parto externo, emergência). Não expor à paciente. */
   reason?: string | null;
+  id?: string | null;
 };
 
 export type PredictionAppointment = {
@@ -37,6 +41,7 @@ export type PredictionAppointment = {
   organizationId: string;
   practiceId: string;
   professionalId: string;
+  roomId?: string | null;
   procedureId: string | null;
   /** Horário administrativo atual. */
   startsAt: string;
@@ -76,6 +81,8 @@ export type AppointmentPredictionView = {
   /** Texto interno para staff / appointment_predictions.prediction_reason. */
   predictionReason: string;
   inChain: boolean;
+  /** Previsão deslocada por bloqueio operacional incidente. */
+  affectedByBlock: boolean;
   state: "cancelled" | "no_show" | "completed_actual" | "in_progress" | "pending";
 };
 
@@ -84,7 +91,7 @@ export type ComputeAgendaPredictionsInput = {
   /** procedureId → duration_min do catálogo. */
   catalogDurationMin: ReadonlyMap<string, number>;
   historicalSamples?: readonly HistoricalDurationSample[];
-  /** Bloqueios futuros por profissional (C032.3). */
+  /** Bloqueios operacionais (profissional e/ou sala). */
   blocks?: readonly AgendaBlockInterval[];
   /** Relógio operacional (testes / atendimento em andamento atrasado). */
   now?: Date;
@@ -200,30 +207,41 @@ function durationSourceLabel(source: DurationSource): string {
   }
 }
 
+function blockAppliesToAppointment(
+  block: AgendaBlockInterval,
+  professionalId: string,
+  roomId: string | null | undefined,
+): boolean {
+  const byProfessional =
+    Boolean(block.professionalId) && block.professionalId === professionalId;
+  const byRoom = Boolean(block.roomId) && Boolean(roomId) && block.roomId === roomId;
+  return byProfessional || byRoom;
+}
+
 /**
- * Empurra o início previsto para depois de bloqueios que intersectam
- * [earliest, earliest+duration) ou que cobrem o cursor da cadeia.
+ * Empurra o início previsto para depois de bloqueios incidentes.
+ * Sobreposições são normalizadas pela iteração (união efetiva), sem somar atrasos.
  */
 function applyBlocks(
   professionalId: string,
+  roomId: string | null | undefined,
   earliestIso: string,
   blocks: readonly AgendaBlockInterval[],
 ): { startIso: string; applied: AgendaBlockInterval | null } {
   let startMs = toMs(earliestIso);
   let applied: AgendaBlockInterval | null = null;
   const relevant = blocks
-    .filter((block) => block.professionalId === professionalId)
+    .filter((block) => blockAppliesToAppointment(block, professionalId, roomId))
     .slice()
     .sort((a, b) => toMs(a.startsAt) - toMs(b.startsAt));
 
-  // Itera até estabilizar (bloqueios consecutivos).
-  for (let guard = 0; guard < 16; guard += 1) {
+  // Itera até estabilizar (bloqueios consecutivos / sobrepostos → união).
+  for (let guard = 0; guard < 32; guard += 1) {
     let moved = false;
     for (const block of relevant) {
       const blockStart = toMs(block.startsAt);
       const blockEnd = toMs(block.endsAt);
       if (!(blockEnd > blockStart)) continue;
-      // Se o início previsto cai dentro do bloqueio, começa após o bloqueio.
       if (startMs >= blockStart && startMs < blockEnd) {
         startMs = blockEnd;
         applied = block;
@@ -285,6 +303,7 @@ export function computeAgendaPredictions(
           durationSource: duration.source,
           predictionReason: `fora da cadeia (${appt.status}); ${durationSourceLabel(duration.source)}`,
           inChain: false,
+          affectedByBlock: false,
           state: appt.status === "no_show" ? "no_show" : "cancelled",
         });
         continue;
@@ -307,6 +326,7 @@ export function computeAgendaPredictions(
           durationSource: duration.source,
           predictionReason: `recalculo após encerramento do atendimento; ${durationSourceLabel(duration.source)}`,
           inChain: true,
+          affectedByBlock: false,
           state: "completed_actual",
         });
         continue;
@@ -315,8 +335,7 @@ export function computeAgendaPredictions(
       if (appt.actualStartAt && !appt.actualEndAt) {
         const start = appt.actualStartAt;
         const estimatedEnd = addMinutesIso(start, duration.minutes);
-        // Versão persistida permanece estável (start + duração).
-        // A cadeia dos próximos usa max(estimado, agora) se o atendimento já passou do previsto.
+        // Em andamento: bloqueio NÃO interrompe; cadeia usa término efetivo/estimado.
         const chainEnd =
           toMs(nowIso) > toMs(estimatedEnd) ? nowIso : estimatedEnd;
         cursorEndIso = chainEnd;
@@ -337,6 +356,7 @@ export function computeAgendaPredictions(
               ? `atendimento em andamento; ${durationSourceLabel(duration.source)}`
               : `atendimento em andamento; atraso de ${delay} minutos no início; ${durationSourceLabel(duration.source)}`,
           inChain: true,
+          affectedByBlock: false,
           state: "in_progress",
         });
         continue;
@@ -354,7 +374,7 @@ export function computeAgendaPredictions(
         );
       }
 
-      const blocked = applyBlocks(appt.professionalId, earliest, blocks);
+      const blocked = applyBlocks(appt.professionalId, appt.roomId, earliest, blocks);
       if (blocked.applied) {
         earliest = blocked.startIso;
         reasonParts.push("bloqueio operacional na cadeia");
@@ -383,6 +403,7 @@ export function computeAgendaPredictions(
         durationSource: duration.source,
         predictionReason: reasonParts.join("; "),
         inChain: true,
+        affectedByBlock: Boolean(blocked.applied),
         state: "pending",
       });
     }

@@ -10,9 +10,13 @@ import { StatusMessage, buttonClass } from "@/components/platform/Ui";
 import { createClient } from "@/lib/supabase/client";
 import {
   appointmentSetStatus,
+  cancelAgendaBlock,
   encounterOpenFromAppointment,
+  listAgendaBlocksForDay,
   listAppointments,
   recalculateDayPredictions,
+  summarizeBlockImpact,
+  type AgendaBlockRow,
   type AppointmentPredictionView,
   type AppointmentRow,
   type OperationalAppointmentStatus,
@@ -25,6 +29,10 @@ import { AgendaDayBoard } from "@/components/attendance/AgendaDayBoard";
 import { AgendaFilters } from "@/components/attendance/AgendaFilters";
 import { AppointmentForm, type AgendaProcedureOption, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
 import { EditAppointmentForm } from "@/components/attendance/EditAppointmentForm";
+import { AgendaBlockForm } from "@/components/attendance/AgendaBlockForm";
+import { AgendaBlockBanner } from "@/components/attendance/AgendaBlockBanner";
+import { AgendaImpactPanel } from "@/components/attendance/AgendaImpactPanel";
+import { StaffAgendaNotifications } from "@/components/attendance/StaffAgendaNotifications";
 import { parseRoomOccupancy, type RoomOccupancy } from "@/lib/clinic/room-occupancy";
 
 function toRoom(value: Record<string, unknown>): AgendaRoomOption | null {
@@ -52,6 +60,7 @@ export function AgendaPage() {
   const [predictions, setPredictions] = useState<Map<string, AppointmentPredictionView>>(
     () => new Map(),
   );
+  const [blocks, setBlocks] = useState<AgendaBlockRow[]>([]);
   const [patients, setPatients] = useState<PatientListRow[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalLabel[]>([]);
   const [rooms, setRooms] = useState<AgendaRoomOption[]>([]);
@@ -59,6 +68,8 @@ export function AgendaPage() {
   const [occupancy, setOccupancy] = useState<RoomOccupancy[]>([]);
   const [procedureNames, setProcedureNames] = useState<Map<string, string>>(new Map());
   const [showForm, setShowForm] = useState(false);
+  const [showBlockForm, setShowBlockForm] = useState(false);
+  const [showImpact, setShowImpact] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -119,6 +130,7 @@ export function AgendaPage() {
     if (!selectedPracticeId || !organizationId) {
       setRows([]);
       setPredictions(new Map());
+      setBlocks([]);
       setPatients([]);
       setProfessionals([]);
       setRooms([]);
@@ -139,8 +151,15 @@ export function AgendaPage() {
     setLoading(true);
     void (async () => {
       try {
-        const [appointmentRows, patientRows, professionalRows, roomResult, procedureResult, occupancyResult] =
-          await Promise.all([
+        const [
+          appointmentRows,
+          patientRows,
+          professionalRows,
+          roomResult,
+          procedureResult,
+          occupancyResult,
+          blockResult,
+        ] = await Promise.all([
           listAppointments(supabase, {
             practiceId: selectedPracticeId,
             from: bounds.from,
@@ -165,6 +184,11 @@ export function AgendaPage() {
             .from("room_occupancy_labels")
             .select("room_id, organization_id, professional_id, professional_name, occupancy")
             .eq("organization_id", organizationId),
+          listAgendaBlocksForDay(supabase, {
+            practiceId: selectedPracticeId,
+            from: bounds.from,
+            to: bounds.to,
+          }),
         ]);
         if (cancelled) return;
         const procedureIds = [
@@ -221,11 +245,22 @@ export function AgendaPage() {
         setPatients(patientRows);
         setProfessionals(professionalRows);
         setRows(appointmentRows);
+        setBlocks(blockResult.blocks);
 
         const predictionResult = await recalculateDayPredictions(supabase, {
           organizationId,
           practiceId: selectedPracticeId,
           appointments: appointmentRows,
+          from: bounds.from,
+          to: bounds.to,
+          blocks: blockResult.blocks.map((block) => ({
+            id: block.id,
+            professionalId: block.professionalId,
+            roomId: block.roomId,
+            startsAt: block.startsAt,
+            endsAt: block.endsAt,
+            reason: block.reasonCode,
+          })),
           persist: true,
         });
         if (cancelled) return;
@@ -238,6 +273,7 @@ export function AgendaPage() {
         if (cancelled) return;
         setRows([]);
         setPredictions(new Map());
+        setBlocks([]);
         setError(err instanceof Error ? err.message : "Não foi possível carregar a agenda.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -328,6 +364,26 @@ export function AgendaPage() {
   const canCreate = Boolean(supabase && organizationId && selectedPracticeId && userId);
   const canStartEncounter = authorization ? hasStaffRole(authorization, "physician") : false;
   const editingRow = editingId ? labeledRows.find((item) => item.id === editingId) ?? null : null;
+  const primaryBlock = blocks[0] ?? null;
+  const predictionList = useMemo(() => [...predictions.values()], [predictions]);
+  const primaryImpact = useMemo(() => {
+    if (!primaryBlock) {
+      return { affectedCount: 0, firstPredictedStartsAt: null, lastPredictedStartsAt: null, rows: [] };
+    }
+    return summarizeBlockImpact(labeledRows, predictionList, primaryBlock);
+  }, [labeledRows, predictionList, primaryBlock]);
+  const blockAffectedCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const block of blocks) {
+      map.set(block.id, summarizeBlockImpact(labeledRows, predictionList, block).affectedCount);
+    }
+    return map;
+  }, [blocks, labeledRows, predictionList]);
+  const roomNames = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const room of rooms) map.set(room.id, room.name);
+    return map;
+  }, [rooms]);
 
   return (
     <div>
@@ -340,23 +396,81 @@ export function AgendaPage() {
 
       <StatusMessage error={error} notice={notice} />
 
+      <StaffAgendaNotifications
+        supabase={supabase}
+        reloadKey={reloadKey}
+        onOpenAgenda={() => setShowImpact(true)}
+      />
+
+      {primaryBlock ? (
+        <AgendaBlockBanner
+          block={primaryBlock}
+          professionalName={
+            primaryBlock.professionalId
+              ? professionalNames.get(primaryBlock.professionalId) ?? null
+              : null
+          }
+          affectedCount={primaryImpact.affectedCount}
+          firstPredictedStartsAt={primaryImpact.firstPredictedStartsAt}
+          busy={formBusy}
+          onViewImpact={() => setShowImpact(true)}
+          onCancelBlock={() => {
+            if (!supabase) return;
+            void (async () => {
+              setFormBusy(true);
+              const result = await cancelAgendaBlock(supabase, primaryBlock.id, "Cancelado na agenda");
+              setFormBusy(false);
+              if (result.error) {
+                setError(result.error);
+                return;
+              }
+              setNotice("Bloqueio cancelado. Previsões serão recalculadas.");
+              setShowImpact(false);
+              setReloadKey((value) => value + 1);
+            })();
+          }}
+        />
+      ) : null}
+
+      {showImpact && primaryBlock ? (
+        <AgendaImpactPanel
+          rows={primaryImpact.rows}
+          onClose={() => setShowImpact(false)}
+        />
+      ) : null}
+
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-lotus-600">
           {loading
             ? "Carregando…"
             : `${labeledRows.length} ${labeledRows.length === 1 ? "atendimento" : "atendimentos"}`}
         </p>
-        <button
-          type="button"
-          className={buttonClass}
-          disabled={!canCreate || formBusy || Boolean(editingId)}
-          onClick={() => {
-            setEditingId(null);
-            setShowForm((open) => !open);
-          }}
-        >
-          Novo atendimento
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={buttonClass}
+            disabled={!canCreate || formBusy || Boolean(editingId) || showForm}
+            onClick={() => {
+              setEditingId(null);
+              setShowForm(false);
+              setShowBlockForm((open) => !open);
+            }}
+          >
+            Bloquear agenda
+          </button>
+          <button
+            type="button"
+            className={buttonClass}
+            disabled={!canCreate || formBusy || Boolean(editingId) || showBlockForm}
+            onClick={() => {
+              setEditingId(null);
+              setShowBlockForm(false);
+              setShowForm((open) => !open);
+            }}
+          >
+            Novo atendimento
+          </button>
+        </div>
       </div>
 
       <AgendaFilters
@@ -368,6 +482,26 @@ export function AgendaPage() {
         onProfessionalChange={setProfessionalId}
         onStatusChange={setStatus}
       />
+
+      {showBlockForm && supabase && organizationId && selectedPracticeId ? (
+        <AgendaBlockForm
+          supabase={supabase}
+          organizationId={organizationId}
+          practiceId={selectedPracticeId}
+          defaultDate={date}
+          professionals={professionals}
+          rooms={rooms}
+          affectedPreviewCount={null}
+          busy={formBusy}
+          onBusy={setFormBusy}
+          onCancel={() => setShowBlockForm(false)}
+          onCreated={(_block, message) => {
+            setShowBlockForm(false);
+            setNotice(message);
+            setReloadKey((value) => value + 1);
+          }}
+        />
+      ) : null}
 
       {showForm && supabase && organizationId && selectedPracticeId && userId ? (
         <AppointmentForm
@@ -422,6 +556,10 @@ export function AgendaPage() {
       <AgendaDayBoard
         date={date}
         rows={labeledRows}
+        blocks={blocks}
+        blockAffectedCounts={blockAffectedCounts}
+        professionalNames={professionalNames}
+        roomNames={roomNames}
         predictions={predictions}
         loading={loading || authorizationLoading}
         busyId={busyId}
@@ -430,6 +568,7 @@ export function AgendaPage() {
         editingId={editingId}
         onEdit={(appointmentId) => {
           setShowForm(false);
+          setShowBlockForm(false);
           setEditingId(appointmentId);
         }}
         onSetStatus={onSetStatus}

@@ -341,7 +341,119 @@ function run(): void {
         },
       ],
     });
-    check("T", "isolamento + bloqueio preparado", out[0].deltaMin === 0 && out[1].predictionReason.includes("bloqueio"));
+    check(
+      "T",
+      "isolamento + bloqueio preparado",
+      out[0].deltaMin === 0 &&
+        out[1].predictionReason.includes("bloqueio") &&
+        out[1].affectedByBlock === true,
+    );
+  }
+
+  {
+    // C032.3 — parto hospitalar: A/B antes do bloqueio; C+ após 14:00
+    const rows = ["09:00", "09:30", "10:00", "10:30", "11:00"].map((time, index) => {
+      const [hh, mm] = time.split(":").map(Number);
+      const endH = mm === 30 ? hh + 1 : hh;
+      const endM = mm === 30 ? 0 : 30;
+      return base({
+        id: `parto-${index}`,
+        startsAt: iso(day, time),
+        endsAt: iso(day, `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`),
+        roomId: "sala-03",
+      });
+    });
+    rows[0] = {
+      ...rows[0],
+      actualStartAt: iso(day, "09:00"),
+      actualEndAt: iso(day, "09:40"),
+      status: "completed",
+    };
+    rows[1] = {
+      ...rows[1],
+      actualStartAt: iso(day, "09:40"),
+      actualEndAt: iso(day, "10:10"),
+      status: "completed",
+    };
+    const out = computeAgendaPredictions({
+      appointments: rows,
+      catalogDurationMin: catalog,
+      blocks: [
+        {
+          professionalId: "dra-helena",
+          startsAt: iso(day, "10:00"),
+          endsAt: iso(day, "14:00"),
+          reason: "PARTO_HOSPITALAR",
+        },
+      ],
+    });
+    check(
+      "U",
+      "parto hospitalar desloca cadeia após bloqueio",
+      out[2].affectedByBlock === true &&
+        out[2].predictedStartsAt === iso(day, "14:00") &&
+        out[3].predictedStartsAt === iso(day, "14:30") &&
+        out[4].predictedStartsAt === iso(day, "15:00") &&
+        rows[2].startsAt === iso(day, "10:00"),
+    );
+  }
+
+  {
+    const rows = [
+      base({ id: "r1", startsAt: iso(day, "10:00"), endsAt: iso(day, "10:30"), roomId: "sala-a" }),
+      base({
+        id: "r2",
+        professionalId: "outra",
+        startsAt: iso(day, "10:00"),
+        endsAt: iso(day, "10:30"),
+        roomId: "sala-b",
+      }),
+    ];
+    const out = computeAgendaPredictions({
+      appointments: rows,
+      catalogDurationMin: catalog,
+      blocks: [
+        {
+          roomId: "sala-a",
+          startsAt: iso(day, "09:00"),
+          endsAt: iso(day, "12:00"),
+          reason: "MANUTENCAO_SALA",
+        },
+      ],
+    });
+    check(
+      "V",
+      "bloqueio de sala isola cadeias",
+      out[0].affectedByBlock &&
+        out[0].predictedStartsAt === iso(day, "12:00") &&
+        out[1].deltaMin === 0 &&
+        !out[1].affectedByBlock,
+    );
+  }
+
+  {
+    const rows = [base({ id: "o1", startsAt: iso(day, "10:30"), endsAt: iso(day, "11:00") })];
+    const out = computeAgendaPredictions({
+      appointments: rows,
+      catalogDurationMin: catalog,
+      blocks: [
+        {
+          professionalId: "dra-helena",
+          startsAt: iso(day, "10:00"),
+          endsAt: iso(day, "12:00"),
+        },
+        {
+          professionalId: "dra-helena",
+          startsAt: iso(day, "11:00"),
+          endsAt: iso(day, "14:00"),
+        },
+      ],
+    });
+    check(
+      "W",
+      "bloqueios sobrepostos unem intervalo",
+      out[0].predictedStartsAt === iso(day, "14:00") && out[0].affectedByBlock,
+    );
   }
 
   {

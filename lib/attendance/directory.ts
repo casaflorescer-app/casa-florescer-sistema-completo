@@ -23,6 +23,7 @@ import {
 } from "@/lib/attendance/types";
 import {
   computeAgendaPredictions,
+  type AgendaBlockInterval,
   type AppointmentPredictionView,
   type HistoricalDurationSample,
   type PredictionAppointment,
@@ -203,6 +204,18 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   if (message.includes("APPOINTMENT_UPDATE_INVALID_RANGE")) {
     return "O horário de término deve ser após o início.";
   }
+  if (message.includes("AGENDA_BLOCK_RANGE_INVALID")) {
+    return "O fim do bloqueio deve ser após o início.";
+  }
+  if (message.includes("AGENDA_BLOCK_TARGET_REQUIRED")) {
+    return "Informe profissional e/ou sala para o bloqueio.";
+  }
+  if (message.includes("AGENDA_BLOCK_NOT_FOUND")) return "Bloqueio não encontrado.";
+  if (message.includes("AGENDA_BLOCK_CANCELLED")) return "Este bloqueio já foi cancelado.";
+  if (message.includes("PROFESSIONAL_INVALID")) return "Profissional inválido para esta prática.";
+  if (message.includes("ROOM_INVALID")) return "Sala inválida para esta organização.";
+  if (message.includes("AGENDA_BLOCK_INVALID")) return "Dados do bloqueio inválidos.";
+  if (message.includes("NOTIFICATION_NOT_FOUND")) return "Notificação não encontrada.";
   if (message.includes("APPOINTMENT_UPDATE_INVALID")) {
     return "Informe paciente, profissional, procedimento, sala e horários válidos.";
   }
@@ -776,6 +789,7 @@ function toPredictionAppointment(row: AppointmentRow): PredictionAppointment {
     organizationId: row.organizationId,
     practiceId: row.practiceId,
     professionalId: row.professionalId,
+    roomId: row.roomId,
     procedureId: row.procedureId,
     startsAt: row.startsAt,
     endsAt: row.endsAt,
@@ -905,6 +919,9 @@ export async function recalculateDayPredictions(
     organizationId: string;
     practiceId: string;
     appointments: AppointmentRow[];
+    blocks?: readonly AgendaBlockInterval[];
+    from?: string;
+    to?: string;
     persist?: boolean;
   },
 ): Promise<{
@@ -912,15 +929,24 @@ export async function recalculateDayPredictions(
   persisted: number;
   error: string | null;
 }> {
-  const [catalog, historical] = await Promise.all([
+  const [catalog, historical, loadedBlocks] = await Promise.all([
     listProcedureDurationMinutes(supabase, input.organizationId),
     listHistoricalDurationSamples(supabase, input.practiceId),
+    input.blocks
+      ? Promise.resolve([...input.blocks])
+      : listAgendaBlocksForDay(supabase, {
+          practiceId: input.practiceId,
+          appointments: input.appointments,
+          from: input.from,
+          to: input.to,
+        }).then((result) => result.blocks.map(toAgendaBlockInterval)),
   ]);
 
   const predictions = computeAgendaPredictions({
     appointments: input.appointments.map(toPredictionAppointment),
     catalogDurationMin: catalog,
     historicalSamples: historical,
+    blocks: loadedBlocks,
   });
 
   if (!input.persist || predictions.length === 0) {
@@ -942,4 +968,376 @@ export async function recalculateDayPredictions(
     persisted: append.rows.length,
     error: append.error,
   };
+}
+
+// ---------------------------------------------------------------------------
+// C032.3 — Bloqueios operacionais + notificações internas
+// ---------------------------------------------------------------------------
+
+export type AgendaBlockReasonCode =
+  | "EMERGENCIA_MEDICA"
+  | "PARTO_HOSPITALAR"
+  | "PROCEDIMENTO_EXTERNO"
+  | "REUNIAO"
+  | "COMPROMISSO_ADMINISTRATIVO"
+  | "AUSENCIA"
+  | "MANUTENCAO_SALA"
+  | "BLOQUEIO_OPERACIONAL"
+  | "OUTRO";
+
+export type AgendaBlockStatus = "scheduled" | "active" | "ended" | "cancelled";
+
+export type AgendaBlockRow = {
+  id: string;
+  organizationId: string;
+  practiceId: string;
+  professionalId: string | null;
+  roomId: string | null;
+  startsAt: string;
+  endsAt: string;
+  blockType: AgendaBlockReasonCode;
+  reasonCode: AgendaBlockReasonCode;
+  title: string;
+  description: string | null;
+  status: AgendaBlockStatus;
+  recordedAfterStart: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+};
+
+export type StaffNotificationRow = {
+  id: string;
+  organizationId: string;
+  practiceId: string | null;
+  eventType: string;
+  title: string;
+  message: string;
+  referenceType: string | null;
+  referenceId: string | null;
+  readAt: string | null;
+  dismissedAt: string | null;
+  createdAt: string;
+};
+
+export const AGENDA_BLOCK_REASON_LABEL: Record<AgendaBlockReasonCode, string> = {
+  EMERGENCIA_MEDICA: "Emergência médica",
+  PARTO_HOSPITALAR: "Parto hospitalar",
+  PROCEDIMENTO_EXTERNO: "Procedimento externo",
+  REUNIAO: "Reunião",
+  COMPROMISSO_ADMINISTRATIVO: "Compromisso administrativo",
+  AUSENCIA: "Ausência",
+  MANUTENCAO_SALA: "Manutenção de sala",
+  BLOQUEIO_OPERACIONAL: "Bloqueio operacional",
+  OUTRO: "Outro",
+};
+
+const AGENDA_BLOCK_COLUMNS =
+  "id, organization_id, practice_id, professional_id, room_id, starts_at, ends_at, block_type, reason_code, title, description, status, recorded_after_start, created_by, created_at, updated_at, cancelled_at, cancellation_reason" as const;
+
+function asAgendaBlockReason(value: unknown): AgendaBlockReasonCode | null {
+  if (typeof value !== "string") return null;
+  return value in AGENDA_BLOCK_REASON_LABEL ? (value as AgendaBlockReasonCode) : null;
+}
+
+function asAgendaBlockStatus(value: unknown): AgendaBlockStatus | null {
+  if (
+    value === "scheduled" ||
+    value === "active" ||
+    value === "ended" ||
+    value === "cancelled"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+export function toAgendaBlockRow(value: Record<string, unknown>): AgendaBlockRow | null {
+  const id = asString(value.id);
+  const organizationId = asString(value.organization_id);
+  const practiceId = asString(value.practice_id);
+  const startsAt = asString(value.starts_at);
+  const endsAt = asString(value.ends_at);
+  const blockType = asAgendaBlockReason(value.block_type);
+  const reasonCode = asAgendaBlockReason(value.reason_code);
+  const title = asString(value.title);
+  const status = asAgendaBlockStatus(value.status);
+  const createdBy = asString(value.created_by);
+  const createdAt = asString(value.created_at);
+  const updatedAt = asString(value.updated_at);
+  if (
+    !id ||
+    !organizationId ||
+    !practiceId ||
+    !startsAt ||
+    !endsAt ||
+    !blockType ||
+    !reasonCode ||
+    !title ||
+    !status ||
+    !createdBy ||
+    !createdAt ||
+    !updatedAt
+  ) {
+    return null;
+  }
+  return {
+    id,
+    organizationId,
+    practiceId,
+    professionalId: asString(value.professional_id),
+    roomId: asString(value.room_id),
+    startsAt,
+    endsAt,
+    blockType,
+    reasonCode,
+    title,
+    description: asString(value.description),
+    status,
+    recordedAfterStart: value.recorded_after_start === true,
+    createdBy,
+    createdAt,
+    updatedAt,
+    cancelledAt: asString(value.cancelled_at),
+    cancellationReason: asString(value.cancellation_reason),
+  };
+}
+
+export function toAgendaBlockInterval(block: AgendaBlockRow): AgendaBlockInterval {
+  return {
+    id: block.id,
+    professionalId: block.professionalId,
+    roomId: block.roomId,
+    startsAt: block.startsAt,
+    endsAt: block.endsAt,
+    reason: block.reasonCode,
+  };
+}
+
+export async function listAgendaBlocksForDay(
+  supabase: SupabaseClient,
+  input: {
+    practiceId: string;
+    appointments?: AppointmentRow[];
+    from?: string;
+    to?: string;
+  },
+): Promise<{ blocks: AgendaBlockRow[]; error: string | null }> {
+  let from = input.from;
+  let to = input.to;
+  if ((!from || !to) && input.appointments && input.appointments.length > 0) {
+    const starts = input.appointments.map((row) => row.startsAt).sort();
+    const ends = input.appointments.map((row) => row.endsAt).sort();
+    from = starts[0];
+    to = ends[ends.length - 1];
+  }
+  if (!from || !to) return { blocks: [], error: null };
+
+  const { data, error } = await supabase
+    .from("agenda_blocks")
+    .select(AGENDA_BLOCK_COLUMNS)
+    .eq("practice_id", input.practiceId)
+    .in("status", ["scheduled", "active"])
+    .lt("starts_at", to)
+    .gt("ends_at", from)
+    .order("starts_at", { ascending: true });
+
+  if (error) return { blocks: [], error: error.message };
+  return {
+    blocks: (data ?? [])
+      .map((raw) => toAgendaBlockRow(raw as Record<string, unknown>))
+      .filter((item): item is AgendaBlockRow => Boolean(item)),
+    error: null,
+  };
+}
+
+export async function createAgendaBlock(
+  supabase: SupabaseClient,
+  input: {
+    organizationId: string;
+    practiceId: string;
+    professionalId?: string | null;
+    roomId?: string | null;
+    startsAt: string;
+    endsAt: string;
+    reasonCode: AgendaBlockReasonCode;
+    title?: string;
+    description?: string | null;
+  },
+): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("agenda_block_create", {
+    p_payload: {
+      organization_id: input.organizationId,
+      practice_id: input.practiceId,
+      professional_id: input.professionalId ?? null,
+      room_id: input.roomId ?? null,
+      starts_at: input.startsAt,
+      ends_at: input.endsAt,
+      block_type: input.reasonCode,
+      reason_code: input.reasonCode,
+      title: input.title ?? AGENDA_BLOCK_REASON_LABEL[input.reasonCode],
+      description: input.description ?? null,
+    },
+  });
+  if (error) return { row: null, error: mapAttendanceRpcError(error) };
+  if (!data || typeof data !== "object") {
+    return { row: null, error: "Resposta inválida do servidor." };
+  }
+  return { row: toAgendaBlockRow(data as Record<string, unknown>), error: null };
+}
+
+export async function updateAgendaBlock(
+  supabase: SupabaseClient,
+  input: {
+    id: string;
+    startsAt?: string;
+    endsAt?: string;
+    description?: string | null;
+  },
+): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("agenda_block_update", {
+    p_payload: {
+      id: input.id,
+      starts_at: input.startsAt ?? null,
+      ends_at: input.endsAt ?? null,
+      description: input.description ?? null,
+    },
+  });
+  if (error) return { row: null, error: mapAttendanceRpcError(error) };
+  if (!data || typeof data !== "object") {
+    return { row: null, error: "Resposta inválida do servidor." };
+  }
+  return { row: toAgendaBlockRow(data as Record<string, unknown>), error: null };
+}
+
+export async function cancelAgendaBlock(
+  supabase: SupabaseClient,
+  blockId: string,
+  reason?: string | null,
+): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("agenda_block_cancel", {
+    p_block_id: blockId,
+    p_reason: reason ?? null,
+  });
+  if (error) return { row: null, error: mapAttendanceRpcError(error) };
+  if (!data || typeof data !== "object") {
+    return { row: null, error: "Resposta inválida do servidor." };
+  }
+  return { row: toAgendaBlockRow(data as Record<string, unknown>), error: null };
+}
+
+export async function endAgendaBlock(
+  supabase: SupabaseClient,
+  blockId: string,
+): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("agenda_block_end", {
+    p_block_id: blockId,
+  });
+  if (error) return { row: null, error: mapAttendanceRpcError(error) };
+  if (!data || typeof data !== "object") {
+    return { row: null, error: "Resposta inválida do servidor." };
+  }
+  return { row: toAgendaBlockRow(data as Record<string, unknown>), error: null };
+}
+
+export function summarizeBlockImpact(
+  appointments: AppointmentRow[],
+  predictions: AppointmentPredictionView[],
+  block: Pick<AgendaBlockRow, "professionalId" | "roomId" | "startsAt" | "endsAt">,
+): {
+  affectedCount: number;
+  firstPredictedStartsAt: string | null;
+  lastPredictedStartsAt: string | null;
+  rows: Array<{
+    appointmentId: string;
+    patientId: string;
+    patientName: string | null;
+    administrativeStartsAt: string;
+    predictedStartsAt: string;
+    deltaMin: number;
+  }>;
+} {
+  const predictionById = new Map(predictions.map((item) => [item.appointmentId, item]));
+  const rows = appointments
+    .filter((appt) => {
+      if (appt.status === "cancelled" || appt.status === "no_show") return false;
+      if (appt.actualEndAt) return false;
+      const byProfessional =
+        Boolean(block.professionalId) && appt.professionalId === block.professionalId;
+      const byRoom = Boolean(block.roomId) && appt.roomId === block.roomId;
+      if (!byProfessional && !byRoom) return false;
+      const pred = predictionById.get(appt.id);
+      return Boolean(pred?.affectedByBlock) || Boolean(pred && pred.deltaMin > 0 && pred.predictionReason.includes("bloqueio"));
+    })
+    .map((appt) => {
+      const pred = predictionById.get(appt.id)!;
+      return {
+        appointmentId: appt.id,
+        patientId: appt.patientId,
+        patientName: appt.patientName ?? null,
+        administrativeStartsAt: appt.startsAt,
+        predictedStartsAt: pred.predictedStartsAt,
+        deltaMin: pred.deltaMin,
+      };
+    })
+    .sort((a, b) => a.administrativeStartsAt.localeCompare(b.administrativeStartsAt));
+
+  return {
+    affectedCount: rows.length,
+    firstPredictedStartsAt: rows[0]?.predictedStartsAt ?? null,
+    lastPredictedStartsAt: rows[rows.length - 1]?.predictedStartsAt ?? null,
+    rows,
+  };
+}
+
+export async function listUnreadStaffNotifications(
+  supabase: SupabaseClient,
+  limit = 20,
+): Promise<StaffNotificationRow[]> {
+  const { data, error } = await supabase
+    .from("staff_notifications")
+    .select(
+      "id, organization_id, practice_id, event_type, title, message, reference_type, reference_id, read_at, dismissed_at, created_at",
+    )
+    .is("dismissed_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data.flatMap((raw) => {
+    const value = raw as Record<string, unknown>;
+    const id = asString(value.id);
+    const organizationId = asString(value.organization_id);
+    const eventType = asString(value.event_type);
+    const title = asString(value.title);
+    const message = asString(value.message);
+    const createdAt = asString(value.created_at);
+    if (!id || !organizationId || !eventType || !title || !message || !createdAt) return [];
+    return [
+      {
+        id,
+        organizationId,
+        practiceId: asString(value.practice_id),
+        eventType,
+        title,
+        message,
+        referenceType: asString(value.reference_type),
+        referenceId: asString(value.reference_id),
+        readAt: asString(value.read_at),
+        dismissedAt: asString(value.dismissed_at),
+        createdAt,
+      },
+    ];
+  });
+}
+
+export async function dismissStaffNotification(
+  supabase: SupabaseClient,
+  notificationId: string,
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc("staff_notification_dismiss", {
+    p_notification_id: notificationId,
+  });
+  return { error: error ? mapAttendanceRpcError(error) : null };
 }

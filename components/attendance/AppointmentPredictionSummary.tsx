@@ -52,6 +52,9 @@ export function AppointmentPredictionSummary({
           <p className={deltaClass}>Previsão no horário</p>
         ) : null}
       </div>
+      {prediction.affectedByBlock ? (
+        <p className="mt-1 text-xs font-semibold text-amber-900">Afetado por bloqueio operacional</p>
+      ) : null}
 
       <button
         type="button"

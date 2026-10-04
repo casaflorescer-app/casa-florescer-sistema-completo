@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { hasStaffRole } from "@/lib/auth/access";
 import { createClient } from "@/lib/supabase/client";
 import { formatCep, formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
@@ -20,6 +22,9 @@ import {
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { PatientPregnancies } from "@/components/pregnancies/PatientPregnancies";
+import { ClinicalOrientationsPanel } from "@/components/orientations/ClinicalOrientationsPanel";
+import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
+import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
 
 export function PatientDetail({
   patientId,
@@ -30,8 +35,14 @@ export function PatientDetail({
   photoUploadFailed?: boolean;
   updated?: boolean;
 }) {
+  const { authorization } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [row, setRow] = useState<PatientDetailRow | null>(null);
+  const supabase = createClient();
+  const physicianMembership =
+    authorization?.memberships.find(
+      (item) => item.role === "physician" && item.professional?.id,
+    ) ?? null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(
@@ -359,6 +370,51 @@ export function PatientDetail({
           ) : null}
 
           <PatientPregnancies patientId={patientId} />
+
+          {supabase && row && authorization ? (
+            <>
+              {(physicianMembership || hasStaffRole(authorization, "secretary")) && (
+                <ClinicalExamsPanel
+                  supabase={supabase}
+                  organizationId={row.organizationId}
+                  practiceId={
+                    physicianMembership?.practiceId ??
+                    authorization.memberships.find((item) => item.role === "secretary")?.practiceId ??
+                    authorization.memberships[0]?.practiceId ??
+                    ""
+                  }
+                  patientId={patientId}
+                  canAnalyze={Boolean(physicianMembership)}
+                  canAttach={
+                    Boolean(physicianMembership) || hasStaffRole(authorization, "secretary")
+                  }
+                  attachSource="secretaria"
+                />
+              )}
+              {physicianMembership?.professional?.id ? (
+                <>
+                  <ClinicalOrientationsPanel
+                    supabase={supabase}
+                    organizationId={row.organizationId}
+                    practiceId={physicianMembership.practiceId}
+                    patientId={patientId}
+                    professionalId={physicianMembership.professional.id}
+                    patientName={row.fullName}
+                    professionalName={authorization.profile?.fullName ?? "Profissional"}
+                    canManage={hasStaffRole(authorization, "physician")}
+                  />
+                  <ClinicalPrescriptionPanel
+                    supabase={supabase}
+                    organizationId={row.organizationId}
+                    practiceId={physicianMembership.practiceId}
+                    patientId={patientId}
+                    professionalId={physicianMembership.professional.id}
+                    canManage={hasStaffRole(authorization, "physician")}
+                  />
+                </>
+              ) : null}
+            </>
+          ) : null}
         </>
       ) : null}
     </div>

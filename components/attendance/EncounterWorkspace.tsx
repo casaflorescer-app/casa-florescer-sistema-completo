@@ -55,6 +55,9 @@ import {
   soapToBody,
   type SoapNote,
 } from "@/components/attendance/soap";
+import { ClinicalOrientationsPanel } from "@/components/orientations/ClinicalOrientationsPanel";
+import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
+import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
 
 function viewerIsEncounterProfessional(
   authorization: AuthorizationContext | null,
@@ -434,6 +437,46 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             ))}
           </ul>
         </section>
+      ) : null}
+      {supabase && authorization ? (
+        <>
+          <ClinicalExamsPanel
+            supabase={supabase}
+            organizationId={encounter.organizationId}
+            practiceId={encounter.practiceId}
+            patientId={encounter.patientId}
+            encounterId={encounter.id}
+            canAnalyze={viewerIsEncounterProfessional(authorization, encounter)}
+            canAttach={
+              viewerIsEncounterProfessional(authorization, encounter) ||
+              hasStaffRole(authorization, "secretary")
+            }
+            attachSource={
+              viewerIsEncounterProfessional(authorization, encounter) ? "secretaria" : "secretaria"
+            }
+          />
+          <ClinicalOrientationsPanel
+            supabase={supabase}
+            organizationId={encounter.organizationId}
+            practiceId={encounter.practiceId}
+            patientId={encounter.patientId}
+            professionalId={encounter.professionalId}
+            encounterId={encounter.id}
+            appointmentId={encounter.appointmentId}
+            patientName={patientName ?? "Paciente"}
+            professionalName={professionalName ?? "Profissional"}
+            canManage={viewerIsEncounterProfessional(authorization, encounter)}
+          />
+          <ClinicalPrescriptionPanel
+            supabase={supabase}
+            organizationId={encounter.organizationId}
+            practiceId={encounter.practiceId}
+            patientId={encounter.patientId}
+            professionalId={encounter.professionalId}
+            encounterId={encounter.id}
+            canManage={viewerIsEncounterProfessional(authorization, encounter)}
+          />
+        </>
       ) : null}
     </div>
   );

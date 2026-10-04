@@ -1,30 +1,47 @@
+"use client";
+
+import { RelationshipCenter } from "@/components/relationship/RelationshipCenter";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { usePracticeUi } from "@/components/layout/PracticeUi";
+
 export default function ComunicacaoPage() {
+  const { authorization, authorizationLoading } = useAuth();
+  const { selectedPracticeId } = usePracticeUi();
+
+  const membership = authorization?.memberships.find(
+    (item) => item.practiceId === selectedPracticeId,
+  );
+  const organizationId =
+    membership?.practice?.organizationId ?? authorization?.organization?.id ?? null;
+
+  const canManage = Boolean(
+    authorization &&
+      selectedPracticeId &&
+      authorization.memberships.some(
+        (item) =>
+          item.practiceId === selectedPracticeId &&
+          (item.role === "owner" || item.role === "admin" || item.role === "secretary"),
+      ),
+  );
+
+  if (authorizationLoading) {
+    return <p className="page-sub">Carregando Central de Relacionamentos…</p>;
+  }
+
+  if (!organizationId || !selectedPracticeId) {
+    return (
+      <section className="card">
+        <h1 className="page-title">Central de Relacionamentos</h1>
+        <p className="page-sub mt-2">Selecione uma prática para continuar.</p>
+      </section>
+    );
+  }
+
   return (
-    <div>
-      <h1 className="page-title">Automação de comunicação</h1>
-      <p className="page-sub">
-        Lembrete de retorno anual e mensagens de cancelamento/reagendamento.
-        Canal preferido da paciente (WhatsApp por padrão).
-      </p>
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <section className="card">
-          <h2 className="font-semibold">Retornos anuais</h2>
-          <p className="mt-2 text-sm text-lotus-700">
-            12 pacientes com retorno em setembro. Disparo sugerido: 15 dias
-            antes, às 10h.
-          </p>
-          <button type="button" className="mt-4 rounded-xl bg-lotus-700 px-4 py-2 text-sm font-semibold text-white">
-            Programar disparo
-          </button>
-        </section>
-        <section className="card">
-          <h2 className="font-semibold">Cancelamento / remarcação</h2>
-          <p className="mt-2 text-sm text-lotus-700">
-            Modelo pronto: “Sua consulta foi remarcada para [data]. Responda
-            SIM para confirmar.”
-          </p>
-        </section>
-      </div>
-    </div>
+    <RelationshipCenter
+      organizationId={organizationId}
+      practiceId={selectedPracticeId}
+      canManage={canManage}
+    />
   );
 }

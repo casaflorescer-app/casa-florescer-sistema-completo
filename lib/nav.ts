@@ -119,6 +119,12 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
         icon: "megaphone",
         moduleIds: ["agenda"],
       },
+      {
+        id: "sec-relacionamentos",
+        label: "Central de Relacionamentos",
+        href: "/secretaria/comunicacao",
+        icon: "megaphone",
+      },
     ],
   },
   {
@@ -154,6 +160,12 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
         icon: "shield-check",
         moduleIds: ["permissoes"],
         aliases: ["/app/admin/permissions"],
+      },
+      {
+        id: "ges-relacionamentos",
+        label: "Central de Relacionamentos",
+        href: "/secretaria/comunicacao",
+        icon: "megaphone",
       },
     ],
   },

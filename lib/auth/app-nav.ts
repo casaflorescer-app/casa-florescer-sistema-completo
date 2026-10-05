@@ -108,6 +108,15 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         href: "/app/care-policies",
         visible: carePolicyViewers,
       },
+      {
+        id: "relationship",
+        label: "Central de Relacionamentos",
+        href: "/app/relationship",
+        visible: (auth) =>
+          hasStaffRole(auth, "secretary") ||
+          hasStaffRole(auth, "owner") ||
+          hasStaffRole(auth, "admin"),
+      },
     ],
   },
   {

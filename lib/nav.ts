@@ -122,7 +122,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       {
         id: "sec-relacionamentos",
         label: "Central de Relacionamentos",
-        href: "/secretaria/comunicacao",
+        href: "/app/relationship",
         icon: "megaphone",
       },
     ],
@@ -164,7 +164,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       {
         id: "ges-relacionamentos",
         label: "Central de Relacionamentos",
-        href: "/secretaria/comunicacao",
+        href: "/app/relationship",
         icon: "megaphone",
       },
     ],

@@ -5,8 +5,8 @@
  *   Central → CampaignService → MessageService → CommunicationProvider
  *     → StubProvider | WhatsAppProvider | EmailProvider | PushProvider
  *
- * Neste Commit 036: somente StubProvider (SIMULAÇÃO — NÃO ENVIADO).
- * Nenhum provider real está configurado. Não afirmar "enviado".
+ * Neste Commit 037: somente StubProvider (SIMULAÇÃO — NÃO ENVIADO).
+ * Nenhum provider real está configurado. Não afirmar "enviado" nem SENT fictício.
  */
 
 export type SendPayload = {

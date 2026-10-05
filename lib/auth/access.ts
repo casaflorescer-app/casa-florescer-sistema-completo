@@ -182,6 +182,14 @@ const PATH_RULES: PathRule[] = [
     prefix: "/app/prescriptions",
     allow: (auth) => isClinicStaff(auth),
   },
+  {
+    // Central de Relacionamentos (C037): secretaria/gestão — sem médica/paciente.
+    prefix: "/app/relationship",
+    allow: (auth) =>
+      hasStaffRole(auth, "secretary") ||
+      hasStaffRole(auth, "owner") ||
+      hasStaffRole(auth, "admin"),
+  },
   { prefix: "/app/dashboard", exact: true, allow: () => true },
   { prefix: "/app", exact: true, allow: () => true },
   { prefix: "/medica", allow: (auth) => hasStaffRole(auth, "physician") },

@@ -24,6 +24,7 @@ export function AgendaDayBoard({
   onEdit,
   onSetStatus,
   onStartEncounter,
+  onRecordArrival,
 }: {
   date: string;
   rows: AppointmentRow[];
@@ -40,6 +41,7 @@ export function AgendaDayBoard({
   onEdit: (appointmentId: string) => void;
   onSetStatus: (appointmentId: string, status: OperationalAppointmentStatus) => void;
   onStartEncounter: (appointmentId: string) => void;
+  onRecordArrival: (appointmentId: string) => void;
 }) {
   const dayBlocks = blocks ?? [];
   const empty = !loading && rows.length === 0 && dayBlocks.length === 0;
@@ -81,6 +83,7 @@ export function AgendaDayBoard({
                 onEdit={onEdit}
                 onSetStatus={onSetStatus}
                 onStartEncounter={onStartEncounter}
+                onRecordArrival={onRecordArrival}
               />
             </li>
           ))}

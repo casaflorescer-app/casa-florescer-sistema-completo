@@ -6,15 +6,21 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
+import { dayBoundsIso } from "@/components/attendance/agenda-display";
 import {
   clinicalNoteUpsert,
   encounterSign,
+  getAppointment,
   getEncounter,
   getEncounterPregnancy,
   linkEncounterToPregnancy,
+  listAppointments,
   listClinicalNotes,
   getLatestClinicalNote,
   unlinkEncounterFromPregnancy,
+  appointmentRecordActualEnd,
+  recalculateDayPredictions,
+  type AppointmentRow,
   type ClinicalNoteRow,
   type EncounterRow,
   type PregnancyContext,
@@ -143,6 +149,8 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [obstetricHistory, setObstetricHistory] = useState<ObstetricHistoryItem[]>([]);
   const [obstetricHistoryError, setObstetricHistoryError] = useState<string | null>(null);
+  const [attendanceEnded, setAttendanceEnded] = useState(false);
+  const [appointmentRow, setAppointmentRow] = useState<AppointmentRow | null>(null);
 
   const load = useCallback(async (quiet = false) => {
     if (!supabase) {
@@ -154,23 +162,29 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     const row = await getEncounter(supabase, encounterId);
     if (!row) {
       setEncounter(null);
+      setAppointmentRow(null);
       setPregnancy(null);
       setPregnancyLinked(false);
       setPrimaryProfessionalName(null);
       setObstetricHistory([]);
       setObstetricHistoryError(null);
+      setAttendanceEnded(false);
       setError("Atendimento não encontrado ou sem permissão de leitura.");
       setLoading(false);
       return;
     }
-    const [latest, history, patients, professionals, pregnancyContext, linkRow] = await Promise.all([
-      getLatestClinicalNote(supabase, encounterId),
-      listClinicalNotes(supabase, encounterId),
-      listPatients(supabase).catch(() => []),
-      listProfessionalLabels(supabase, row.practiceId).catch(() => []),
-      getEncounterPregnancy(supabase, encounterId),
-      supabase.from("encounters").select("pregnancy_id").eq("id", encounterId).maybeSingle(),
-    ]);
+    const [latest, history, patients, professionals, pregnancyContext, linkRow, appointment] =
+      await Promise.all([
+        getLatestClinicalNote(supabase, encounterId),
+        listClinicalNotes(supabase, encounterId),
+        listPatients(supabase).catch(() => []),
+        listProfessionalLabels(supabase, row.practiceId).catch(() => []),
+        getEncounterPregnancy(supabase, encounterId),
+        supabase.from("encounters").select("pregnancy_id").eq("id", encounterId).maybeSingle(),
+        row.appointmentId ? getAppointment(supabase, row.appointmentId) : Promise.resolve(null),
+      ]);
+    setAppointmentRow(appointment);
+    setAttendanceEnded(Boolean(appointment?.actualEndAt));
     const nextSoap = soapFromBody(latest?.body);
     setEncounter(row);
     setNotes(history);
@@ -354,6 +368,78 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     await load(true);
   }
 
+  async function onEndAttendance() {
+    if (!supabase || !encounter?.appointmentId) {
+      setError("Este atendimento não está vinculado a um agendamento.");
+      return;
+    }
+    if (!viewerIsEncounterProfessional(authorization, encounter)) {
+      setError("Somente a médica do atendimento pode encerrar.");
+      return;
+    }
+    if (
+      !window.confirm(
+        "Encerrar o atendimento clinicamente agora? Isso registra o horário real de término (independente da assinatura) e atualiza a previsão da agenda.",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const result = await appointmentRecordActualEnd(supabase, encounter.appointmentId);
+    if (result.error || !result.row) {
+      setBusy(false);
+      setError(result.error ?? "Não foi possível registrar o término.");
+      return;
+    }
+
+    setAppointmentRow(result.row);
+    setAttendanceEnded(true);
+
+    // Recalcula a cadeia do dia da profissional sem alterar starts_at/scheduled_*.
+    let predictionNotice = "Término clínico registrado.";
+    try {
+      const dayKey = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Sao_Paulo",
+      }).format(new Date(result.row.startsAt));
+      const bounds = dayBoundsIso(dayKey);
+      if (bounds) {
+        const dayAppts = await listAppointments(supabase, {
+          practiceId: encounter.practiceId,
+          from: bounds.from,
+          to: bounds.to,
+          professionalId: encounter.professionalId,
+        });
+        // Inclui o appointment acabado de encerrar (lista pode estar stale se filtro por status).
+        const byId = new Map(dayAppts.map((item) => [item.id, item]));
+        byId.set(result.row.id, result.row);
+        const recalc = await recalculateDayPredictions(supabase, {
+          organizationId: encounter.organizationId,
+          practiceId: encounter.practiceId,
+          appointments: [...byId.values()],
+          from: bounds.from,
+          to: bounds.to,
+          persist: true,
+        });
+        if (recalc.error) {
+          predictionNotice =
+            "Término clínico registrado. A previsão da agenda será atualizada na próxima carga da agenda.";
+        } else if (recalc.persisted > 0) {
+          predictionNotice = `Término clínico registrado. Previsão da agenda atualizada (${recalc.persisted}).`;
+        } else {
+          predictionNotice = "Término clínico registrado. Sem alteração relevante na previsão.";
+        }
+      }
+    } catch {
+      predictionNotice =
+        "Término clínico registrado. A previsão da agenda será atualizada na próxima carga da agenda.";
+    }
+
+    setBusy(false);
+    setNotice(predictionNotice);
+  }
+
   if (loading) {
     return <p className="text-sm text-lotus-600">Carregando atendimento…</p>;
   }
@@ -419,12 +505,60 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       <div className="mt-4">
         <StatusMessage error={error} notice={notice} />
       </div>
+      {appointmentRow ? (
+        <section className="card mt-4 overflow-x-hidden">
+          <h2 className="text-base font-semibold text-lotus-900">Tempo do atendimento</h2>
+          <p className="mt-1 text-sm text-lotus-600">
+            Horários administrativos permanecem inalterados. Início e término reais alimentam a previsão.
+          </p>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl bg-lotus-50/80 px-3 py-3">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Agendado</dt>
+              <dd className="mt-1 text-lg font-semibold text-lotus-950">
+                {formatDateTime(appointmentRow.scheduledStartsAt)}
+              </dd>
+            </div>
+            <div className="rounded-xl bg-lotus-50/80 px-3 py-3">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Início efetivo</dt>
+              <dd className="mt-1 text-lg font-semibold text-lotus-950">
+                {appointmentRow.actualStartAt ? formatDateTime(appointmentRow.actualStartAt) : "Aguardando"}
+              </dd>
+            </div>
+            <div className="rounded-xl bg-lotus-50/80 px-3 py-3">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Término efetivo</dt>
+              <dd className="mt-1 text-lg font-semibold text-lotus-950">
+                {appointmentRow.actualEndAt ? formatDateTime(appointmentRow.actualEndAt) : "Em aberto"}
+              </dd>
+            </div>
+            <div className="rounded-xl bg-[#FFF8F5] px-3 py-3 ring-1 ring-[#F0D5C8]">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-[#9A5B64]">Duração efetiva</dt>
+              <dd className="mt-1 text-lg font-semibold text-[#5C2E35]">
+                {appointmentRow.actualStartAt && appointmentRow.actualEndAt
+                  ? `${Math.max(
+                      0,
+                      Math.round(
+                        (new Date(appointmentRow.actualEndAt).getTime() -
+                          new Date(appointmentRow.actualStartAt).getTime()) /
+                          60000,
+                      ),
+                    )} min`
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
       <ClinicalNoteEditor value={soap} locked={locked} onChange={setSoap} />
       <EncounterActions
         locked={locked}
         busy={busy || linkBusy}
+        canEndAttendance={Boolean(
+          encounter.appointmentId && viewerIsEncounterProfessional(authorization, encounter),
+        )}
+        attendanceEnded={attendanceEnded}
         onSave={() => void onSave()}
         onSign={() => void onSign()}
+        onEndAttendance={() => void onEndAttendance()}
       />
       {notes.length > 0 ? (
         <section className="card mt-4">

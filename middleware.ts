@@ -50,10 +50,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // B3.2: superfície oficial única — portais legados redirecionam para /app
+  // B3.2 / C038: portais legados — paciente vai para /app/portal; demais para /app
   if (isLegacyPortalPath(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = AUTHENTICATED_HOME;
+    url.pathname = pathname === "/paciente" || pathname.startsWith("/paciente/")
+      ? "/app/portal"
+      : AUTHENTICATED_HOME;
     url.search = "";
     return NextResponse.redirect(url);
   }

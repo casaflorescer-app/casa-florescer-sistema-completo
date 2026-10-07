@@ -25,7 +25,7 @@ import {
   type PrescriptionRow,
 } from "@/lib/prescriptions/directory";
 
-export function PatientOrientationsPortal() {
+export function PatientOrientationsPortal({ embedded = false }: { embedded?: boolean }) {
   const { authorization, authorizationLoading } = useAuth();
   const [items, setItems] = useState<
     Array<{ orientation: ClinicalOrientationRow; version: ClinicalOrientationVersionRow }>
@@ -182,13 +182,24 @@ export function PatientOrientationsPortal() {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Paciente</p>
-      <h1 className="page-title mt-1">Minha saúde</h1>
-      <p className="page-sub mt-2">Exames, orientações e receitas disponibilizadas pela sua médica.</p>
+      {embedded ? (
+        <>
+          <h2 className="text-base font-semibold text-lotus-900">Meus documentos</h2>
+          <p className="mt-1 text-sm text-lotus-700">
+            Exames, orientações e receitas disponibilizadas pela sua médica.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Paciente</p>
+          <h1 className="page-title mt-1">Minha saúde</h1>
+          <p className="page-sub mt-2">Exames, orientações e receitas disponibilizadas pela sua médica.</p>
+        </>
+      )}
 
       <StatusMessage error={error} notice={notice} />
 
-      {notifications.length > 0 ? (
+      {!embedded && notifications.length > 0 ? (
         <section className="mt-4 rounded-md border border-lotus-200 bg-white px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-lotus-500">
             Atualização no seu atendimento

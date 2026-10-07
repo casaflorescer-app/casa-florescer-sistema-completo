@@ -54,6 +54,9 @@ export function resolveAuthenticatedPath(candidate: string | null | undefined) {
     return AUTHENTICATED_HOME;
   }
   const path = normalizePathname(candidate.split("?")[0] ?? candidate);
+  if (path === "/paciente" || path.startsWith("/paciente/")) {
+    return "/app/portal";
+  }
   if (isLegacyPortalPath(path)) return AUTHENTICATED_HOME;
   return path || AUTHENTICATED_HOME;
 }

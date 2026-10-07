@@ -9,6 +9,7 @@ import { usePracticeUi } from "@/components/layout/PracticeUi";
 import { StatusMessage, buttonClass } from "@/components/platform/Ui";
 import { createClient } from "@/lib/supabase/client";
 import {
+  appointmentRecordArrival,
   appointmentSetStatus,
   cancelAgendaBlock,
   encounterOpenFromAppointment,
@@ -361,6 +362,20 @@ export function AgendaPage() {
     });
   }
 
+  function onRecordArrival(appointmentId: string) {
+    void withClient(appointmentId, async (supabase) => {
+      const result = await appointmentRecordArrival(supabase, appointmentId);
+      if (result.error || !result.row) {
+        setError(result.error ?? "Não foi possível registrar a chegada.");
+        return;
+      }
+      setRows((current) =>
+        current.map((item) => (item.id === appointmentId ? result.row! : item)),
+      );
+      setNotice("Chegada física registrada.");
+    });
+  }
+
   const canCreate = Boolean(supabase && organizationId && selectedPracticeId && userId);
   const canStartEncounter = authorization ? hasStaffRole(authorization, "physician") : false;
   const editingRow = editingId ? labeledRows.find((item) => item.id === editingId) ?? null : null;
@@ -573,6 +588,7 @@ export function AgendaPage() {
         }}
         onSetStatus={onSetStatus}
         onStartEncounter={onStartEncounter}
+        onRecordArrival={onRecordArrival}
       />
     </div>
   );

@@ -237,6 +237,12 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   if (message.includes("APPOINTMENT_ACTUAL_END_LOCKED")) {
     return "O término clínico já foi registrado e não pode ser alterado.";
   }
+  if (message.includes("APPOINTMENT_ACTUAL_END_BEFORE_START")) {
+    return "O término não pode ser anterior ao início clínico.";
+  }
+  if (message.includes("APPOINTMENT_ACTUAL_END_WITHOUT_START")) {
+    return "Registre o início clínico antes de encerrar o atendimento.";
+  }
   if (message.includes("ENCOUNTER_NOT_FOUND")) return "Atendimento não encontrado.";
   if (message.includes("ENCOUNTER_NOT_OPEN")) {
     return "O atendimento precisa estar aberto.";
@@ -536,6 +542,40 @@ export async function appointmentSetStatus(
   const { data, error } = await supabase.rpc("appointment_set_status", {
     p_appointment_id: appointmentId,
     p_status: status,
+  });
+  if (error) return { row: null, error: mapAttendanceRpcError(error) };
+  if (!data || typeof data !== "object") {
+    return { row: null, error: "Resposta inválida do servidor." };
+  }
+  return {
+    row: toAppointmentRow(data as Record<string, unknown>),
+    error: null,
+  };
+}
+
+export async function appointmentRecordArrival(
+  supabase: SupabaseClient,
+  appointmentId: string,
+): Promise<{ row: AppointmentRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("appointment_record_arrival", {
+    p_appointment_id: appointmentId,
+  });
+  if (error) return { row: null, error: mapAttendanceRpcError(error) };
+  if (!data || typeof data !== "object") {
+    return { row: null, error: "Resposta inválida do servidor." };
+  }
+  return {
+    row: toAppointmentRow(data as Record<string, unknown>),
+    error: null,
+  };
+}
+
+export async function appointmentRecordActualEnd(
+  supabase: SupabaseClient,
+  appointmentId: string,
+): Promise<{ row: AppointmentRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("appointment_record_actual_end", {
+    p_appointment_id: appointmentId,
   });
   if (error) return { row: null, error: mapAttendanceRpcError(error) };
   if (!data || typeof data !== "object") {

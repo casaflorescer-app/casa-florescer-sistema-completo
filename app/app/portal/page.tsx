@@ -1,5 +1,5 @@
-import { PatientOrientationsPortal } from "@/components/orientations/PatientOrientationsPortal";
+import { PatientPortalHome } from "@/components/portal/PatientPortalHome";
 
 export default function PatientPortalPage() {
-  return <PatientOrientationsPortal />;
+  return <PatientPortalHome />;
 }

@@ -1,20 +1,12 @@
 "use client";
 
-import { PatientRegistrationForm } from "@/components/patients/PatientRegistrationForm";
-import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function PacienteCadastroPage() {
-  const { session } = usePermissions();
-  return (
-    <div>
-      <h1 className="page-title">Atualizar cadastro</h1>
-      <p className="page-sub">
-        Confira identidade, contato e convênio. O histórico clínico é preenchido
-        pela clínica na ficha de admissão.
-      </p>
-      <div className="mt-6">
-        <PatientRegistrationForm patientId={session.patientId ?? "preview-patient"} variant="portal" />
-      </div>
-    </div>
-  );
+export default function PacienteCadastroLegacyRedirectPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/app/portal");
+  }, [router]);
+  return <p className="page-sub">Redirecionando para o portal da paciente…</p>;
 }

@@ -23,6 +23,7 @@ export function AppointmentCard({
   onEdit,
   onSetStatus,
   onStartEncounter,
+  onRecordArrival,
 }: {
   row: AppointmentRow;
   prediction?: AppointmentPredictionView | null;
@@ -33,6 +34,7 @@ export function AppointmentCard({
   onEdit: (appointmentId: string) => void;
   onSetStatus: (appointmentId: string, status: OperationalAppointmentStatus) => void;
   onStartEncounter: (appointmentId: string) => void;
+  onRecordArrival?: (appointmentId: string) => void;
 }) {
   function cancel() {
     if (!window.confirm("Cancelar este agendamento?")) return;
@@ -86,6 +88,12 @@ export function AppointmentCard({
 
       {row.urgencyNote ? <p className="mt-3 text-sm text-lotus-800">{row.urgencyNote}</p> : null}
 
+      {row.arrivalAt ? (
+        <p className="mt-2 text-xs font-medium text-emerald-800">
+          Chegada registrada · {formatClock(row.arrivalAt)}
+        </p>
+      ) : null}
+
       <AppointmentPredictionSummary prediction={prediction} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -97,6 +105,20 @@ export function AppointmentCard({
             onClick={() => onEdit(row.id)}
           >
             {editing ? "Editando…" : "Editar"}
+          </button>
+        ) : null}
+        {!row.arrivalAt &&
+        onRecordArrival &&
+        row.status !== "cancelled" &&
+        row.status !== "no_show" &&
+        row.status !== "completed" ? (
+          <button
+            type="button"
+            className={ghostActionClass}
+            disabled={busy}
+            onClick={() => onRecordArrival(row.id)}
+          >
+            Registrar chegada
           </button>
         ) : null}
         {row.status === "scheduled" ? (

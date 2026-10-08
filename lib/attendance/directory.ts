@@ -634,6 +634,27 @@ export async function listEncountersForPatient(
     .filter((item): item is EncounterRow => Boolean(item));
 }
 
+/** Encounters abertos do profissional na prática (índice do prontuário — C040.1). */
+export async function listOpenEncountersForProfessional(
+  supabase: SupabaseClient,
+  practiceId: string,
+  professionalId: string,
+  limit = 40,
+): Promise<EncounterRow[]> {
+  const { data, error } = await supabase
+    .from("encounters")
+    .select(ENCOUNTER_COLUMNS)
+    .eq("practice_id", practiceId)
+    .eq("professional_id", professionalId)
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data
+    .map((raw) => toEncounterRow(raw as Record<string, unknown>))
+    .filter((item): item is EncounterRow => Boolean(item));
+}
+
 export async function encounterOpenFromAppointment(
   supabase: SupabaseClient,
   appointmentId: string,

@@ -23,6 +23,7 @@ export function AppointmentCard({
   onEdit,
   onSetStatus,
   onStartEncounter,
+  onContinueEncounter,
   onRecordArrival,
 }: {
   row: AppointmentRow;
@@ -34,6 +35,7 @@ export function AppointmentCard({
   onEdit: (appointmentId: string) => void;
   onSetStatus: (appointmentId: string, status: OperationalAppointmentStatus) => void;
   onStartEncounter: (appointmentId: string) => void;
+  onContinueEncounter?: (appointmentId: string) => void;
   onRecordArrival?: (appointmentId: string) => void;
 }) {
   function cancel() {
@@ -165,6 +167,16 @@ export function AppointmentCard({
               </button>
             ) : null}
           </>
+        ) : null}
+        {row.status === "in_progress" && canStartEncounter && onContinueEncounter ? (
+          <button
+            type="button"
+            className={actionClass}
+            disabled={busy}
+            onClick={() => onContinueEncounter(row.id)}
+          >
+            Continuar atendimento
+          </button>
         ) : null}
       </div>
     </article>

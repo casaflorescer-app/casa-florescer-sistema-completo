@@ -19,12 +19,17 @@ import {
   getLatestClinicalNote,
   unlinkEncounterFromPregnancy,
   appointmentRecordActualEnd,
+  listEncountersForPatient,
   recalculateDayPredictions,
   type AppointmentRow,
   type ClinicalNoteRow,
   type EncounterRow,
   type PregnancyContext,
 } from "@/lib/attendance/directory";
+import {
+  loadPatientClinicalSummary,
+  type PatientClinicalSummaryData,
+} from "@/lib/attendance/patient-summary";
 import { listPatients } from "@/lib/patients/directory";
 import { formatIsoDateBr } from "@/lib/patients/format";
 import {
@@ -40,11 +45,15 @@ import {
   type ProfessionalLabel,
 } from "@/lib/pregnancies/directory";
 import { formatDateTime } from "@/lib/platform/format";
-import { ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
+import { buttonClass, ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
 import { ClinicalNoteEditor } from "@/components/attendance/ClinicalNoteEditor";
 import { ContextAssistencial } from "@/components/attendance/ContextAssistencial";
 import { EncounterActions } from "@/components/attendance/EncounterActions";
 import { EncounterHeader } from "@/components/attendance/EncounterHeader";
+import { EncounterTimeline } from "@/components/attendance/EncounterTimeline";
+import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalSummary";
+import { WorkspaceComingSoon } from "@/components/attendance/WorkspaceComingSoon";
+import { WorkspaceSectionNav } from "@/components/attendance/WorkspaceSectionNav";
 import {
   ObstetricHistory,
   type ObstetricHistoryItem,
@@ -151,6 +160,10 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [obstetricHistoryError, setObstetricHistoryError] = useState<string | null>(null);
   const [attendanceEnded, setAttendanceEnded] = useState(false);
   const [appointmentRow, setAppointmentRow] = useState<AppointmentRow | null>(null);
+  const [summary, setSummary] = useState<PatientClinicalSummaryData | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [timeline, setTimeline] = useState<EncounterRow[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
 
   const load = useCallback(async (quiet = false) => {
     if (!supabase) {
@@ -212,6 +225,22 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     setObstetricHistoryError(obstetric.error);
     setError(null);
     setLoading(false);
+
+    setSummaryLoading(true);
+    setTimelineLoading(true);
+    const [summaryData, timelineRows] = await Promise.all([
+      loadPatientClinicalSummary(supabase, {
+        practiceId: row.practiceId,
+        patientId: row.patientId,
+        currentEncounterId: row.id,
+        pregnancy: pregnancyContext,
+      }).catch(() => null),
+      listEncountersForPatient(supabase, row.practiceId, row.patientId).catch(() => []),
+    ]);
+    setSummary(summaryData);
+    setTimeline(timelineRows);
+    setSummaryLoading(false);
+    setTimelineLoading(false);
   }, [encounterId, supabase]);
 
   const refreshPregnancy = useCallback(async () => {
@@ -449,7 +478,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   return (
-    <div>
+    <div className="overflow-x-hidden pb-8">
       <EncounterHeader
         encounter={encounter}
         patientName={patientName}
@@ -489,6 +518,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
           />
         }
       />
+      <WorkspaceSectionNav />
       {linkMode ? (
         <PregnancyLinkDialog
           mode={linkMode}
@@ -505,11 +535,28 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       <div className="mt-4">
         <StatusMessage error={error} notice={notice} />
       </div>
+
+      <PatientClinicalSummary
+        summary={summary}
+        pregnancy={pregnancy}
+        loading={summaryLoading}
+      />
+
+      {supabase ? (
+        <EncounterTimeline
+          supabase={supabase}
+          encounters={timeline}
+          currentEncounterId={encounter.id}
+          loading={timelineLoading}
+        />
+      ) : null}
+
       {appointmentRow ? (
         <section className="card mt-4 overflow-x-hidden">
           <h2 className="text-base font-semibold text-lotus-900">Tempo do atendimento</h2>
           <p className="mt-1 text-sm text-lotus-600">
-            Horários administrativos permanecem inalterados. Início e término reais alimentam a previsão.
+            Assinatura documental (`encounter_sign`) e término efetivo (`actual_end_at`) são
+            eventos distintos. Horários administrativos permanecem inalterados.
           </p>
           <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl bg-lotus-50/80 px-3 py-3">
@@ -548,70 +595,120 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
           </dl>
         </section>
       ) : null}
-      <ClinicalNoteEditor value={soap} locked={locked} onChange={setSoap} />
-      <EncounterActions
-        locked={locked}
-        busy={busy || linkBusy}
-        canEndAttendance={Boolean(
-          encounter.appointmentId && viewerIsEncounterProfessional(authorization, encounter),
-        )}
-        attendanceEnded={attendanceEnded}
-        onSave={() => void onSave()}
-        onSign={() => void onSign()}
-        onEndAttendance={() => void onEndAttendance()}
-      />
-      {notes.length > 0 ? (
-        <section className="card mt-4">
-          <h2 className="text-base font-semibold text-lotus-900">Histórico da evolução</h2>
-          <ul className="mt-3 space-y-2 text-sm text-lotus-700">
-            {notes.map((note) => (
-              <li key={note.id}>
-                Versão {note.version} · {formatDateTime(note.createdAt)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+
+      <section id="atendimento" className="mt-4 scroll-mt-16 space-y-4">
+        <WorkspaceComingSoon id="anamnese" title="Anamnese" stage="C040.2" />
+        <WorkspaceComingSoon id="queixa" title="Queixa / motivo" stage="C040.2" />
+        <WorkspaceComingSoon id="exame-fisico" title="Exame físico" stage="C040.2" />
+        <div id="soap" className="scroll-mt-16">
+          <ClinicalNoteEditor value={soap} locked={locked} onChange={setSoap} />
+        </div>
+        {notes.length > 0 ? (
+          <section className="card overflow-x-hidden">
+            <h2 className="text-base font-semibold text-lotus-900">Histórico da evolução (SOAP)</h2>
+            <ul className="mt-3 space-y-2 text-sm text-lotus-700">
+              {notes.map((note) => (
+                <li key={note.id}>
+                  Versão {note.version} · {formatDateTime(note.createdAt)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+      </section>
+
+      <WorkspaceComingSoon id="gravacao" title="Gravação / transcrição" stage="C040.3">
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className={buttonClass} disabled title="Disponível no C040.3">
+            Iniciar gravação
+          </button>
+          <button type="button" className={ghostButtonClass} disabled>
+            Pausar
+          </button>
+          <button type="button" className={ghostButtonClass} disabled>
+            Continuar
+          </button>
+          <button type="button" className={ghostButtonClass} disabled>
+            Transcrever agora
+          </button>
+          <button type="button" className={ghostButtonClass} disabled>
+            Encerrar
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-lotus-500">
+          Controles reservados. A gravação não inicia automaticamente neste release.
+        </p>
+      </WorkspaceComingSoon>
+
       {supabase && authorization ? (
         <>
-          <ClinicalExamsPanel
-            supabase={supabase}
-            organizationId={encounter.organizationId}
-            practiceId={encounter.practiceId}
-            patientId={encounter.patientId}
-            encounterId={encounter.id}
-            canAnalyze={viewerIsEncounterProfessional(authorization, encounter)}
-            canAttach={
-              viewerIsEncounterProfessional(authorization, encounter) ||
-              hasStaffRole(authorization, "secretary")
-            }
-            attachSource={
-              viewerIsEncounterProfessional(authorization, encounter) ? "secretaria" : "secretaria"
-            }
-          />
-          <ClinicalOrientationsPanel
-            supabase={supabase}
-            organizationId={encounter.organizationId}
-            practiceId={encounter.practiceId}
-            patientId={encounter.patientId}
-            professionalId={encounter.professionalId}
-            encounterId={encounter.id}
-            appointmentId={encounter.appointmentId}
-            patientName={patientName ?? "Paciente"}
-            professionalName={professionalName ?? "Profissional"}
-            canManage={viewerIsEncounterProfessional(authorization, encounter)}
-          />
-          <ClinicalPrescriptionPanel
-            supabase={supabase}
-            organizationId={encounter.organizationId}
-            practiceId={encounter.practiceId}
-            patientId={encounter.patientId}
-            professionalId={encounter.professionalId}
-            encounterId={encounter.id}
-            canManage={viewerIsEncounterProfessional(authorization, encounter)}
-          />
+          <div id="exames" className="scroll-mt-16">
+            <ClinicalExamsPanel
+              supabase={supabase}
+              organizationId={encounter.organizationId}
+              practiceId={encounter.practiceId}
+              patientId={encounter.patientId}
+              encounterId={encounter.id}
+              canAnalyze={viewerIsEncounterProfessional(authorization, encounter)}
+              canAttach={
+                viewerIsEncounterProfessional(authorization, encounter) ||
+                hasStaffRole(authorization, "secretary")
+              }
+              attachSource={
+                viewerIsEncounterProfessional(authorization, encounter) ? "secretaria" : "secretaria"
+              }
+            />
+          </div>
+          <div id="receita" className="scroll-mt-16">
+            <ClinicalPrescriptionPanel
+              supabase={supabase}
+              organizationId={encounter.organizationId}
+              practiceId={encounter.practiceId}
+              patientId={encounter.patientId}
+              professionalId={encounter.professionalId}
+              encounterId={encounter.id}
+              canManage={viewerIsEncounterProfessional(authorization, encounter)}
+            />
+          </div>
+          <div id="orientacao" className="scroll-mt-16">
+            <ClinicalOrientationsPanel
+              supabase={supabase}
+              organizationId={encounter.organizationId}
+              practiceId={encounter.practiceId}
+              patientId={encounter.patientId}
+              professionalId={encounter.professionalId}
+              encounterId={encounter.id}
+              appointmentId={encounter.appointmentId}
+              patientName={patientName ?? "Paciente"}
+              professionalName={professionalName ?? "Profissional"}
+              canManage={viewerIsEncounterProfessional(authorization, encounter)}
+            />
+          </div>
         </>
       ) : null}
+
+      <WorkspaceComingSoon id="retorno" title="Retorno" stage="C040.7" />
+
+      <section id="encerramento" className="mt-4 scroll-mt-16">
+        <div className="card mb-0 overflow-x-hidden">
+          <h2 className="text-base font-semibold text-lotus-900">Encerramento</h2>
+          <p className="mt-1 text-sm text-lotus-600">
+            Salvar evolução, assinar o prontuário e registrar o término efetivo permanecem ações
+            distintas.
+          </p>
+        </div>
+        <EncounterActions
+          locked={locked}
+          busy={busy || linkBusy}
+          canEndAttendance={Boolean(
+            encounter.appointmentId && viewerIsEncounterProfessional(authorization, encounter),
+          )}
+          attendanceEnded={attendanceEnded}
+          onSave={() => void onSave()}
+          onSign={() => void onSign()}
+          onEndAttendance={() => void onEndAttendance()}
+        />
+      </section>
     </div>
   );
 }

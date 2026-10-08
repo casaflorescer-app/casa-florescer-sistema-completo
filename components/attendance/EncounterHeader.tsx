@@ -48,9 +48,12 @@ export function EncounterHeader({
         </span>
       </div>
       {assistential}
-      <p className="mt-4 text-sm">
+      <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
         <Link href="/app/agenda" className="text-lotus-800 underline-offset-2 hover:underline">
           Voltar para a agenda
+        </Link>
+        <Link href="/app/records" className="text-lotus-800 underline-offset-2 hover:underline">
+          Índice do prontuário
         </Link>
       </p>
     </header>

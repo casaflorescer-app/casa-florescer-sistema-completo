@@ -13,6 +13,7 @@ import {
   appointmentSetStatus,
   cancelAgendaBlock,
   encounterOpenFromAppointment,
+  getEncounterByAppointment,
   listAgendaBlocksForDay,
   listAppointments,
   recalculateDayPredictions,
@@ -362,6 +363,26 @@ export function AgendaPage() {
     });
   }
 
+  /** Continua encounter aberto existente — não reabre assinados/cancelados e não cria novo. */
+  function onContinueEncounter(appointmentId: string) {
+    void withClient(appointmentId, async (supabase) => {
+      const existing = await getEncounterByAppointment(supabase, appointmentId);
+      if (!existing) {
+        setError("Não há atendimento clínico vinculado a este horário.");
+        return;
+      }
+      if (existing.status === "open") {
+        router.push(`/app/records/${existing.id}`);
+        return;
+      }
+      if (existing.status === "signed" || existing.status === "amended") {
+        setError("Este atendimento já foi finalizado e não pode ser reaberto.");
+        return;
+      }
+      setError("Não é possível continuar este atendimento.");
+    });
+  }
+
   function onRecordArrival(appointmentId: string) {
     void withClient(appointmentId, async (supabase) => {
       const result = await appointmentRecordArrival(supabase, appointmentId);
@@ -588,6 +609,7 @@ export function AgendaPage() {
         }}
         onSetStatus={onSetStatus}
         onStartEncounter={onStartEncounter}
+        onContinueEncounter={onContinueEncounter}
         onRecordArrival={onRecordArrival}
       />
     </div>

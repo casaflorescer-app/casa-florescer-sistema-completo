@@ -1,11 +1,5 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { RecordsIndex } from "@/components/attendance/RecordsIndex";
 
 export default function RecordsPage() {
-  return (
-    <ModulePlaceholder
-      title="Prontuário"
-      area="clinica"
-      description="Módulo em implementação. Disponível apenas para membership médico. SYSTEM_ADMIN não recebe este acesso automaticamente."
-    />
-  );
+  return <RecordsIndex />;
 }

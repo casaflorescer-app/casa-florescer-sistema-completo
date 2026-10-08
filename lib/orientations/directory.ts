@@ -494,6 +494,16 @@ export async function dismissPatientNotification(
   return { error: error ? mapOrientationRpcError(error) : null };
 }
 
+export async function markPatientNotificationRead(
+  supabase: SupabaseClient,
+  notificationId: string,
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc("patient_notification_mark_read", {
+    p_notification_id: notificationId,
+  });
+  return { error: error ? mapOrientationRpcError(error) : null };
+}
+
 export async function linkOrientationExams(
   supabase: SupabaseClient,
   orientationId: string,

@@ -3,7 +3,10 @@
 export const WORKSPACE_SECTIONS = [
   { id: "resumo", label: "Resumo" },
   { id: "historico", label: "Histórico" },
-  { id: "atendimento", label: "Atendimento" },
+  { id: "queixa", label: "Queixa" },
+  { id: "anamnese", label: "Anamnese" },
+  { id: "exame-fisico", label: "Exame físico" },
+  { id: "soap", label: "Avaliação" },
   { id: "gravacao", label: "Gravação" },
   { id: "exames", label: "Exames" },
   { id: "receita", label: "Receita" },

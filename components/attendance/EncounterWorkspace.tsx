@@ -21,6 +21,7 @@ import {
   appointmentRecordActualEnd,
   listEncountersForPatient,
   recalculateDayPredictions,
+  DEFAULT_NOTE_TEMPLATE,
   type AppointmentRow,
   type ClinicalNoteRow,
   type EncounterRow,
@@ -30,6 +31,21 @@ import {
   loadPatientClinicalSummary,
   type PatientClinicalSummaryData,
 } from "@/lib/attendance/patient-summary";
+import {
+  EMPTY_ANAMNESIS,
+  EMPTY_CHIEF_COMPLAINT,
+  EMPTY_PHYSICAL_EXAM,
+  TEMPLATE_ANAMNESIS_ENCOUNTER,
+  TEMPLATE_CHIEF_COMPLAINT,
+  TEMPLATE_PHYSICAL_EXAM,
+  parseAnamnesis,
+  parseChiefComplaint,
+  parsePhysicalExam,
+  type AnamnesisEncounterForm,
+  type ChiefComplaintForm,
+  type PhysicalExamForm,
+} from "@/lib/attendance/clinical-forms";
+import { loadPriorAnamnesis, type PriorAnamnesisRef } from "@/lib/attendance/prior-clinical";
 import { listPatients } from "@/lib/patients/directory";
 import { formatIsoDateBr } from "@/lib/patients/format";
 import {
@@ -46,12 +62,15 @@ import {
 } from "@/lib/pregnancies/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { buttonClass, ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
+import { AnamnesisPanel } from "@/components/attendance/AnamnesisPanel";
+import { ChiefComplaintPanel } from "@/components/attendance/ChiefComplaintPanel";
 import { ClinicalNoteEditor } from "@/components/attendance/ClinicalNoteEditor";
 import { ContextAssistencial } from "@/components/attendance/ContextAssistencial";
 import { EncounterActions } from "@/components/attendance/EncounterActions";
 import { EncounterHeader } from "@/components/attendance/EncounterHeader";
 import { EncounterTimeline } from "@/components/attendance/EncounterTimeline";
 import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalSummary";
+import { PhysicalExamPanel } from "@/components/attendance/PhysicalExamPanel";
 import { WorkspaceComingSoon } from "@/components/attendance/WorkspaceComingSoon";
 import { WorkspaceSectionNav } from "@/components/attendance/WorkspaceSectionNav";
 import {
@@ -164,6 +183,10 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [timeline, setTimeline] = useState<EncounterRow[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  const [chiefComplaint, setChiefComplaint] = useState<ChiefComplaintForm>(EMPTY_CHIEF_COMPLAINT);
+  const [anamnesis, setAnamnesis] = useState<AnamnesisEncounterForm>(EMPTY_ANAMNESIS);
+  const [physicalExam, setPhysicalExam] = useState<PhysicalExamForm>(EMPTY_PHYSICAL_EXAM);
+  const [priorAnamnesis, setPriorAnamnesis] = useState<PriorAnamnesisRef | null>(null);
 
   const load = useCallback(async (quiet = false) => {
     if (!supabase) {
@@ -182,27 +205,47 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       setObstetricHistory([]);
       setObstetricHistoryError(null);
       setAttendanceEnded(false);
+      setChiefComplaint(EMPTY_CHIEF_COMPLAINT);
+      setAnamnesis(EMPTY_ANAMNESIS);
+      setPhysicalExam(EMPTY_PHYSICAL_EXAM);
+      setPriorAnamnesis(null);
       setError("Atendimento não encontrado ou sem permissão de leitura.");
       setLoading(false);
       return;
     }
-    const [latest, history, patients, professionals, pregnancyContext, linkRow, appointment] =
-      await Promise.all([
-        getLatestClinicalNote(supabase, encounterId),
-        listClinicalNotes(supabase, encounterId),
-        listPatients(supabase).catch(() => []),
-        listProfessionalLabels(supabase, row.practiceId).catch(() => []),
-        getEncounterPregnancy(supabase, encounterId),
-        supabase.from("encounters").select("pregnancy_id").eq("id", encounterId).maybeSingle(),
-        row.appointmentId ? getAppointment(supabase, row.appointmentId) : Promise.resolve(null),
-      ]);
+    const [
+      latest,
+      history,
+      patients,
+      professionals,
+      pregnancyContext,
+      linkRow,
+      appointment,
+      complaintNote,
+      anamnesisNote,
+      examNote,
+    ] = await Promise.all([
+      getLatestClinicalNote(supabase, encounterId, DEFAULT_NOTE_TEMPLATE),
+      listClinicalNotes(supabase, encounterId),
+      listPatients(supabase).catch(() => []),
+      listProfessionalLabels(supabase, row.practiceId).catch(() => []),
+      getEncounterPregnancy(supabase, encounterId),
+      supabase.from("encounters").select("pregnancy_id").eq("id", encounterId).maybeSingle(),
+      row.appointmentId ? getAppointment(supabase, row.appointmentId) : Promise.resolve(null),
+      getLatestClinicalNote(supabase, encounterId, TEMPLATE_CHIEF_COMPLAINT),
+      getLatestClinicalNote(supabase, encounterId, TEMPLATE_ANAMNESIS_ENCOUNTER),
+      getLatestClinicalNote(supabase, encounterId, TEMPLATE_PHYSICAL_EXAM),
+    ]);
     setAppointmentRow(appointment);
     setAttendanceEnded(Boolean(appointment?.actualEndAt));
     const nextSoap = soapFromBody(latest?.body);
     setEncounter(row);
-    setNotes(history);
+    setNotes(history.filter((note) => note.templateCode === DEFAULT_NOTE_TEMPLATE));
     setSoap(nextSoap);
     setSavedSoap(nextSoap);
+    setChiefComplaint(parseChiefComplaint(complaintNote?.body));
+    setAnamnesis(parseAnamnesis(anamnesisNote?.body));
+    setPhysicalExam(parsePhysicalExam(examNote?.body));
     setPatientName(patients.find((item) => item.id === row.patientId)?.fullName ?? null);
     setProfessionalName(
       professionals.find((item) => item.id === row.professionalId)?.fullName ?? null,
@@ -228,7 +271,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
 
     setSummaryLoading(true);
     setTimelineLoading(true);
-    const [summaryData, timelineRows] = await Promise.all([
+    const [summaryData, timelineRows, prior] = await Promise.all([
       loadPatientClinicalSummary(supabase, {
         practiceId: row.practiceId,
         patientId: row.patientId,
@@ -236,9 +279,15 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         pregnancy: pregnancyContext,
       }).catch(() => null),
       listEncountersForPatient(supabase, row.practiceId, row.patientId).catch(() => []),
+      loadPriorAnamnesis(supabase, {
+        practiceId: row.practiceId,
+        patientId: row.patientId,
+        currentEncounterId: row.id,
+      }).catch(() => null),
     ]);
     setSummary(summaryData);
     setTimeline(timelineRows);
+    setPriorAnamnesis(prior);
     setSummaryLoading(false);
     setTimelineLoading(false);
   }, [encounterId, supabase]);
@@ -596,20 +645,60 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         </section>
       ) : null}
 
-      <section id="atendimento" className="mt-4 scroll-mt-16 space-y-4">
-        <WorkspaceComingSoon id="anamnese" title="Anamnese" stage="C040.2" />
-        <WorkspaceComingSoon id="queixa" title="Queixa / motivo" stage="C040.2" />
-        <WorkspaceComingSoon id="exame-fisico" title="Exame físico" stage="C040.2" />
+      {supabase ? (
+        <>
+          <ChiefComplaintPanel
+            supabase={supabase}
+            encounterId={encounter.id}
+            locked={locked}
+            canEdit={viewerIsEncounterProfessional(authorization, encounter)}
+            initial={chiefComplaint}
+          />
+          <AnamnesisPanel
+            supabase={supabase}
+            encounterId={encounter.id}
+            patientId={encounter.patientId}
+            organizationId={encounter.organizationId}
+            actorUserId={authorization?.user.id ?? null}
+            locked={locked}
+            canEdit={viewerIsEncounterProfessional(authorization, encounter)}
+            initial={anamnesis}
+            prior={priorAnamnesis}
+            pregnancyHint={
+              pregnancy
+                ? `Gestação vinculada · DUM ${choiceDate(pregnancy.lmpDate)} · DPP ${choiceDate(
+                    pregnancy.clinicalDueDate ?? pregnancy.estimatedDueDate,
+                  )} · ${PREGNANCY_STATUS_LABEL[pregnancy.status]}`
+                : null
+            }
+          />
+          <PhysicalExamPanel
+            supabase={supabase}
+            encounterId={encounter.id}
+            locked={locked}
+            canEdit={viewerIsEncounterProfessional(authorization, encounter)}
+            initial={physicalExam}
+          />
+        </>
+      ) : null}
+
+      <section className="mt-4 space-y-4">
         <div id="soap" className="scroll-mt-16">
           <ClinicalNoteEditor value={soap} locked={locked} onChange={setSoap} />
         </div>
         {notes.length > 0 ? (
           <section className="card overflow-x-hidden">
-            <h2 className="text-base font-semibold text-lotus-900">Histórico da evolução (SOAP)</h2>
+            <h2 className="text-base font-semibold text-lotus-900">Rascunho SOAP deste atendimento</h2>
+            <p className="mt-1 text-xs text-lotus-500">
+              Uma nota por template: o contador indica quantas vezes o rascunho foi gravado,
+              não um histórico recuperável de textos anteriores.
+            </p>
             <ul className="mt-3 space-y-2 text-sm text-lotus-700">
               {notes.map((note) => (
                 <li key={note.id}>
-                  Versão {note.version} · {formatDateTime(note.createdAt)}
+                  Rascunho · {note.version}{" "}
+                  {note.version === 1 ? "gravação" : "gravações"} · iniciado em{" "}
+                  {formatDateTime(note.createdAt)}
                 </li>
               ))}
             </ul>

@@ -14,10 +14,12 @@ export function ClinicalNoteEditor({
   value,
   locked,
   onChange,
+  fromAiSuggestion = false,
 }: {
   value: SoapNote;
   locked: boolean;
   onChange: (next: SoapNote) => void;
+  fromAiSuggestion?: boolean;
 }) {
   return (
     <section className="card mt-4">
@@ -25,8 +27,13 @@ export function ClinicalNoteEditor({
       <p className="mt-1 text-sm text-lotus-600">
         {locked
           ? "Atendimento assinado. A evolução fica somente para leitura."
-          : "Registro mínimo do atendimento. Salve antes de assinar."}
+          : "Registro clínico elaborado pela médica. Transcrição ≠ SOAP. Salve antes de assinar."}
       </p>
+      {fromAiSuggestion && !locked ? (
+        <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+          Conteúdo inclui sugestão de IA — revise e salve o rascunho para integrar ao prontuário.
+        </p>
+      ) : null}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {FIELDS.map((field) => (
           <label key={field.key} className={labelClass}>

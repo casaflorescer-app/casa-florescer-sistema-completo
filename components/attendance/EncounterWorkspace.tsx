@@ -41,6 +41,7 @@ import {
   parseAnamnesis,
   parseChiefComplaint,
   parsePhysicalExam,
+  physicalExamHasContent,
   type AnamnesisEncounterForm,
   type ChiefComplaintForm,
   type PhysicalExamForm,
@@ -64,11 +65,14 @@ import { formatDateTime } from "@/lib/platform/format";
 import { buttonClass, ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
 import { AnamnesisPanel } from "@/components/attendance/AnamnesisPanel";
 import { ChiefComplaintPanel } from "@/components/attendance/ChiefComplaintPanel";
+import { AiAssistancePanel } from "@/components/attendance/AiAssistancePanel";
 import { ClinicalNoteEditor } from "@/components/attendance/ClinicalNoteEditor";
 import { ContextAssistencial } from "@/components/attendance/ContextAssistencial";
 import { EncounterActions } from "@/components/attendance/EncounterActions";
+import { EncounterCloseChecklist } from "@/components/attendance/EncounterCloseChecklist";
 import { EncounterHeader } from "@/components/attendance/EncounterHeader";
 import { EncounterTimeline } from "@/components/attendance/EncounterTimeline";
+import { ExamRequestPanel } from "@/components/attendance/ExamRequestPanel";
 import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalSummary";
 import { EncounterRecordingPanel } from "@/components/attendance/EncounterRecordingPanel";
 import { PhysicalExamPanel } from "@/components/attendance/PhysicalExamPanel";
@@ -161,6 +165,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [encounter, setEncounter] = useState<EncounterRow | null>(null);
   const [notes, setNotes] = useState<ClinicalNoteRow[]>([]);
   const [soap, setSoap] = useState<SoapNote>(EMPTY_SOAP);
+  const [soapFromAi, setSoapFromAi] = useState(false);
   const [savedSoap, setSavedSoap] = useState<SoapNote>(EMPTY_SOAP);
   const [patientName, setPatientName] = useState<string | null>(null);
   const [professionalName, setProfessionalName] = useState<string | null>(null);
@@ -244,6 +249,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     setNotes(history.filter((note) => note.templateCode === DEFAULT_NOTE_TEMPLATE));
     setSoap(nextSoap);
     setSavedSoap(nextSoap);
+    setSoapFromAi(false);
     setChiefComplaint(parseChiefComplaint(complaintNote?.body));
     setAnamnesis(parseAnamnesis(anamnesisNote?.body));
     setPhysicalExam(parsePhysicalExam(examNote?.body));
@@ -683,9 +689,87 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         </>
       ) : null}
 
+      {supabase ? (
+        <EncounterRecordingPanel
+          supabase={supabase}
+          encounterId={encounter.id}
+          locked={locked}
+          canEdit={viewerIsEncounterProfessional(authorization, encounter)}
+        />
+      ) : null}
+
+      {supabase && authorization ? (
+        <AiAssistancePanel
+          supabase={supabase}
+          organizationId={encounter.organizationId}
+          practiceId={encounter.practiceId}
+          patientId={encounter.patientId}
+          encounterId={encounter.id}
+          locked={locked}
+          canEdit={viewerIsEncounterProfessional(authorization, encounter)}
+          context={{
+            chiefComplaint: [
+              chiefComplaint.chiefComplaint,
+              chiefComplaint.motives.join(", "),
+              chiefComplaint.historyOfPresentIllness,
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            anamnesis: [
+              anamnesis.personalHistoryNotes,
+              anamnesis.familyHistoryNotes,
+              anamnesis.changesSinceLastVisit,
+              anamnesis.reviewNotes,
+              anamnesis.noRelevantChanges ? "Sem alterações relevantes desde a última consulta." : "",
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            physicalExam: [
+              physicalExam.general,
+              physicalExam.cardiovascular,
+              physicalExam.respiratory,
+              physicalExam.abdominal,
+              physicalExam.gynecologic,
+              physicalExam.obstetric,
+              physicalExam.otherSystems,
+              physicalExam.freeText,
+              physicalExam.noRelevantFindings ? "Sem achados relevantes no exame físico." : "",
+              [
+                physicalExam.vitals.weightKg && `Peso ${physicalExam.vitals.weightKg} kg`,
+                physicalExam.vitals.heightCm && `Altura ${physicalExam.vitals.heightCm} cm`,
+                (physicalExam.vitals.systolicBp || physicalExam.vitals.diastolicBp) &&
+                  `PA ${physicalExam.vitals.systolicBp}/${physicalExam.vitals.diastolicBp}`,
+                physicalExam.vitals.heartRate && `FC ${physicalExam.vitals.heartRate}`,
+                physicalExam.vitals.temperatureC && `Temp ${physicalExam.vitals.temperatureC}`,
+                physicalExam.vitals.spo2 && `SpO2 ${physicalExam.vitals.spo2}`,
+              ]
+                .filter(Boolean)
+                .join(" | "),
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            soapDraft: [soap.subjective, soap.objective, soap.assessment, soap.plan]
+              .filter(Boolean)
+              .join("\n"),
+          }}
+          onApplySoap={(next) => {
+            setSoap(next);
+            setSoapFromAi(true);
+          }}
+        />
+      ) : null}
+
       <section className="mt-4 space-y-4">
         <div id="soap" className="scroll-mt-16">
-          <ClinicalNoteEditor value={soap} locked={locked} onChange={setSoap} />
+          <ClinicalNoteEditor
+            value={soap}
+            locked={locked}
+            fromAiSuggestion={soapFromAi}
+            onChange={(next) => {
+              setSoap(next);
+              setSoapFromAi(false);
+            }}
+          />
         </div>
         {notes.length > 0 ? (
           <section className="card overflow-x-hidden">
@@ -707,18 +791,16 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         ) : null}
       </section>
 
-      {supabase ? (
-        <EncounterRecordingPanel
-          supabase={supabase}
-          encounterId={encounter.id}
-          locked={locked}
-          canEdit={viewerIsEncounterProfessional(authorization, encounter)}
-        />
-      ) : null}
-
       {supabase && authorization ? (
         <>
           <div id="exames" className="scroll-mt-16">
+            <ExamRequestPanel
+              supabase={supabase}
+              practiceId={encounter.practiceId}
+              encounterId={encounter.id}
+              locked={locked}
+              canEdit={viewerIsEncounterProfessional(authorization, encounter)}
+            />
             <ClinicalExamsPanel
               supabase={supabase}
               organizationId={encounter.organizationId}
@@ -773,6 +855,27 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             distintas.
           </p>
         </div>
+        <EncounterCloseChecklist
+          hints={{
+            complaint: Boolean(
+              chiefComplaint.chiefComplaint.trim() ||
+                chiefComplaint.motives.length > 0 ||
+                chiefComplaint.historyOfPresentIllness.trim(),
+            ),
+            anamnesis: Boolean(
+              anamnesis.personalHistoryNotes.trim() ||
+                anamnesis.changesSinceLastVisit.trim() ||
+                anamnesis.noRelevantChanges ||
+                anamnesis.reviewNotes.trim(),
+            ),
+            physicalExam: physicalExamHasContent(physicalExam),
+            soap: soapHasContent(soap),
+            exams: true,
+            prescription: true,
+            orientations: true,
+            feedback: false,
+          }}
+        />
         <EncounterActions
           locked={locked}
           busy={busy || linkBusy}

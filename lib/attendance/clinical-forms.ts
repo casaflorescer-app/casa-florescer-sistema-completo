@@ -355,34 +355,55 @@ export function validateVitals(vitals: VitalSignsForm): VitalAlert[] {
   const height = num(vitals.heightCm);
 
   if (sys !== null && (Number.isNaN(sys) || sys < 60 || sys > 260)) {
-    alerts.push({ field: "systolicBp", message: "PA sistólica fora da faixa esperada (60–260)." });
+    alerts.push({
+      field: "systolicBp",
+      message: "Valor fora da faixa configurada (PA sistólica 60–260).",
+    });
   }
   if (dia !== null && (Number.isNaN(dia) || dia < 30 || dia > 160)) {
-    alerts.push({ field: "diastolicBp", message: "PA diastólica fora da faixa esperada (30–160)." });
+    alerts.push({
+      field: "diastolicBp",
+      message: "Valor fora da faixa configurada (PA diastólica 30–160).",
+    });
   }
   if (sys !== null && dia !== null && !Number.isNaN(sys) && !Number.isNaN(dia) && sys < dia) {
     alerts.push({ field: "systolicBp", message: "PA sistólica menor que a diastólica." });
   }
   if (hr !== null && (Number.isNaN(hr) || hr < 20 || hr > 250)) {
-    alerts.push({ field: "heartRate", message: "Frequência cardíaca fora da faixa esperada (20–250)." });
+    alerts.push({
+      field: "heartRate",
+      message: "Valor fora da faixa configurada (frequência cardíaca 20–250).",
+    });
   }
   if (rr !== null && (Number.isNaN(rr) || rr < 5 || rr > 80)) {
     alerts.push({
       field: "respiratoryRate",
-      message: "Frequência respiratória fora da faixa esperada (5–80).",
+      message: "Valor fora da faixa configurada (frequência respiratória 5–80).",
     });
   }
   if (temp !== null && (Number.isNaN(temp) || temp < 30 || temp > 45)) {
-    alerts.push({ field: "temperatureC", message: "Temperatura fora da faixa esperada (30–45 °C)." });
+    alerts.push({
+      field: "temperatureC",
+      message: "Valor fora da faixa configurada (temperatura 30–45 °C).",
+    });
   }
   if (spo2 !== null && (Number.isNaN(spo2) || spo2 < 50 || spo2 > 100)) {
-    alerts.push({ field: "spo2", message: "Saturação fora da faixa esperada (50–100%)." });
+    alerts.push({
+      field: "spo2",
+      message: "Valor fora da faixa configurada (saturação 50–100%).",
+    });
   }
   if (weight !== null && (Number.isNaN(weight) || weight < 1 || weight > 400)) {
-    alerts.push({ field: "weightKg", message: "Peso fora da faixa esperada (1–400 kg)." });
+    alerts.push({
+      field: "weightKg",
+      message: "Valor fora da faixa configurada (peso 1–400 kg).",
+    });
   }
   if (height !== null && (Number.isNaN(height) || height < 30 || height > 250)) {
-    alerts.push({ field: "heightCm", message: "Altura fora da faixa esperada (30–250 cm)." });
+    alerts.push({
+      field: "heightCm",
+      message: "Valor fora da faixa configurada (altura 30–250 cm).",
+    });
   }
   return alerts;
 }

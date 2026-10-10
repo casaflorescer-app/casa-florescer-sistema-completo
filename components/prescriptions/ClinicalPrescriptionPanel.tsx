@@ -12,6 +12,12 @@ import {
   type PrescriptionItemRow,
   type PrescriptionRow,
 } from "@/lib/prescriptions/directory";
+import {
+  applyPrescriptionTemplate,
+  listPrescriptionTemplates,
+  upsertPrescriptionTemplate,
+  type PrescriptionTemplateRow,
+} from "@/lib/attendance/clinical-support-directory";
 import { buttonClass, ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
 import { formatDateTime } from "@/lib/platform/format";
 
@@ -35,6 +41,9 @@ export function ClinicalPrescriptionPanel({
   const [rows, setRows] = useState<PrescriptionRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [items, setItems] = useState<PrescriptionItemRow[]>([]);
+  const [templates, setTemplates] = useState<PrescriptionTemplateRow[]>([]);
+  const [templateId, setTemplateId] = useState("");
+  const [templateName, setTemplateName] = useState("");
   const [medicationName, setMedicationName] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
@@ -49,7 +58,9 @@ export function ClinicalPrescriptionPanel({
     if (activeId) {
       setItems(await listPrescriptionItems(supabase, activeId));
     }
-  }, [activeId, patientId, supabase]);
+    const tpl = await listPrescriptionTemplates(supabase, practiceId, true);
+    setTemplates(tpl);
+  }, [activeId, patientId, practiceId, supabase]);
 
   useEffect(() => {
     void reload();
@@ -122,22 +133,101 @@ export function ClinicalPrescriptionPanel({
     }
   }
 
+  async function onUseTemplate() {
+    if (!canManage || !encounterId || !templateId) {
+      setError("Selecione um modelo para copiar para a receita atual.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await applyPrescriptionTemplate(supabase, templateId, encounterId);
+      if (result.error || !result.prescriptionId) {
+        setError(result.error ?? "Não foi possível aplicar o modelo.");
+        return;
+      }
+      setActiveId(result.prescriptionId);
+      setNotice("Modelo copiado para nova receita em rascunho. Revise antes de publicar.");
+      await reload();
+      setItems(await listPrescriptionItems(supabase, result.prescriptionId));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSaveAsTemplate() {
+    if (!canManage || !templateName.trim() || items.length === 0) {
+      setError("Informe o nome do modelo e tenha ao menos um medicamento na receita aberta.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await upsertPrescriptionTemplate(supabase, {
+        practiceId,
+        name: templateName.trim(),
+        items: items.map((item) => ({
+          medication_name: item.medicationName,
+          presentation: item.presentation ?? undefined,
+          dosage: item.dosage ?? undefined,
+          route: item.route ?? undefined,
+          frequency: item.frequency ?? undefined,
+          duration: item.duration ?? undefined,
+          quantity: item.quantity ?? undefined,
+          observations: item.instructions ?? undefined,
+        })),
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setTemplateName("");
+      setNotice("Modelo de receita salvo (atalho). Receitas antigas não são alteradas.");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="card mt-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-lotus-900">Receita</h2>
           <p className="mt-1 text-sm text-lotus-600">
-            Elabore e publique no mesmo fluxo clínico. Sem IA prescritora.
+            Elabore e publique no mesmo fluxo clínico. Modelos são atalhos — a IA não prescrita.
           </p>
         </div>
         {canManage ? (
           <button type="button" className={buttonClass} disabled={busy} onClick={() => void onCreate()}>
-            Criar receita
+            Nova receita
           </button>
         ) : null}
       </div>
       <StatusMessage error={error} notice={notice} />
+
+      {canManage && encounterId ? (
+        <div className="mt-4 flex flex-col gap-2 rounded-lg border border-lotus-100 p-3 sm:flex-row sm:items-end">
+          <label className="flex-1 text-sm font-medium text-lotus-800">
+            Usar modelo
+            <select
+              className="mt-1 w-full rounded-md border border-lotus-200 px-3 py-2 text-sm"
+              value={templateId}
+              onChange={(event) => setTemplateId(event.target.value)}
+            >
+              <option value="">Selecione…</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} ({template.items.length} itens)
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className={ghostButtonClass} disabled={busy || !templateId} onClick={() => void onUseTemplate()}>
+            Copiar modelo para receita
+          </button>
+        </div>
+      ) : null}
 
       <ul className="mt-4 space-y-2 text-sm">
         {rows.length === 0 ? (
@@ -227,6 +317,20 @@ export function ClinicalPrescriptionPanel({
                 </button>
                 <button type="button" className={buttonClass} disabled={busy} onClick={() => void onPublish()}>
                   Revisar e publicar para paciente
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 border-t border-lotus-100 pt-3 sm:flex-row sm:items-end">
+                <label className="flex-1 text-sm font-medium text-lotus-800">
+                  Salvar receita aberta como modelo
+                  <input
+                    className="mt-1 w-full rounded-md border border-lotus-200 px-3 py-2 text-sm"
+                    value={templateName}
+                    onChange={(event) => setTemplateName(event.target.value)}
+                    placeholder="Nome do modelo"
+                  />
+                </label>
+                <button type="button" className={ghostButtonClass} disabled={busy} onClick={() => void onSaveAsTemplate()}>
+                  Salvar modelo
                 </button>
               </div>
             </>

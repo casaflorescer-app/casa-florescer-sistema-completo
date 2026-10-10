@@ -70,6 +70,7 @@ import { EncounterActions } from "@/components/attendance/EncounterActions";
 import { EncounterHeader } from "@/components/attendance/EncounterHeader";
 import { EncounterTimeline } from "@/components/attendance/EncounterTimeline";
 import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalSummary";
+import { EncounterRecordingPanel } from "@/components/attendance/EncounterRecordingPanel";
 import { PhysicalExamPanel } from "@/components/attendance/PhysicalExamPanel";
 import { WorkspaceComingSoon } from "@/components/attendance/WorkspaceComingSoon";
 import { WorkspaceSectionNav } from "@/components/attendance/WorkspaceSectionNav";
@@ -706,28 +707,14 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         ) : null}
       </section>
 
-      <WorkspaceComingSoon id="gravacao" title="Gravação / transcrição" stage="C040.3">
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className={buttonClass} disabled title="Disponível no C040.3">
-            Iniciar gravação
-          </button>
-          <button type="button" className={ghostButtonClass} disabled>
-            Pausar
-          </button>
-          <button type="button" className={ghostButtonClass} disabled>
-            Continuar
-          </button>
-          <button type="button" className={ghostButtonClass} disabled>
-            Transcrever agora
-          </button>
-          <button type="button" className={ghostButtonClass} disabled>
-            Encerrar
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-lotus-500">
-          Controles reservados. A gravação não inicia automaticamente neste release.
-        </p>
-      </WorkspaceComingSoon>
+      {supabase ? (
+        <EncounterRecordingPanel
+          supabase={supabase}
+          encounterId={encounter.id}
+          locked={locked}
+          canEdit={viewerIsEncounterProfessional(authorization, encounter)}
+        />
+      ) : null}
 
       {supabase && authorization ? (
         <>

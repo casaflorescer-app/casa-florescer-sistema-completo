@@ -26,3 +26,4 @@ Thumbs.db
 agent-transcripts/
 
 supabase/temp/
+.vercel

@@ -15,12 +15,24 @@ export function EncounterHeader({
   patientName,
   professionalName,
   assistential,
+  attendanceEnded = false,
+  draftHint = false,
 }: {
   encounter: EncounterRow;
   patientName: string | null;
   professionalName: string | null;
   assistential?: ReactNode;
+  attendanceEnded?: boolean;
+  draftHint?: boolean;
 }) {
+  const operationalLabel = attendanceEnded
+    ? "Encerrado"
+    : encounter.status === "open"
+      ? draftHint
+        ? "Rascunho"
+        : "Em atendimento"
+      : ENCOUNTER_STATUS_LABEL[encounter.status];
+
   return (
     <header className="card">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -41,11 +53,16 @@ export function EncounterHeader({
             </p>
           ) : null}
         </div>
-        <span
-          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${TONE[encounter.status]}`}
-        >
-          {ENCOUNTER_STATUS_LABEL[encounter.status]}
-        </span>
+        <div className="flex flex-col items-end gap-1.5">
+          <span
+            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${TONE[encounter.status]}`}
+          >
+            {ENCOUNTER_STATUS_LABEL[encounter.status]}
+          </span>
+          <span className="inline-flex rounded-full border border-lotus-200 bg-white px-3 py-1 text-xs font-semibold text-lotus-800">
+            {operationalLabel}
+          </span>
+        </div>
       </div>
       {assistential}
       <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">

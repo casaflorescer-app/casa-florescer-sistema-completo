@@ -12,6 +12,8 @@ export const WORKSPACE_SECTIONS = [
   { id: "exames", label: "Exames" },
   { id: "receita", label: "Receita" },
   { id: "orientacao", label: "Orientação" },
+  { id: "feedback", label: "Feedback" },
+  { id: "revisao-final", label: "Revisão" },
   { id: "retorno", label: "Retorno" },
   { id: "encerramento", label: "Encerramento" },
 ] as const;

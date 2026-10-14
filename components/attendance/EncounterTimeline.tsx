@@ -100,7 +100,7 @@ export function EncounterTimeline({
                       </p>
                       <p className="mt-0.5 text-xs text-lotus-600">
                         {ENCOUNTER_STATUS_LABEL[encounter.status]}
-                        {isCurrent ? " · atendimento atual" : ""}
+                        {isCurrent ? " · atendimento atual" : " · somente leitura"}
                       </p>
                     </div>
                     {!isCurrent ? (

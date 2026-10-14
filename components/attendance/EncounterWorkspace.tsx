@@ -69,8 +69,12 @@ import { AiAssistancePanel } from "@/components/attendance/AiAssistancePanel";
 import { ClinicalNoteEditor } from "@/components/attendance/ClinicalNoteEditor";
 import { ContextAssistencial } from "@/components/attendance/ContextAssistencial";
 import { EncounterActions } from "@/components/attendance/EncounterActions";
-import { EncounterCloseChecklist } from "@/components/attendance/EncounterCloseChecklist";
+import {
+  EncounterFinalReview,
+  type ReviewPendingItem,
+} from "@/components/attendance/EncounterFinalReview";
 import { EncounterHeader } from "@/components/attendance/EncounterHeader";
+import { EncounterPatientFeedbackPanel } from "@/components/attendance/EncounterPatientFeedbackPanel";
 import { EncounterTimeline } from "@/components/attendance/EncounterTimeline";
 import { ExamRequestPanel } from "@/components/attendance/ExamRequestPanel";
 import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalSummary";
@@ -78,6 +82,14 @@ import { EncounterRecordingPanel } from "@/components/attendance/EncounterRecord
 import { PhysicalExamPanel } from "@/components/attendance/PhysicalExamPanel";
 import { WorkspaceComingSoon } from "@/components/attendance/WorkspaceComingSoon";
 import { WorkspaceSectionNav } from "@/components/attendance/WorkspaceSectionNav";
+import { markEncounterAuditEvent } from "@/lib/attendance/encounter-feedback";
+import {
+  listAiAssistance,
+  listExamRequestsForEncounter,
+} from "@/lib/attendance/clinical-support-directory";
+import { listExamOrdersForPatient } from "@/lib/exams/directory";
+import { listPrescriptionsForPatient } from "@/lib/prescriptions/directory";
+import { listOrientationsForEncounter } from "@/lib/orientations/directory";
 import {
   ObstetricHistory,
   type ObstetricHistoryItem,
@@ -167,6 +179,15 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [soap, setSoap] = useState<SoapNote>(EMPTY_SOAP);
   const [soapFromAi, setSoapFromAi] = useState(false);
   const [savedSoap, setSavedSoap] = useState<SoapNote>(EMPTY_SOAP);
+  const [reviewCounts, setReviewCounts] = useState({
+    examOrders: 0,
+    examRequests: 0,
+    prescriptions: 0,
+    orientations: 0,
+    aiPending: false,
+    hasRecording: false,
+  });
+  const [reviewAudited, setReviewAudited] = useState(false);
   const [patientName, setPatientName] = useState<string | null>(null);
   const [professionalName, setProfessionalName] = useState<string | null>(null);
   const [pregnancy, setPregnancy] = useState<PregnancyContext | null>(null);
@@ -297,6 +318,39 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     setPriorAnamnesis(prior);
     setSummaryLoading(false);
     setTimelineLoading(false);
+
+    const [examOrders, examRequests, prescriptions, orientations, aiList, recordingRes] =
+      await Promise.all([
+        listExamOrdersForPatient(supabase, row.patientId).catch(() => []),
+        listExamRequestsForEncounter(supabase, row.id).catch(() => []),
+        listPrescriptionsForPatient(supabase, row.patientId).catch(() => []),
+        listOrientationsForEncounter(supabase, row.id).catch(() => []),
+        listAiAssistance(supabase, row.id).catch(() => ({
+          results: [] as Awaited<ReturnType<typeof listAiAssistance>>["results"],
+          requests: [] as Awaited<ReturnType<typeof listAiAssistance>>["requests"],
+          error: null as string | null,
+        })),
+        supabase
+          .from("encounter_recording_sessions")
+          .select("id")
+          .eq("encounter_id", row.id)
+          .limit(1),
+      ]);
+    const pendingAi = (aiList.results ?? []).some(
+      (item: { reviewStatus: string }) => item.reviewStatus === "pending",
+    );
+    const recordingRows = recordingRes.error ? [] : recordingRes.data ?? [];
+    setReviewCounts({
+      examOrders: examOrders.filter((item: { encounterId: string | null }) => item.encounterId === row.id)
+        .length,
+      examRequests: examRequests.length,
+      prescriptions: prescriptions.filter(
+        (item: { encounterId: string | null }) => item.encounterId === row.id,
+      ).length,
+      orientations: orientations.length,
+      aiPending: pendingAi,
+      hasRecording: recordingRows.length > 0,
+    });
   }, [encounterId, supabase]);
 
   const refreshPregnancy = useCallback(async () => {
@@ -437,9 +491,6 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       setNotice(null);
       return;
     }
-    if (!window.confirm("Assinar este atendimento? Depois da assinatura a evolução não poderá ser alterada.")) {
-      return;
-    }
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -449,7 +500,8 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       setError(result.error ?? "Não foi possível assinar o atendimento.");
       return;
     }
-    setNotice("Atendimento assinado.");
+    await markEncounterAuditEvent(supabase, encounter.id, "clinical_document_finalized");
+    setNotice("Atendimento assinado. Registros clínicos deste encounter ficam somente leitura.");
     await load(true);
   }
 
@@ -521,6 +573,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         "Término clínico registrado. A previsão da agenda será atualizada na próxima carga da agenda.";
     }
 
+    await markEncounterAuditEvent(supabase, encounter.id, "encounter_closed");
     setBusy(false);
     setNotice(predictionNotice);
   }
@@ -533,12 +586,52 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     return <StatusMessage error={error ?? "Atendimento não encontrado."} />;
   }
 
+  const soapDirty = !sameSoap(soap, savedSoap);
+  const pendings: ReviewPendingItem[] = [];
+  if (soapDirty) {
+    pendings.push({
+      id: "soap-dirty",
+      label: "Alterações no SOAP não salvas",
+      href: "#soap",
+      blocking: true,
+    });
+  }
+  if (!soapHasContent(savedSoap) && !locked) {
+    pendings.push({
+      id: "soap-empty",
+      label: "SOAP ainda vazio — salve a evolução antes de assinar",
+      href: "#soap",
+      blocking: true,
+    });
+  }
+  if (reviewCounts.aiPending) {
+    pendings.push({
+      id: "ai-pending",
+      label: "Sugestão de IA pendente de revisão",
+      href: "#auxilio-ia",
+    });
+  }
+
+  const durationLabel =
+    appointmentRow?.actualStartAt && appointmentRow?.actualEndAt
+      ? `${Math.max(
+          0,
+          Math.round(
+            (new Date(appointmentRow.actualEndAt).getTime() -
+              new Date(appointmentRow.actualStartAt).getTime()) /
+              60000,
+          ),
+        )} min`
+      : "—";
+
   return (
     <div className="overflow-x-hidden pb-8">
       <EncounterHeader
         encounter={encounter}
         patientName={patientName}
         professionalName={professionalName}
+        attendanceEnded={attendanceEnded}
+        draftHint={soapDirty || !soapHasContent(savedSoap)}
         assistential={
           <ContextAssistencial
             pregnancy={pregnancy}
@@ -845,49 +938,91 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         </>
       ) : null}
 
+      {supabase && authorization ? (
+        <EncounterPatientFeedbackPanel
+          supabase={supabase}
+          encounterId={encounter.id}
+          locked={locked}
+          canEditClinical={viewerIsEncounterProfessional(authorization, encounter)}
+        />
+      ) : null}
+
       <WorkspaceComingSoon id="retorno" title="Retorno" stage="C040.7" />
 
-      <section id="encerramento" className="mt-4 scroll-mt-16">
-        <div className="card mb-0 overflow-x-hidden">
-          <h2 className="text-base font-semibold text-lotus-900">Encerramento</h2>
-          <p className="mt-1 text-sm text-lotus-600">
-            Salvar evolução, assinar o prontuário e registrar o término efetivo permanecem ações
-            distintas.
-          </p>
-        </div>
-        <EncounterCloseChecklist
-          hints={{
-            complaint: Boolean(
-              chiefComplaint.chiefComplaint.trim() ||
-                chiefComplaint.motives.length > 0 ||
-                chiefComplaint.historyOfPresentIllness.trim(),
-            ),
-            anamnesis: Boolean(
-              anamnesis.personalHistoryNotes.trim() ||
-                anamnesis.changesSinceLastVisit.trim() ||
-                anamnesis.noRelevantChanges ||
-                anamnesis.reviewNotes.trim(),
-            ),
-            physicalExam: physicalExamHasContent(physicalExam),
-            soap: soapHasContent(soap),
-            exams: true,
-            prescription: true,
-            orientations: true,
-            feedback: false,
-          }}
-        />
-        <EncounterActions
-          locked={locked}
-          busy={busy || linkBusy}
-          canEndAttendance={Boolean(
-            encounter.appointmentId && viewerIsEncounterProfessional(authorization, encounter),
-          )}
-          attendanceEnded={attendanceEnded}
-          onSave={() => void onSave()}
-          onSign={() => void onSign()}
-          onEndAttendance={() => void onEndAttendance()}
-        />
-      </section>
+      <EncounterFinalReview
+        locked={locked}
+        attendanceEnded={attendanceEnded}
+        canSign={viewerIsEncounterProfessional(authorization, encounter)}
+        canEnd={Boolean(
+          encounter.appointmentId && viewerIsEncounterProfessional(authorization, encounter),
+        )}
+        busy={busy || linkBusy}
+        pendings={pendings}
+        checklistHints={{
+          complaint: Boolean(
+            chiefComplaint.chiefComplaint.trim() ||
+              chiefComplaint.motives.length > 0 ||
+              chiefComplaint.historyOfPresentIllness.trim(),
+          ),
+          anamnesis: Boolean(
+            anamnesis.personalHistoryNotes.trim() ||
+              anamnesis.changesSinceLastVisit.trim() ||
+              anamnesis.noRelevantChanges ||
+              anamnesis.reviewNotes.trim(),
+          ),
+          physicalExam: physicalExamHasContent(physicalExam),
+          soap: soapHasContent(soap),
+          exams: reviewCounts.examRequests > 0 || reviewCounts.examOrders > 0,
+          prescription: reviewCounts.prescriptions > 0,
+          orientations: reviewCounts.orientations > 0,
+          feedback: false,
+        }}
+        summary={{
+          motive: [
+            chiefComplaint.chiefComplaint,
+            chiefComplaint.motives.join(", "),
+            chiefComplaint.historyOfPresentIllness,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          soap,
+          examOrdersCount: reviewCounts.examOrders,
+          examRequestsCount: reviewCounts.examRequests,
+          prescriptionsCount: reviewCounts.prescriptions,
+          orientationsCount: reviewCounts.orientations,
+          hasRecording: reviewCounts.hasRecording,
+          hasTranscription: false,
+          transcriptionStatus: null,
+          aiPendingReview: reviewCounts.aiPending,
+          soapDirty,
+          durationLabel,
+          documentaryStatus: locked ? "Assinado" : soapDirty ? "Alterações não salvas" : "Rascunho",
+          operationalStatus: attendanceEnded ? "Encerrado" : "Em atendimento",
+          professionalName,
+          signedAt: encounter.signedAt,
+          actualEndAt: appointmentRow?.actualEndAt ?? null,
+        }}
+        onReviewStarted={() => {
+          if (!supabase || reviewAudited) return;
+          setReviewAudited(true);
+          void markEncounterAuditEvent(supabase, encounter.id, "encounter_review_started");
+        }}
+        onSign={() => void onSign()}
+        onEndAttendance={() => void onEndAttendance()}
+      />
+
+      <EncounterActions
+        locked={locked}
+        busy={busy || linkBusy}
+        hideSign
+        canEndAttendance={Boolean(
+          encounter.appointmentId && viewerIsEncounterProfessional(authorization, encounter),
+        )}
+        attendanceEnded={attendanceEnded}
+        onSave={() => void onSave()}
+        onSign={() => void onSign()}
+        onEndAttendance={() => void onEndAttendance()}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ export function EncounterActions({
   busy,
   canEndAttendance,
   attendanceEnded,
+  hideSign = false,
   onSave,
   onSign,
   onEndAttendance,
@@ -13,6 +14,8 @@ export function EncounterActions({
   busy: boolean;
   canEndAttendance: boolean;
   attendanceEnded: boolean;
+  /** Quando a assinatura é acionada pela Revisão final. */
+  hideSign?: boolean;
   onSave: () => void;
   onSign: () => void;
   onEndAttendance: () => void;
@@ -20,15 +23,17 @@ export function EncounterActions({
   if (locked && attendanceEnded) return null;
 
   return (
-    <div className="mt-4 flex flex-wrap gap-3">
+    <div id="encerramento" className="mt-4 flex flex-wrap gap-3 scroll-mt-16">
       {!locked ? (
         <>
           <button type="button" className={buttonClass} disabled={busy} onClick={onSave}>
-            {busy ? "Salvando…" : "Salvar evolução"}
+            {busy ? "Salvando…" : "Salvar rascunho"}
           </button>
-          <button type="button" className={ghostButtonClass} disabled={busy} onClick={onSign}>
-            Assinar atendimento
-          </button>
+          {!hideSign ? (
+            <button type="button" className={ghostButtonClass} disabled={busy} onClick={onSign}>
+              Assinar atendimento
+            </button>
+          ) : null}
         </>
       ) : null}
       {canEndAttendance && !attendanceEnded ? (
@@ -37,7 +42,9 @@ export function EncounterActions({
         </button>
       ) : null}
       {attendanceEnded ? (
-        <p className="text-sm font-medium text-emerald-800">Término clínico registrado.</p>
+        <p className="text-sm font-medium text-emerald-800" role="status">
+          Término clínico registrado (`actual_end_at`).
+        </p>
       ) : null}
     </div>
   );

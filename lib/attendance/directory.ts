@@ -245,7 +245,7 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   }
   if (message.includes("ENCOUNTER_NOT_FOUND")) return "Atendimento não encontrado.";
   if (message.includes("ENCOUNTER_NOT_OPEN")) {
-    return "O atendimento precisa estar aberto.";
+    return "Este atendimento não está aberto. Não é possível alterar o conteúdo clínico.";
   }
   if (message.includes("ENCOUNTER_OWNER_REQUIRED")) {
     return "Somente a médica responsável pelo atendimento pode continuar.";
@@ -266,6 +266,9 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
     return "Dados de identidade do atendimento assinado não podem ser alterados.";
   }
   if (message.includes("NOTE_BODY_REQUIRED")) return "Informe o conteúdo da nota clínica.";
+  if (message.includes("SOAP_REQUIRED_BEFORE_SIGN")) {
+    return "Registre o SOAP (subjetivo, objetivo, avaliação e plano) antes de assinar.";
+  }
   if (message.includes("NOTE_REQUIRED_BEFORE_SIGN")) {
     return "Registre ao menos uma nota clínica antes de assinar.";
   }
@@ -647,6 +650,27 @@ export async function listOpenEncountersForProfessional(
     .eq("practice_id", practiceId)
     .eq("professional_id", professionalId)
     .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data
+    .map((raw) => toEncounterRow(raw as Record<string, unknown>))
+    .filter((item): item is EncounterRow => Boolean(item));
+}
+
+/** Encounters recentes (inclui assinados) — consulta em modo leitura. */
+export async function listRecentEncountersForProfessional(
+  supabase: SupabaseClient,
+  practiceId: string,
+  professionalId: string,
+  limit = 30,
+): Promise<EncounterRow[]> {
+  const { data, error } = await supabase
+    .from("encounters")
+    .select(ENCOUNTER_COLUMNS)
+    .eq("practice_id", practiceId)
+    .eq("professional_id", professionalId)
+    .neq("status", "open")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error || !data) return [];

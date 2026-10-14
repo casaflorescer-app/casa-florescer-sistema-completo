@@ -8,6 +8,7 @@ import { hasStaffRole } from "@/lib/auth/access";
 import {
   ENCOUNTER_STATUS_LABEL,
   listOpenEncountersForProfessional,
+  listRecentEncountersForProfessional,
   type EncounterRow,
 } from "@/lib/attendance/directory";
 import { listPatients, type PatientListRow } from "@/lib/patients/directory";
@@ -17,7 +18,8 @@ import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platf
 export function RecordsIndex() {
   const { authorization, authorizationLoading } = useAuth();
   const supabase = useMemo(() => createClient(), []);
-  const [rows, setRows] = useState<EncounterRow[]>([]);
+  const [openRows, setOpenRows] = useState<EncounterRow[]>([]);
+  const [recentRows, setRecentRows] = useState<EncounterRow[]>([]);
   const [patients, setPatients] = useState<PatientListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,15 +56,21 @@ export function RecordsIndex() {
     setLoading(true);
     setError(null);
     try {
-      const [openRows, patientRows] = await Promise.all([
+      const [open, recent, patientRows] = await Promise.all([
         listOpenEncountersForProfessional(
+          supabase,
+          membership.practiceId,
+          membership.professional.id,
+        ),
+        listRecentEncountersForProfessional(
           supabase,
           membership.practiceId,
           membership.professional.id,
         ),
         listPatients(supabase).catch(() => []),
       ]);
-      setRows(openRows);
+      setOpenRows(open);
+      setRecentRows(recent);
       setPatients(patientRows);
     } catch (caught) {
       setError(
@@ -96,7 +104,7 @@ export function RecordsIndex() {
         <h1 className="page-title mt-1">Prontuário</h1>
         <p className="mt-2 max-w-2xl text-sm text-lotus-700">
           Experiência oficial do atendimento clínico. Inicie ou continue pela agenda; use esta
-          página para retomar encounters abertos.
+          página para retomar encounters abertos ou consultar atendimentos já assinados.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/app/agenda" className={buttonClass}>
@@ -134,13 +142,13 @@ export function RecordsIndex() {
           Encounters com status aberto nesta prática. Encounters assinados não são reabertos por
           aqui.
         </p>
-        {rows.length === 0 ? (
+        {openRows.length === 0 ? (
           <p className="mt-3 text-sm text-lotus-600">
             Nenhum atendimento aberto. Use a agenda para iniciar ou continuar.
           </p>
         ) : (
           <ul className="mt-4 space-y-2">
-            {rows.map((row) => (
+            {openRows.map((row) => (
               <li
                 key={row.id}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-lotus-100 bg-white px-3 py-3"
@@ -155,6 +163,38 @@ export function RecordsIndex() {
                 </div>
                 <Link href={`/app/records/${row.id}`} className={buttonClass}>
                   Continuar atendimento
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card mt-4">
+        <h2 className="text-base font-semibold text-lotus-900">Atendimentos recentes</h2>
+        <p className="mt-1 text-sm text-lotus-600">
+          Consulta em modo leitura. Atendimentos assinados não podem ser reabertos nem alterados.
+        </p>
+        {recentRows.length === 0 ? (
+          <p className="mt-3 text-sm text-lotus-600">Nenhum atendimento assinado recente.</p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {recentRows.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-lotus-100 bg-white px-3 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-lotus-950">
+                    {nameByPatient.get(row.patientId) ?? "Paciente"}
+                  </p>
+                  <p className="text-xs text-lotus-600">
+                    {formatDateTime(row.signedAt ?? row.createdAt)} ·{" "}
+                    {ENCOUNTER_STATUS_LABEL[row.status]}
+                  </p>
+                </div>
+                <Link href={`/app/records/${row.id}`} className={ghostButtonClass}>
+                  Consultar
                 </Link>
               </li>
             ))}

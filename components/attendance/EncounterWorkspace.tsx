@@ -47,6 +47,8 @@ import {
   type PhysicalExamForm,
 } from "@/lib/attendance/clinical-forms";
 import { loadPriorAnamnesis, type PriorAnamnesisRef } from "@/lib/attendance/prior-clinical";
+import { listEncounterRecordings } from "@/lib/attendance/recording-directory";
+import type { EncounterTranscriptionStatus } from "@/lib/attendance/recording-types";
 import { listPatients } from "@/lib/patients/directory";
 import { formatIsoDateBr } from "@/lib/patients/format";
 import {
@@ -186,6 +188,8 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     orientations: 0,
     aiPending: false,
     hasRecording: false,
+    hasTranscription: false,
+    transcriptionStatus: null as EncounterTranscriptionStatus | null,
   });
   const [reviewAudited, setReviewAudited] = useState(false);
   const [patientName, setPatientName] = useState<string | null>(null);
@@ -319,7 +323,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     setSummaryLoading(false);
     setTimelineLoading(false);
 
-    const [examOrders, examRequests, prescriptions, orientations, aiList, recordingRes] =
+    const [examOrders, examRequests, prescriptions, orientations, aiList, recordingBundle] =
       await Promise.all([
         listExamOrdersForPatient(supabase, row.patientId).catch(() => []),
         listExamRequestsForEncounter(supabase, row.id).catch(() => []),
@@ -330,16 +334,25 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
           requests: [] as Awaited<ReturnType<typeof listAiAssistance>>["requests"],
           error: null as string | null,
         })),
-        supabase
-          .from("encounter_recording_sessions")
-          .select("id")
-          .eq("encounter_id", row.id)
-          .limit(1),
+        listEncounterRecordings(supabase, row.id).catch(() => ({
+          bundle: { sessions: [], segments: [], transcriptions: [] },
+          error: null as string | null,
+        })),
       ]);
     const pendingAi = (aiList.results ?? []).some(
       (item: { reviewStatus: string }) => item.reviewStatus === "pending",
     );
-    const recordingRows = recordingRes.error ? [] : recordingRes.data ?? [];
+    const sessions = recordingBundle.bundle.sessions;
+    const transcriptions = recordingBundle.bundle.transcriptions;
+    const latestTx = [...transcriptions].sort((a, b) =>
+      (b.createdAt || "").localeCompare(a.createdAt || ""),
+    )[0];
+    const hasUsableTx = transcriptions.some(
+      (item) =>
+        item.status === "available" ||
+        item.status === "reviewed" ||
+        Boolean(item.originalText?.trim() || item.reviewedText?.trim()),
+    );
     setReviewCounts({
       examOrders: examOrders.filter((item: { encounterId: string | null }) => item.encounterId === row.id)
         .length,
@@ -349,7 +362,9 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       ).length,
       orientations: orientations.length,
       aiPending: pendingAi,
-      hasRecording: recordingRows.length > 0,
+      hasRecording: sessions.length > 0,
+      hasTranscription: hasUsableTx,
+      transcriptionStatus: latestTx?.status ?? null,
     });
   }, [encounterId, supabase]);
 
@@ -991,8 +1006,8 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
           prescriptionsCount: reviewCounts.prescriptions,
           orientationsCount: reviewCounts.orientations,
           hasRecording: reviewCounts.hasRecording,
-          hasTranscription: false,
-          transcriptionStatus: null,
+          hasTranscription: reviewCounts.hasTranscription,
+          transcriptionStatus: reviewCounts.transcriptionStatus,
           aiPendingReview: reviewCounts.aiPending,
           soapDirty,
           durationLabel,

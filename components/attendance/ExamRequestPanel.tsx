@@ -14,6 +14,7 @@ import {
   type ExamGroupRow,
   type ExamRequestRow,
 } from "@/lib/attendance/clinical-support-directory";
+import { issueExamRequestDocumentWithPdf } from "@/lib/documents/issue";
 import { buttonClass, fieldClass, ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
 import { formatDateTime } from "@/lib/platform/format";
 
@@ -37,6 +38,7 @@ export function ExamRequestPanel({
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [customName, setCustomName] = useState("");
   const [notes, setNotes] = useState("");
+  const [clinicalIndication, setClinicalIndication] = useState("");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +137,33 @@ export function ExamRequestPanel({
         return;
       }
       setNotice("Pedido confirmado.");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onIssueDocument(requestId: string) {
+    if (!canEdit || locked) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await issueExamRequestDocumentWithPdf(supabase, {
+        requestId,
+        clinicalIndication: clinicalIndication.trim() || notes.trim() || null,
+        shareWithPatient: false,
+      });
+      if (result.error && !result.row) {
+        setError(result.error);
+        return;
+      }
+      if (result.error) setNotice(result.error);
+      else {
+        setNotice(
+          "Documento de solicitação emitido (validação interna — não é ICP-Brasil). PDF gerado.",
+        );
+      }
       await reload();
     } finally {
       setBusy(false);
@@ -260,6 +289,16 @@ export function ExamRequestPanel({
             />
           </label>
           <label className="mt-3 block text-sm font-medium text-lotus-800">
+            Indicação clínica
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={clinicalIndication}
+              onChange={(event) => setClinicalIndication(event.target.value)}
+              placeholder="Motivo clínico da solicitação"
+            />
+          </label>
+          <label className="mt-3 block text-sm font-medium text-lotus-800">
             Observações do pedido
             <textarea
               className={fieldClass}
@@ -344,16 +383,28 @@ export function ExamRequestPanel({
                   <li key={item.id}>{item.catalogName || item.customName || "Exame"}</li>
                 ))}
               </ul>
-              {canEdit && !locked && request.status === "draft" ? (
-                <button
-                  type="button"
-                  className={`${ghostButtonClass} mt-2`}
-                  disabled={busy}
-                  onClick={() => void onConfirmDraft(request.id)}
-                >
-                  Confirmar
-                </button>
-              ) : null}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {canEdit && !locked && request.status === "draft" ? (
+                  <button
+                    type="button"
+                    className={ghostButtonClass}
+                    disabled={busy}
+                    onClick={() => void onConfirmDraft(request.id)}
+                  >
+                    Confirmar
+                  </button>
+                ) : null}
+                {canEdit && !locked && request.status !== "cancelled" ? (
+                  <button
+                    type="button"
+                    className={buttonClass}
+                    disabled={busy}
+                    onClick={() => void onIssueDocument(request.id)}
+                  >
+                    Emitir documento (PDF)
+                  </button>
+                ) : null}
+              </div>
             </div>
           ))
         )}

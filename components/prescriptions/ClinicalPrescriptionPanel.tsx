@@ -12,6 +12,7 @@ import {
   type PrescriptionItemRow,
   type PrescriptionRow,
 } from "@/lib/prescriptions/directory";
+import { issuePrescriptionDocumentWithPdf } from "@/lib/documents/issue";
 import {
   applyPrescriptionTemplate,
   listPrescriptionTemplates,
@@ -127,6 +128,32 @@ export function ClinicalPrescriptionPanel({
         return;
       }
       setNotice("Receita publicada para a paciente.");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onIssueDocument() {
+    if (!activeId || !canManage) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await issuePrescriptionDocumentWithPdf(supabase, {
+        prescriptionId: activeId,
+        shareWithPatient: true,
+      });
+      if (result.error && !result.row) {
+        setError(result.error);
+        return;
+      }
+      if (result.error) setNotice(result.error);
+      else {
+        setNotice(
+          "Documento de receita emitido com validação interna do sistema (não é assinatura digital ICP-Brasil). PDF gerado.",
+        );
+      }
       await reload();
     } finally {
       setBusy(false);
@@ -315,10 +342,16 @@ export function ClinicalPrescriptionPanel({
                 <button type="button" className={ghostButtonClass} disabled={busy} onClick={() => void onAddItem()}>
                   Adicionar medicamento
                 </button>
-                <button type="button" className={buttonClass} disabled={busy} onClick={() => void onPublish()}>
-                  Revisar e publicar para paciente
+                <button type="button" className={buttonClass} disabled={busy} onClick={() => void onIssueDocument()}>
+                  Emitir documento (PDF)
+                </button>
+                <button type="button" className={ghostButtonClass} disabled={busy} onClick={() => void onPublish()}>
+                  Publicar sem PDF (legado)
                 </button>
               </div>
+              <p className="text-xs text-lotus-500">
+                Emitir documento congela a receita, gera PDF e registra validação interna (não é ICP-Brasil).
+              </p>
               <div className="flex flex-col gap-2 border-t border-lotus-100 pt-3 sm:flex-row sm:items-end">
                 <label className="flex-1 text-sm font-medium text-lotus-800">
                   Salvar receita aberta como modelo

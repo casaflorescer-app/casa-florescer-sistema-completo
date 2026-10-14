@@ -82,6 +82,7 @@ import { ExamRequestPanel } from "@/components/attendance/ExamRequestPanel";
 import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalSummary";
 import { EncounterRecordingPanel } from "@/components/attendance/EncounterRecordingPanel";
 import { PhysicalExamPanel } from "@/components/attendance/PhysicalExamPanel";
+import { EncounterDocumentsPanel } from "@/components/attendance/EncounterDocumentsPanel";
 import { WorkspaceComingSoon } from "@/components/attendance/WorkspaceComingSoon";
 import { WorkspaceSectionNav } from "@/components/attendance/WorkspaceSectionNav";
 import { markEncounterAuditEvent } from "@/lib/attendance/encounter-feedback";
@@ -962,7 +963,15 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         />
       ) : null}
 
-      <WorkspaceComingSoon id="retorno" title="Retorno" stage="C040.7" />
+      {supabase ? (
+        <EncounterDocumentsPanel
+          supabase={supabase}
+          encounterId={encounter.id}
+          locked={locked}
+        />
+      ) : null}
+
+      <WorkspaceComingSoon id="retorno" title="Retorno" stage="C040.8" />
 
       <EncounterFinalReview
         locked={locked}

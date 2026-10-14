@@ -19,6 +19,7 @@ import {
 import type { PatientNotificationCategory, PatientPortalAppointment } from "@/lib/portal/types";
 import { PatientOrientationsPortal } from "@/components/orientations/PatientOrientationsPortal";
 import { PortalEncounterFeedback } from "@/components/portal/PortalEncounterFeedback";
+import { PortalClinicalDocuments } from "@/components/portal/PortalClinicalDocuments";
 import {
   dismissPatientNotification,
   listPatientNotifications,
@@ -441,6 +442,7 @@ export function PatientPortalHome() {
 
       {section === "documents" ? (
         <>
+          {supabase ? <PortalClinicalDocuments supabase={supabase} /> : null}
           <PatientOrientationsPortal embedded />
           {supabase ? <PortalEncounterFeedback supabase={supabase} /> : null}
         </>

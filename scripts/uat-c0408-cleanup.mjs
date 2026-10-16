@@ -67,8 +67,13 @@ select json_build_object(
 
 const paths = Array.isArray(pathsPayload.paths) ? pathsPayload.paths.filter(Boolean) : [];
 if (paths.length) {
-  const { error } = await phys.storage.from("clinical-documents").remove(paths);
-  console.log(error ? `storage remove error: ${error.message}` : `storage removed: ${paths.length}`);
+  for (const objectPath of paths) {
+    const rm = spawnSync(
+      `npx --yes supabase@2.121.0 storage rm --experimental --yes --linked "ss:///clinical-documents/${objectPath}"`,
+      { encoding: "utf8", shell: true, cwd: process.cwd() },
+    );
+    console.log(`storage rm ${objectPath}: status=${rm.status}`);
+  }
 } else {
   console.log("storage: nothing to remove");
 }

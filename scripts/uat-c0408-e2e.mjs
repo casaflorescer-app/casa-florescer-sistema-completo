@@ -351,7 +351,7 @@ select json_build_object(
   if (Number(agenda.n) === 10) pass("agenda 29/09/2026 = 10");
   else fail("agenda 29/09/2026 = 10", `got ${agenda.n}`);
 
-  // Cleanup
+  // Cleanup storage via CLI (bucket sem policy DELETE para authenticated)
   {
     const listRaw = dbQuery(`
 select json_build_object(
@@ -366,9 +366,18 @@ select json_build_object(
     const pathPayload = parsePayload(listRaw);
     const paths = Array.isArray(pathPayload.paths) ? pathPayload.paths.filter(Boolean) : [];
     if (paths.length) {
-      const { error } = await physA.storage.from("clinical-documents").remove(paths);
-      if (error) note("storage cleanup", error.message);
-      else pass("storage cleanup", String(paths.length));
+      let removed = 0;
+      for (const objectPath of paths) {
+        const rm = spawnSync(
+          `npx --yes supabase@2.121.0 storage rm --experimental --yes --linked "ss:///clinical-documents/${objectPath}"`,
+          { encoding: "utf8", shell: true, cwd: process.cwd() },
+        );
+        const text = `${rm.stdout || ""}\n${rm.stderr || ""}`;
+        if (rm.status === 0 && /deleted/i.test(text)) removed += 1;
+        else note("storage rm", text.slice(0, 200));
+      }
+      if (removed === paths.length) pass("storage cleanup", String(removed));
+      else fail("storage cleanup", `removed ${removed}/${paths.length}`);
     } else pass("storage cleanup", "0");
   }
 

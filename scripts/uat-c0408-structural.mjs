@@ -45,6 +45,21 @@ ok("retorno agora C040.9", workspace.includes('stage="C040.9"'));
 const docs = read("components/attendance/EncounterDocumentsPanel.tsx");
 ok("central menciona orientação", docs.includes("Orientação"));
 
+ok(
+  "script portal fixture vinculada",
+  existsSync(resolve(root, "scripts/uat-c0408-portal.mjs")),
+);
+const portalScript = read("scripts/uat-c0408-portal.mjs");
+ok(
+  "portal usa patient_accounts UAT",
+  portalScript.includes("patient_accounts") && portalScript.includes("uat.b34.patient@exemplo.local"),
+);
+ok(
+  "portal testa available_to_patient true/false",
+  portalScript.includes("available_to_patient=true") &&
+    portalScript.includes("available_to_patient=false"),
+);
+
 const failed = checks.filter((c) => !c.pass);
 console.log(`\nEstrutural C040.8: ${checks.length - failed.length}/${checks.length}`);
 if (failed.length) process.exitCode = 1;

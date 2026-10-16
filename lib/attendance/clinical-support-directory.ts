@@ -237,16 +237,25 @@ export async function createExamRequest(
     customNames?: string[];
     notes?: string;
     confirm?: boolean;
+    clinicalIndication?: string | null;
   },
 ): Promise<{ id: string | null; error: string | null }> {
-  const { data, error } = await supabase.rpc("clinical_exam_request_create", {
+  const baseArgs = {
     p_encounter_id: input.encounterId,
     p_catalog_ids: input.catalogIds ?? [],
     p_group_ids: input.groupIds ?? [],
     p_custom_names: input.customNames ?? [],
     p_notes: input.notes ?? null,
     p_confirm: input.confirm ?? false,
+  };
+  // C040.9 / 0048: p_clinical_indication; fallback se remoto ainda for 0047
+  let { data, error } = await supabase.rpc("clinical_exam_request_create", {
+    ...baseArgs,
+    p_clinical_indication: input.clinicalIndication ?? null,
   });
+  if (error && /clinical_exam_request_create|PGRST202|Could not find the function/i.test(error.message ?? "")) {
+    ({ data, error } = await supabase.rpc("clinical_exam_request_create", baseArgs));
+  }
   if (error || !data) return { id: null, error: mapRpcError(error) };
   return { id: asString((data as Record<string, unknown>).id), error: null };
 }

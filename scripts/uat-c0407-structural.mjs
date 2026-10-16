@@ -30,7 +30,7 @@ ok("UI PortalClinicalDocuments", existsSync(resolve(root, "components/portal/Por
 
 const workspace = read("components/attendance/EncounterWorkspace.tsx");
 ok("workspace monta Documentos", workspace.includes("EncounterDocumentsPanel"));
-ok("retorno agora C040.9", workspace.includes('stage="C040.9"'));
+ok("retorno agora C040.10", workspace.includes('stage="C040.10"'));
 
 const nav = read("components/attendance/WorkspaceSectionNav.tsx");
 ok("nav documentos", nav.includes('id: "documentos"'));

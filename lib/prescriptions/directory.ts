@@ -234,3 +234,87 @@ export async function markPrescriptionViewed(
   });
   return { error: error ? mapPrescriptionError(error) : null };
 }
+
+/** Copia receita anterior como NOVO rascunho (não documento emitido). */
+export async function copyPrescriptionAsDraft(
+  supabase: SupabaseClient,
+  input: {
+    sourcePrescriptionId: string;
+    organizationId: string;
+    practiceId: string;
+    patientId: string;
+    professionalId: string;
+    encounterId?: string | null;
+  },
+): Promise<{ prescription: PrescriptionRow | null; error: string | null }> {
+  const sourceItems = await listPrescriptionItems(supabase, input.sourcePrescriptionId);
+  if (sourceItems.length === 0) {
+    return { prescription: null, error: "Receita de origem sem itens para copiar." };
+  }
+  const created = await createPrescriptionDraft(supabase, {
+    organizationId: input.organizationId,
+    practiceId: input.practiceId,
+    patientId: input.patientId,
+    professionalId: input.professionalId,
+    encounterId: input.encounterId,
+    notes: `Cópia de receita ${input.sourcePrescriptionId.slice(0, 8)} — revisar antes de emitir.`,
+  });
+  if (created.error || !created.prescription) return created;
+
+  for (const [index, item] of sourceItems.entries()) {
+    const added = await addPrescriptionItem(supabase, {
+      prescriptionId: created.prescription.id,
+      medicationName: item.medicationName,
+      presentation: item.presentation ?? undefined,
+      quantity: item.quantity ?? undefined,
+      dosage: item.dosage ?? undefined,
+      frequency: item.frequency ?? undefined,
+      duration: item.duration ?? undefined,
+      route: item.route ?? undefined,
+      instructions: item.instructions ?? undefined,
+      sortOrder: item.sortOrder || index + 1,
+    });
+    if (added.error) {
+      return { prescription: created.prescription, error: added.error };
+    }
+  }
+  return created;
+}
+
+/** Monta instruções estruturadas para PRN / uso contínuo (texto; sem campos inventados no schema). */
+export function buildStructuredInstructions(input: {
+  base?: string;
+  prn?: boolean;
+  prnCondition?: string;
+  prnMinInterval?: string;
+  prnMaxDaily?: string;
+  continuous?: boolean;
+  reevaluateAt?: string;
+}): string | undefined {
+  const parts: string[] = [];
+  if (input.base?.trim()) parts.push(input.base.trim());
+  if (input.prn) {
+    parts.push(
+      [
+        "Se necessário (PRN)",
+        input.prnCondition?.trim() ? `condição: ${input.prnCondition.trim()}` : null,
+        input.prnMinInterval?.trim() ? `intervalo mínimo: ${input.prnMinInterval.trim()}` : null,
+        input.prnMaxDaily?.trim() ? `dose máxima/dia: ${input.prnMaxDaily.trim()}` : null,
+      ]
+        .filter(Boolean)
+        .join("; "),
+    );
+  }
+  if (input.continuous) {
+    parts.push(
+      [
+        "Uso contínuo",
+        input.reevaluateAt?.trim()
+          ? `reavaliar em: ${input.reevaluateAt.trim()}`
+          : "definir prazo/reavaliação na revisão",
+      ].join(" — "),
+    );
+  }
+  const text = parts.join("\n").trim();
+  return text || undefined;
+}

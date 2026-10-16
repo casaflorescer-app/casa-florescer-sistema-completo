@@ -89,7 +89,7 @@ export async function buildClinicalDocumentPdf(
     line("ITENS DA RECEITA", true, 12);
     for (const item of asArray(rx.items)) {
       line(
-        `- ${item.medication_name ?? "Medicamento"} | ${item.dosage ?? ""} | ${item.frequency ?? ""} | ${item.duration ?? ""}`,
+        `- ${item.medication_name ?? "Medicamento"} | ${item.presentation ?? ""} | ${item.dosage ?? ""} | ${item.route ?? ""} | ${item.frequency ?? ""} | ${item.duration ?? ""} | qtd ${item.quantity ?? ""}`,
       );
       if (item.instructions) line(`  Obs: ${item.instructions}`, false, 9);
     }
@@ -106,7 +106,8 @@ export async function buildClinicalDocumentPdf(
     y -= 4;
     line("EXAMES SOLICITADOS", true, 12);
     for (const item of asArray(req.items)) {
-      line(`- ${item.name ?? item.custom_name ?? "Exame"}`);
+      const groupBit = item.group_name ? ` [grupo: ${item.group_name}]` : "";
+      line(`- ${item.name ?? item.custom_name ?? "Exame"}${groupBit}`);
     }
     if (req.notes) {
       y -= 4;

@@ -111,6 +111,7 @@ export function ExamRequestPanel({
         customNames: customName.trim() ? [customName.trim()] : [],
         notes: notes.trim() || undefined,
         confirm,
+        clinicalIndication: clinicalIndication.trim() || null,
       });
       if (result.error) {
         setError(result.error);

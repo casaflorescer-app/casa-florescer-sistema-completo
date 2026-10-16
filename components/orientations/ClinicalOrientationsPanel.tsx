@@ -29,6 +29,9 @@ import type {
 import { ORIENTATION_STATUS_LABEL } from "@/lib/orientations/types";
 import { listExamOrdersForPatient } from "@/lib/exams/directory";
 import type { ExamOrderRow } from "@/lib/exams/types";
+import { issueOrientationDocumentWithPdf } from "@/lib/documents/issue";
+import { listDocumentsForEncounter } from "@/lib/documents/directory";
+import type { ClinicalDocumentRow } from "@/lib/documents/types";
 
 export function ClinicalOrientationsPanel({
   supabase,
@@ -65,6 +68,9 @@ export function ClinicalOrientationsPanel({
   const [exams, setExams] = useState<ExamOrderRow[]>([]);
   const [selectedExamIds, setSelectedExamIds] = useState<string[]>([]);
   const [openFeedback, setOpenFeedback] = useState<OrientationFeedbackRow[]>([]);
+  const [issuedDocs, setIssuedDocs] = useState<ClinicalDocumentRow[]>([]);
+  const [shareDocumentWithPatient, setShareDocumentWithPatient] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   const reload = useCallback(async () => {
     const [rows, examRows, feedback] = await Promise.all([
@@ -77,6 +83,18 @@ export function ClinicalOrientationsPanel({
     setOrientations(rows);
     setExams(examRows);
     setOpenFeedback(feedback);
+    if (encounterId) {
+      const docs = await listDocumentsForEncounter(supabase, encounterId);
+      setIssuedDocs(
+        docs.rows.filter(
+          (doc) =>
+            doc.sourceType === "orientation" &&
+            (doc.status === "finalized" || doc.status === "superseded"),
+        ),
+      );
+    } else {
+      setIssuedDocs([]);
+    }
     if (activeOrientationId) {
       const list = await listOrientationVersions(supabase, activeOrientationId);
       setVersions(list);
@@ -314,13 +332,56 @@ export function ClinicalOrientationsPanel({
     }
   }
 
+  async function onIssueDocument(orientationId: string) {
+    if (!canManage) return;
+    const orientation = orientations.find((item) => item.id === orientationId);
+    if (!orientation?.currentPublishedVersionId) {
+      setError("Publique a orientação antes de emitir o documento PDF.");
+      return;
+    }
+    const finalized = issuedDocs.find(
+      (doc) => doc.sourceId === orientationId && doc.status === "finalized",
+    );
+    if (finalized && !correctionReason.trim()) {
+      setError("Já existe documento finalizado. Informe o motivo da correção para emitir nova versão.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await issueOrientationDocumentWithPdf(supabase, {
+        orientationId,
+        shareWithPatient: shareDocumentWithPatient,
+        supersedesId: finalized?.id ?? null,
+        correctionReason: finalized ? correctionReason.trim() : null,
+      });
+      if (result.error && !result.row) {
+        setError(result.error);
+        return;
+      }
+      setCorrectionReason("");
+      setNotice(
+        result.error
+          ? result.error
+          : shareDocumentWithPatient
+            ? "Documento de orientação emitido e disponibilizado à paciente (validação interna — não é ICP-Brasil)."
+            : "Documento de orientação emitido (interno). Validação interna — não é ICP-Brasil.",
+      );
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="card mt-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-lotus-900">Orientações à paciente</h2>
           <p className="mt-1 text-sm text-lotus-600">
-            Grave, revise a transcrição e publique texto ou texto + áudio. Não altera o SOAP.
+            Grave, revise a transcrição e publique texto ou texto + áudio. Publicar no portal
+            (C035) é distinto de emitir documento PDF formal (C040.8). Não altera o SOAP.
           </p>
         </div>
         {canManage ? (
@@ -357,27 +418,79 @@ export function ClinicalOrientationsPanel({
         {orientations.length === 0 ? (
           <li className="text-sm text-lotus-600">Nenhuma orientação publicada ou em rascunho.</li>
         ) : (
-          orientations.map((item) => (
-            <li key={item.id} className="rounded-md border border-lotus-100 px-3 py-2 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-lotus-900">{item.title}</p>
-                  <p className="text-lotus-600">
-                    {professionalName} · {formatDateTime(item.updatedAt)}
-                  </p>
+          orientations.map((item) => {
+            const docForOri = issuedDocs.find(
+              (doc) => doc.sourceId === item.id && doc.status === "finalized",
+            );
+            return (
+              <li key={item.id} className="rounded-md border border-lotus-100 px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-lotus-900">{item.title}</p>
+                    <p className="text-lotus-600">
+                      {professionalName} · {formatDateTime(item.updatedAt)}
+                      {item.currentPublishedVersionId ? " · publicada" : " · sem publicação"}
+                      {docForOri
+                        ? ` · documento v${docForOri.version}${docForOri.availableToPatient ? " (portal)" : " (interno)"}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={ghostButtonClass}
+                      onClick={() => void openOrientation(item.id)}
+                    >
+                      Ver orientação
+                    </button>
+                    {canManage && item.currentPublishedVersionId ? (
+                      <button
+                        type="button"
+                        className={buttonClass}
+                        disabled={busy}
+                        onClick={() => void onIssueDocument(item.id)}
+                      >
+                        {docForOri ? "Emitir correção (PDF)" : "Emitir documento (PDF)"}
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className={ghostButtonClass}
-                  onClick={() => void openOrientation(item.id)}
-                >
-                  Ver orientação
-                </button>
-              </div>
-            </li>
-          ))
+              </li>
+            );
+          })
         )}
       </ul>
+
+      {canManage ? (
+        <div className="mt-4 space-y-2 rounded-md border border-lotus-100 bg-lotus-50/40 px-3 py-3 text-sm">
+          <p className="font-semibold text-lotus-900">Documento PDF da orientação</p>
+          <p className="text-lotus-600">
+            Exige orientação publicada com texto. Não gera PDF no autosave. Validação = interna
+            do sistema (não é assinatura digital ICP-Brasil).
+          </p>
+          <label className="flex items-start gap-2 text-lotus-800">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={shareDocumentWithPatient}
+              disabled={busy}
+              onChange={(event) => setShareDocumentWithPatient(event.target.checked)}
+            />
+            Disponibilizar o PDF à paciente no portal (escolha explícita)
+          </label>
+          <label className="block text-lotus-800">
+            Motivo da correção (obrigatório se já houver documento finalizado)
+            <input
+              type="text"
+              className="mt-1 w-full rounded-md border border-lotus-200 px-3 py-2"
+              value={correctionReason}
+              disabled={busy}
+              onChange={(event) => setCorrectionReason(event.target.value)}
+              placeholder="Ex.: ajuste de dose / esclarecimento"
+            />
+          </label>
+        </div>
+      ) : null}
 
       {composerOpen && activeOrientationId ? (
         <div className="mt-5 border-t border-lotus-100 pt-4">

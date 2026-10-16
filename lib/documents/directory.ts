@@ -116,6 +116,13 @@ export function mapDocumentRpcError(error: { message?: string } | null): string 
   }
   if (message.includes("PRESCRIPTION_EMPTY")) return "Receita sem itens.";
   if (message.includes("EXAM_REQUEST_EMPTY")) return "Pedido de exames sem itens.";
+  if (message.includes("ORIENTATION_NOT_PUBLISHED")) {
+    return "Publique a orientação antes de emitir o documento.";
+  }
+  if (message.includes("ORIENTATION_TEXT_REQUIRED")) {
+    return "Documento de orientação exige texto revisado (áudio isolado não basta).";
+  }
+  if (message.includes("ORIENTATION_NOT_FOUND")) return "Orientação não encontrada.";
   if (message.includes("FORBIDDEN")) return "Sem permissão para esta operação.";
   if (message.includes("DOCUMENT_PDF_ALREADY_ATTACHED")) {
     return "PDF já anexado a este documento.";
@@ -187,6 +194,25 @@ export async function issueDocumentFromExamRequest(
   const { data, error } = await supabase.rpc("clinical_document_issue_from_exam_request", {
     p_request_id: input.requestId,
     p_clinical_indication: input.clinicalIndication ?? null,
+    p_share_with_patient: input.shareWithPatient ?? false,
+    p_supersedes_id: input.supersedesId ?? null,
+    p_correction_reason: input.correctionReason ?? null,
+  });
+  if (error || !data) return { row: null, error: mapDocumentRpcError(error) };
+  return { row: mapDocument(data as Record<string, unknown>), error: null };
+}
+
+export async function issueDocumentFromOrientation(
+  supabase: SupabaseClient,
+  input: {
+    orientationId: string;
+    shareWithPatient?: boolean;
+    supersedesId?: string | null;
+    correctionReason?: string | null;
+  },
+): Promise<{ row: ClinicalDocumentRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("clinical_document_issue_from_orientation", {
+    p_orientation_id: input.orientationId,
     p_share_with_patient: input.shareWithPatient ?? false,
     p_supersedes_id: input.supersedesId ?? null,
     p_correction_reason: input.correctionReason ?? null,

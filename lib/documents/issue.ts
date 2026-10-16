@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   issueDocumentFromExamRequest,
+  issueDocumentFromOrientation,
   issueDocumentFromPrescription,
 } from "@/lib/documents/directory";
 import type { ClinicalDocumentRow } from "@/lib/documents/types";
@@ -49,6 +50,22 @@ export async function issueExamRequestDocumentWithPdf(
   },
 ): Promise<{ row: ClinicalDocumentRow | null; error: string | null }> {
   const issued = await issueDocumentFromExamRequest(supabase, input);
+  if (issued.error || !issued.row) return issued;
+  const pdf = await renderAndAttachPdf(issued.row.id);
+  if (pdf.error) return { row: issued.row, error: `Documento emitido, PDF falhou: ${pdf.error}` };
+  return issued;
+}
+
+export async function issueOrientationDocumentWithPdf(
+  supabase: SupabaseClient,
+  input: {
+    orientationId: string;
+    shareWithPatient?: boolean;
+    supersedesId?: string | null;
+    correctionReason?: string | null;
+  },
+): Promise<{ row: ClinicalDocumentRow | null; error: string | null }> {
+  const issued = await issueDocumentFromOrientation(supabase, input);
   if (issued.error || !issued.row) return issued;
   const pdf = await renderAndAttachPdf(issued.row.id);
   if (pdf.error) return { row: issued.row, error: `Documento emitido, PDF falhou: ${pdf.error}` };

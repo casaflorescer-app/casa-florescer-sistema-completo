@@ -84,7 +84,7 @@ export function EncounterDocumentsPanel({
       </div>
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-lotus-600">
-          Nenhum documento emitido. Use Receita ou Exames para emitir.
+          Nenhum documento emitido. Use Receita, Exames ou Orientação para emitir.
         </p>
       ) : (
         <ul className="mt-4 space-y-2">

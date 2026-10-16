@@ -971,7 +971,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         />
       ) : null}
 
-      <WorkspaceComingSoon id="retorno" title="Retorno" stage="C040.8" />
+      <WorkspaceComingSoon id="retorno" title="Retorno" stage="C040.9" />
 
       <EncounterFinalReview
         locked={locked}

@@ -55,7 +55,9 @@ export async function buildClinicalDocumentPdf(
       ? "RECEITA MEDICA"
       : doc.documentKind === "solicitacao_exames"
         ? "SOLICITACAO DE EXAMES"
-        : "DOCUMENTO CLINICO";
+        : doc.documentKind === "orientacao"
+          ? "ORIENTACAO CLINICA"
+          : "DOCUMENTO CLINICO";
 
   line(kindTitle, true, 16);
   line(pdfSafe(practice.name ?? "Pratica"), false, 10);
@@ -109,6 +111,34 @@ export async function buildClinicalDocumentPdf(
     if (req.notes) {
       y -= 4;
       line(`Observacoes: ${req.notes}`);
+    }
+  }
+
+  if (doc.documentKind === "orientacao") {
+    const ori = asRecord(payload.orientation);
+    line("ORIENTACAO PARA A PACIENTE", true, 12);
+    line(`Titulo: ${ori.title ?? doc.title}`);
+    line(`Modo de entrega (registro): ${ori.delivery_mode ?? "—"}`, false, 9);
+    if (ori.published_at) line(`Publicada em: ${ori.published_at}`, false, 9);
+    y -= 4;
+    const body = String(ori.final_text ?? "");
+    for (const paragraph of body.split(/\r?\n/)) {
+      const chunk = paragraph.length > 0 ? paragraph : " ";
+      // Quebra simples para linhas longas (WinAnsi / Helvetica)
+      const max = 90;
+      if (chunk.length <= max) {
+        line(chunk);
+      } else {
+        let rest = chunk;
+        while (rest.length > 0) {
+          line(rest.slice(0, max));
+          rest = rest.slice(max);
+        }
+      }
+    }
+    if (ori.has_audio) {
+      y -= 4;
+      line("Nota: esta orientacao tambem possui audio no registro clinico (nao embutido neste PDF).", false, 9);
     }
   }
 

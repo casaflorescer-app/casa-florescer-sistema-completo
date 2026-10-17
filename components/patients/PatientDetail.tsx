@@ -162,12 +162,26 @@ export function PatientDetail({
           Voltar para pacientes
         </Link>
         {row && physicianMembership ? (
-          <Link
-            href={patientChartHref(patientId)}
-            className={`${buttonClass} inline-flex items-center`}
-          >
-            Abrir prontuário
-          </Link>
+          <>
+            <Link
+              href={patientChartHref(patientId)}
+              className={`${buttonClass} inline-flex items-center`}
+            >
+              Abrir prontuário
+            </Link>
+            <Link
+              href={`/app/prescriptions?patientId=${patientId}`}
+              className={`${ghostButtonClass} inline-flex items-center`}
+            >
+              Receitas
+            </Link>
+            <Link
+              href={`/app/exams?patientId=${patientId}`}
+              className={`${ghostButtonClass} inline-flex items-center`}
+            >
+              Exames
+            </Link>
+          </>
         ) : null}
         {row ? (
           <Link href={`/app/patients/${patientId}/edit`} className={`${ghostButtonClass} inline-flex items-center`}>

@@ -32,10 +32,13 @@ import {
 import { listExamOrdersForPatient } from "@/lib/exams/directory";
 import { listPrescriptionsForPatient } from "@/lib/prescriptions/directory";
 import { listOrientationsForPatient } from "@/lib/orientations/directory";
+import { listExamRequestsForPatient } from "@/lib/attendance/clinical-support-directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalSummary";
 import { EncounterTimeline } from "@/components/attendance/EncounterTimeline";
 import { PatientSearchPanel } from "@/components/attendance/PatientSearchPanel";
+import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
+import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 
 type TabId = "resumo" | "historico" | "receitas" | "exames" | "orientacoes";
@@ -51,6 +54,9 @@ export function PatientChart({ patientId }: { patientId: string }) {
     { id: string; status: string; when: string }[]
   >([]);
   const [exams, setExams] = useState<{ id: string; title: string; when: string }[]>([]);
+  const [examRequests, setExamRequests] = useState<
+    { id: string; status: string; when: string; indication: string | null; itemCount: number }[]
+  >([]);
   const [orientations, setOrientations] = useState<
     { id: string; title: string; when: string }[]
   >([]);
@@ -67,6 +73,14 @@ export function PatientChart({ patientId }: { patientId: string }) {
       ),
     [authorization],
   );
+
+  const activeMembership = useMemo(() => {
+    if (!physicianMemberships.length) return null;
+    return (
+      physicianMemberships.find((item) => item.practiceId === practiceId) ??
+      physicianMemberships[0]
+    );
+  }, [physicianMemberships, practiceId]);
 
   const load = useCallback(async () => {
     if (!supabase || !authorization) {
@@ -101,7 +115,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
       }
       setPatient(detail);
 
-      const [sum, enc, rx, examRows, ori] = await Promise.all([
+      const [sum, enc, rx, examRows, examReqs, ori] = await Promise.all([
         loadPatientClinicalSummary(supabase, {
           practiceId: membership.practiceId,
           patientId,
@@ -109,6 +123,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
         listEncountersForPatient(supabase, membership.practiceId, patientId),
         listPrescriptionsForPatient(supabase, patientId).catch(() => []),
         listExamOrdersForPatient(supabase, patientId).catch(() => []),
+        listExamRequestsForPatient(supabase, patientId).catch(() => []),
         listOrientationsForPatient(supabase, patientId).catch(() => []),
       ]);
       setSummary(sum);
@@ -125,6 +140,15 @@ export function PatientChart({ patientId }: { patientId: string }) {
           id: item.id,
           title: item.title,
           when: item.documentDate || item.receivedAt || item.updatedAt || item.createdAt || "",
+        })),
+      );
+      setExamRequests(
+        examReqs.slice(0, 40).map((item) => ({
+          id: item.id,
+          status: item.status,
+          when: item.createdAt,
+          indication: item.clinicalIndication,
+          itemCount: item.items.length,
         })),
       );
       setOrientations(
@@ -323,90 +347,128 @@ export function PatientChart({ patientId }: { patientId: string }) {
           ) : null}
 
           {tab === "receitas" ? (
-            <section className="card mt-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <section className="mt-4 space-y-4 overflow-x-hidden">
+              <div className="card flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-lotus-900">Receitas</h2>
                   <p className="mt-1 text-sm text-lotus-600">
-                    Histórico nesta paciente. Nova receita mantém o patientId atual.
+                    Mesmo patientId do prontuário. Emissão com revisão, documento e PDF no painel abaixo.
                   </p>
+                  {prescriptions.length === 0 ? (
+                    <p className="mt-2 text-sm text-lotus-600">Nenhuma receita encontrada.</p>
+                  ) : (
+                    <p className="mt-2 text-xs text-lotus-500">
+                      {prescriptions.length} registro(s) recente(s) no histórico.
+                    </p>
+                  )}
                 </div>
                 <Link
                   href={`/app/prescriptions?patientId=${patientId}`}
-                  className={buttonClass}
+                  className={ghostButtonClass}
                 >
-                  Nova receita
+                  Abrir módulo Receitas
                 </Link>
               </div>
-              {prescriptions.length === 0 ? (
-                <p className="mt-3 text-sm text-lotus-600">Nenhuma receita encontrada.</p>
-              ) : (
-                <ul className="mt-4 space-y-2">
-                  {prescriptions.map((item) => (
-                    <li
-                      key={item.id}
-                      className="rounded-xl border border-lotus-100 bg-white px-3 py-3 text-sm"
-                    >
-                      <p className="font-medium text-lotus-950">Receita · {item.status}</p>
-                      <p className="text-xs text-lotus-600">{formatDateTime(item.when)}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="mt-3 text-xs text-lotus-500">
-                Módulo completo:{" "}
-                <Link
-                  href={`/app/prescriptions?patientId=${patientId}`}
-                  className="underline underline-offset-2"
-                >
-                  Receitas
-                </Link>
-                {" · "}
-                também disponível no atendimento (Workspace).
-              </p>
+              {activeMembership?.professional?.id && patient ? (
+                <ClinicalPrescriptionPanel
+                  supabase={supabase}
+                  organizationId={
+                    patient.organizationId ||
+                    activeMembership.practice?.organizationId ||
+                    authorization?.profile?.organizationId ||
+                    ""
+                  }
+                  practiceId={activeMembership.practiceId}
+                  patientId={patientId}
+                  professionalId={activeMembership.professional.id}
+                  canManage={Boolean(authorization && hasStaffRole(authorization, "physician"))}
+                />
+              ) : null}
             </section>
           ) : null}
 
           {tab === "exames" ? (
-            <section className="card mt-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold text-lotus-900">Exames</h2>
-                  <p className="mt-1 text-sm text-lotus-600">
-                    Pedidos e resultados são objetos distintos. Novo pedido mantém o patientId.
-                  </p>
+            <section className="mt-4 space-y-4 overflow-x-hidden">
+              <div className="card">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-lotus-900">Exames</h2>
+                    <p className="mt-1 text-sm text-lotus-600">
+                      Pedido clínico ≠ resultado/anexo. Novo pedido usa o módulo Exames (exige
+                      atendimento aberto — regra C040.9).
+                    </p>
+                  </div>
+                  <Link href={`/app/exams?patientId=${patientId}`} className={buttonClass}>
+                    Novo pedido
+                  </Link>
                 </div>
-                <Link href={`/app/exams?patientId=${patientId}`} className={buttonClass}>
-                  Novo pedido
-                </Link>
+                <h3 className="mt-4 text-sm font-semibold text-lotus-900">Pedidos (solicitação)</h3>
+                {examRequests.length === 0 ? (
+                  <p className="mt-2 text-sm text-lotus-600">Nenhum pedido de exame encontrado.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {examRequests.map((item) => (
+                      <li
+                        key={item.id}
+                        className="rounded-xl border border-lotus-100 bg-white px-3 py-3 text-sm"
+                      >
+                        <p className="font-medium text-lotus-950">
+                          Pedido ·{" "}
+                          {item.status === "confirmed"
+                            ? "Solicitado"
+                            : item.status === "draft"
+                              ? "Rascunho"
+                              : item.status}
+                          {" · "}
+                          {item.itemCount} exame(s)
+                        </p>
+                        <p className="text-xs text-lotus-600">{formatDateTime(item.when)}</p>
+                        {item.indication ? (
+                          <p className="mt-1 text-xs text-lotus-700">
+                            Indicação: {item.indication}
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <h3 className="mt-4 text-sm font-semibold text-lotus-900">
+                  Resultados / anexos
+                </h3>
+                {exams.length === 0 ? (
+                  <p className="mt-2 text-sm text-lotus-600">Nenhum resultado/anexo listado.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {exams.map((item) => (
+                      <li
+                        key={item.id}
+                        className="rounded-xl border border-lotus-100 bg-white px-3 py-3 text-sm"
+                      >
+                        <p className="font-medium text-lotus-950">Resultado · {item.title}</p>
+                        <p className="text-xs text-lotus-600">
+                          {item.when ? formatDateTime(item.when) : "—"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {exams.length === 0 ? (
-                <p className="mt-3 text-sm text-lotus-600">Nenhum pedido de exame encontrado.</p>
-              ) : (
-                <ul className="mt-4 space-y-2">
-                  {exams.map((item) => (
-                    <li
-                      key={item.id}
-                      className="rounded-xl border border-lotus-100 bg-white px-3 py-3 text-sm"
-                    >
-                      <p className="font-medium text-lotus-950">{item.title}</p>
-                      <p className="text-xs text-lotus-600">
-                        {item.when ? formatDateTime(item.when) : "—"}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="mt-3 text-xs text-lotus-500">
-                Módulo completo:{" "}
-                <Link
-                  href={`/app/exams?patientId=${patientId}`}
-                  className="underline underline-offset-2"
-                >
-                  Exames
-                </Link>
-                .
-              </p>
+              {activeMembership && patient ? (
+                <ClinicalExamsPanel
+                  supabase={supabase}
+                  organizationId={
+                    patient.organizationId ||
+                    activeMembership.practice?.organizationId ||
+                    authorization?.profile?.organizationId ||
+                    ""
+                  }
+                  practiceId={activeMembership.practiceId}
+                  patientId={patientId}
+                  canAnalyze={Boolean(authorization && hasStaffRole(authorization, "physician"))}
+                  canAttach={Boolean(authorization && hasStaffRole(authorization, "physician"))}
+                  attachSource="secretaria"
+                />
+              ) : null}
             </section>
           ) : null}
 

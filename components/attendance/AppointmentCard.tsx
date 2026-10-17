@@ -102,9 +102,20 @@ export function AppointmentCard({
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {row.patientId ? (
-          <Link href={patientChartHref(row.patientId)} className={ghostActionClass}>
-            Abrir prontuário
-          </Link>
+          <>
+            <Link href={patientChartHref(row.patientId)} className={ghostActionClass}>
+              Abrir prontuário
+            </Link>
+            <Link
+              href={`/app/prescriptions?patientId=${row.patientId}`}
+              className={ghostActionClass}
+            >
+              Receitas
+            </Link>
+            <Link href={`/app/exams?patientId=${row.patientId}`} className={ghostActionClass}>
+              Exames
+            </Link>
+          </>
         ) : null}
         {showEdit ? (
           <button

@@ -119,6 +119,8 @@ export function PatientSearchPanel({
                   {" · "}
                   CPF: {maskCpf(row.cpf)}
                   {row.phone ? ` · ${formatPhone(row.phone)}` : ""}
+                  {" · "}
+                  ID {row.id.slice(0, 8)}
                 </p>
               </div>
               {onSelectPatient ? (

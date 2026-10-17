@@ -84,6 +84,8 @@ export function ClinicalPrescriptionPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** C054 — revisão obrigatória antes da emissão (evita clique acidental). */
+  const [reviewing, setReviewing] = useState(false);
 
   const active = rows.find((r) => r.id === activeId) ?? null;
   const isDraft = active?.status === "draft";
@@ -160,6 +162,7 @@ export function ClinicalPrescriptionPanel({
         return;
       }
       setActiveId(result.prescription.id);
+      setReviewing(false);
       setNotice("Receita em rascunho.");
       await reload();
     } finally {
@@ -188,6 +191,7 @@ export function ClinicalPrescriptionPanel({
         return;
       }
       setActiveId(result.prescription.id);
+      setReviewing(false);
       setNotice("Cópia criada como NOVO rascunho. Revise antes de emitir.");
       await reload();
       setItems(await listPrescriptionItems(supabase, result.prescription.id));
@@ -245,6 +249,16 @@ export function ClinicalPrescriptionPanel({
 
   async function onIssueDocument() {
     if (!activeId || !canManage) return;
+    if (items.length === 0) {
+      setError("Adicione ao menos um medicamento antes de emitir.");
+      return;
+    }
+    if (!reviewing && isDraft) {
+      setReviewing(true);
+      setError(null);
+      setNotice("Revise os itens abaixo e confirme a emissão.");
+      return;
+    }
     if (finalizedDoc && !correctionReason.trim()) {
       setError("Já existe documento finalizado. Informe o motivo da correção para nova versão.");
       return;
@@ -264,6 +278,7 @@ export function ClinicalPrescriptionPanel({
         return;
       }
       setCorrectionReason("");
+      setReviewing(false);
       setNotice(
         result.error
           ? result.error
@@ -639,6 +654,53 @@ export function ClinicalPrescriptionPanel({
                   Adicionar medicamento
                 </button>
               </div>
+              {reviewing ? (
+                <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 p-3 text-sm">
+                  <p className="font-semibold text-lotus-900">Revisão da receita</p>
+                  <p className="text-xs text-lotus-600">
+                    Confira paciente e itens antes de emitir. Validação = interna (não ICP-Brasil).
+                    {shareWithPatient ? " · PDF será disponibilizado no portal." : " · PDF não irá ao portal."}
+                  </p>
+                  <ol className="list-decimal space-y-2 pl-5 text-lotus-800">
+                    {items.map((item, index) => (
+                      <li key={item.id}>
+                        <span className="font-medium">
+                          Item {index + 1}: {item.medicationName}
+                        </span>
+                        <span className="block text-xs text-lotus-600">
+                          {[item.presentation, item.dosage, item.route, item.frequency, item.duration, item.quantity]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
+                        </span>
+                        {item.instructions ? (
+                          <span className="mt-1 block whitespace-pre-wrap text-xs">{item.instructions}</span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={ghostButtonClass}
+                      disabled={busy}
+                      onClick={() => {
+                        setReviewing(false);
+                        setNotice(null);
+                      }}
+                    >
+                      Voltar e editar
+                    </button>
+                    <button
+                      type="button"
+                      className={buttonClass}
+                      disabled={busy || items.length === 0}
+                      onClick={() => void onIssueDocument()}
+                    >
+                      Emitir receita
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div className="space-y-2 rounded-md border border-lotus-100 p-3 text-sm">
                 <label className="flex items-start gap-2">
                   <input type="checkbox" className="mt-1" checked={shareWithPatient} onChange={(e) => setShareWithPatient(e.target.checked)} />
@@ -652,13 +714,19 @@ export function ClinicalPrescriptionPanel({
                     onChange={(e) => setCorrectionReason(e.target.value)}
                   />
                 ) : null}
-                <button type="button" className={buttonClass} disabled={busy || items.length === 0} onClick={() => void onIssueDocument()}>
-                  {finalizedDoc ? "Emitir correção (PDF)" : "Emitir documento (PDF)"}
+                <button
+                  type="button"
+                  className={buttonClass}
+                  disabled={busy || items.length === 0}
+                  onClick={() => void onIssueDocument()}
+                >
+                  {finalizedDoc ? "Emitir correção (PDF)" : "Revisar e emitir"}
                 </button>
                 <p className="text-xs text-lotus-500">
                   Congela snapshot + hash. Reimpressão usa o mesmo documento (não gera nova receita).
                 </p>
               </div>
+              )}
               <div className="flex flex-col gap-2 border-t border-lotus-100 pt-3 sm:flex-row sm:items-end">
                 <label className="flex-1 text-sm font-medium text-lotus-800">
                   Salvar como modelo

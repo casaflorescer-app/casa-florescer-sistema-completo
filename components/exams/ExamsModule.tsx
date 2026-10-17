@@ -227,8 +227,9 @@ export function ExamsModule() {
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Médico</p>
         <h1 className="page-title mt-1">Exames</h1>
         <p className="page-sub mt-2">
-          Pedidos clínicos e resultados são objetos distintos. Novo pedido exige atendimento aberto
-          (arquitetura C040.9).
+          Pedidos clínicos e resultados/anexos são objetos distintos. Novo pedido exige atendimento
+          aberto (RPC C040.9 — sem encounter artificial nesta tela). SNCR e ICP-Brasil não fazem
+          parte deste módulo.
         </p>
       </header>
 

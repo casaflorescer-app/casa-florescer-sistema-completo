@@ -1,11 +1,10 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { Suspense } from "react";
+import { ExamsModule } from "@/components/exams/ExamsModule";
 
 export default function ExamsPage() {
   return (
-    <ModulePlaceholder
-      title="Exames"
-      area="clinica"
-      description="Módulo em implementação."
-    />
+    <Suspense fallback={<p className="text-sm text-lotus-600">Carregando exames…</p>}>
+      <ExamsModule />
+    </Suspense>
   );
 }

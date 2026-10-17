@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   addPrescriptionItem,
+  applyTemplateItemsAsDraft,
   buildStructuredInstructions,
   copyPrescriptionAsDraft,
   createPrescriptionDraft,
@@ -14,7 +15,11 @@ import {
   type PrescriptionRow,
 } from "@/lib/prescriptions/directory";
 import { issuePrescriptionDocumentWithPdf } from "@/lib/documents/issue";
-import { listDocumentsForEncounter } from "@/lib/documents/directory";
+import {
+  createSignedDocumentUrl,
+  listDocumentsForEncounter,
+  listDocumentsForPatient,
+} from "@/lib/documents/directory";
 import type { ClinicalDocumentRow } from "@/lib/documents/types";
 import {
   applyPrescriptionTemplate,
@@ -111,6 +116,9 @@ export function ClinicalPrescriptionPanel({
     if (encounterId) {
       const docs = await listDocumentsForEncounter(supabase, encounterId);
       setIssuedDocs(docs.rows.filter((d) => d.sourceType === "prescription"));
+    } else {
+      const docs = await listDocumentsForPatient(supabase, patientId, "prescription");
+      setIssuedDocs(docs.rows);
     }
   }, [activeId, encounterId, patientId, practiceId, supabase]);
 
@@ -268,22 +276,67 @@ export function ClinicalPrescriptionPanel({
   }
 
   async function onUseTemplate() {
-    if (!canManage || !encounterId || !templateId) {
+    if (!canManage || !templateId) {
       setError("Selecione um modelo ativo para copiar.");
+      return;
+    }
+    const template = templates.find((t) => t.id === templateId);
+    if (!template?.isActive) {
+      setError("Selecione um modelo ativo.");
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const result = await applyPrescriptionTemplate(supabase, templateId, encounterId);
-      if (result.error || !result.prescriptionId) {
+      if (encounterId) {
+        const result = await applyPrescriptionTemplate(supabase, templateId, encounterId);
+        if (result.error || !result.prescriptionId) {
+          setError(result.error ?? "Não foi possível aplicar o modelo.");
+          return;
+        }
+        setActiveId(result.prescriptionId);
+        setNotice("Modelo copiado para NOVO rascunho. Revise antes de emitir.");
+        await reload();
+        setItems(await listPrescriptionItems(supabase, result.prescriptionId));
+        return;
+      }
+      const result = await applyTemplateItemsAsDraft(supabase, {
+        organizationId,
+        practiceId,
+        patientId,
+        professionalId,
+        encounterId,
+        templateName: template.name,
+        items: template.items,
+      });
+      if (result.error || !result.prescription) {
         setError(result.error ?? "Não foi possível aplicar o modelo.");
         return;
       }
-      setActiveId(result.prescriptionId);
+      setActiveId(result.prescription.id);
       setNotice("Modelo copiado para NOVO rascunho. Revise antes de emitir.");
       await reload();
-      setItems(await listPrescriptionItems(supabase, result.prescriptionId));
+      setItems(await listPrescriptionItems(supabase, result.prescription.id));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onViewPdf(doc: ClinicalDocumentRow) {
+    if (!doc.pdfStoragePath) {
+      setError("PDF ainda não anexado a este documento.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const signed = await createSignedDocumentUrl(supabase, doc.pdfStoragePath);
+      if (signed.error || !signed.url) {
+        setError(signed.error ?? "Não foi possível abrir o PDF.");
+        return;
+      }
+      window.open(signed.url, "_blank", "noopener,noreferrer");
+      setNotice("PDF aberto (URL assinada — bucket privado). Reimpressão não cria nova versão.");
     } finally {
       setBusy(false);
     }
@@ -415,7 +468,7 @@ export function ClinicalPrescriptionPanel({
               <button
                 type="button"
                 className={ghostButtonClass}
-                disabled={busy || !templateId || !encounterId}
+                disabled={busy || !templateId}
                 onClick={() => void onUseTemplate()}
               >
                 Usar modelo
@@ -481,16 +534,28 @@ export function ClinicalPrescriptionPanel({
                     {formatDateTime(row.createdAt)} · {STATUS_LABEL[row.status]}
                     {doc ? ` · documento v${doc.version}${doc.availableToPatient ? " (portal)" : ""}` : ""}
                   </p>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => {
-                      setActiveId(row.id);
-                      void listPrescriptionItems(supabase, row.id).then(setItems);
-                    }}
-                  >
-                    Abrir
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={ghostButtonClass}
+                      onClick={() => {
+                        setActiveId(row.id);
+                        void listPrescriptionItems(supabase, row.id).then(setItems);
+                      }}
+                    >
+                      Visualizar
+                    </button>
+                    {doc?.pdfStoragePath ? (
+                      <button
+                        type="button"
+                        className={ghostButtonClass}
+                        disabled={busy}
+                        onClick={() => void onViewPdf(doc)}
+                      >
+                        PDF
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </li>
             );

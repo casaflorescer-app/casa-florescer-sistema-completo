@@ -235,6 +235,81 @@ export async function markPrescriptionViewed(
   return { error: error ? mapPrescriptionError(error) : null };
 }
 
+/**
+ * Aplica modelo como NOVO rascunho sem exigir encounter aberto.
+ * Usado no módulo MÉDICO → Receitas (fora do Workspace).
+ * O RPC prescription_template_apply continua preferido quando há encounter.
+ */
+export async function applyTemplateItemsAsDraft(
+  supabase: SupabaseClient,
+  input: {
+    organizationId: string;
+    practiceId: string;
+    patientId: string;
+    professionalId: string;
+    encounterId?: string | null;
+    templateName: string;
+    items: Array<{
+      medicationName: string;
+      presentation?: string | null;
+      concentration?: string | null;
+      dosage?: string | null;
+      route?: string | null;
+      frequency?: string | null;
+      duration?: string | null;
+      quantity?: string | null;
+      observations?: string | null;
+    }>;
+  },
+): Promise<{ prescription: PrescriptionRow | null; error: string | null }> {
+  if (input.items.length === 0) {
+    return { prescription: null, error: "Modelo sem itens." };
+  }
+  const created = await createPrescriptionDraft(supabase, {
+    organizationId: input.organizationId,
+    practiceId: input.practiceId,
+    patientId: input.patientId,
+    professionalId: input.professionalId,
+    encounterId: input.encounterId,
+    notes: `Modelo: ${input.templateName}`,
+  });
+  if (created.error || !created.prescription) return created;
+
+  for (const [index, item] of input.items.entries()) {
+    let dosage = item.dosage?.trim() || null;
+    if (!dosage && item.concentration?.trim()) dosage = item.concentration.trim();
+    let instructions = item.observations?.trim() || undefined;
+    if (
+      item.concentration?.trim() &&
+      item.dosage?.trim() &&
+      item.concentration.trim() !== item.dosage.trim()
+    ) {
+      instructions = [
+        `Concentração (modelo): ${item.concentration.trim()}`,
+        instructions,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+    const added = await addPrescriptionItem(supabase, {
+      prescriptionId: created.prescription.id,
+      medicationName: item.medicationName,
+      presentation: item.presentation ?? undefined,
+      quantity: item.quantity ?? undefined,
+      dosage: dosage ?? undefined,
+      frequency: item.frequency ?? undefined,
+      duration: item.duration ?? undefined,
+      route: item.route ?? undefined,
+      instructions,
+      sortOrder: index + 1,
+    });
+    if (added.error) {
+      return { prescription: created.prescription, error: added.error };
+    }
+  }
+  return created;
+}
+
 /** Copia receita anterior como NOVO rascunho (não documento emitido). */
 export async function copyPrescriptionAsDraft(
   supabase: SupabaseClient,

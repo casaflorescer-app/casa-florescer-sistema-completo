@@ -151,6 +151,28 @@ export async function listDocumentsForEncounter(
   return { rows, error: null };
 }
 
+/** Lista documentos clínicos do paciente (RLS: can_read_clinical). Sem RPC nova. */
+export async function listDocumentsForPatient(
+  supabase: SupabaseClient,
+  patientId: string,
+  sourceType?: DocumentSourceType,
+): Promise<{ rows: ClinicalDocumentRow[]; error: string | null }> {
+  let query = supabase
+    .from("clinical_document_artifacts")
+    .select(
+      "id, organization_id, practice_id, patient_id, encounter_id, professional_id, source_type, source_id, document_kind, version, status, title, issued_at, frozen_payload, content_sha256, pdf_storage_path, pdf_sha256, signature_kind, signed_at, signed_by, available_to_patient, published_to_patient_at, viewed_by_patient_at, supersedes_id, correction_reason, created_by, created_at",
+    )
+    .eq("patient_id", patientId)
+    .order("issued_at", { ascending: false });
+  if (sourceType) query = query.eq("source_type", sourceType);
+  const { data, error } = await query;
+  if (error) return { rows: [], error: mapDocumentRpcError(error) };
+  const rows = (data ?? [])
+    .map((item) => mapDocument(item as Record<string, unknown>))
+    .filter((item): item is ClinicalDocumentRow => Boolean(item));
+  return { rows, error: null };
+}
+
 export async function listDocumentsForPatientPortal(
   supabase: SupabaseClient,
 ): Promise<{ rows: ClinicalDocumentRow[]; error: string | null }> {

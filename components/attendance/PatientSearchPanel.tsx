@@ -23,6 +23,7 @@ export function PatientSearchPanel({
   actionLabel = "Abrir prontuário",
   excludePatientId,
   autoFocus = false,
+  onSelectPatient,
 }: {
   supabase: SupabaseClient;
   title?: string;
@@ -30,6 +31,8 @@ export function PatientSearchPanel({
   actionLabel?: string;
   excludePatientId?: string;
   autoFocus?: boolean;
+  /** Quando informado, a ação seleciona a paciente (não navega ao prontuário). */
+  onSelectPatient?: (row: PatientListRow) => void;
 }) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -118,9 +121,19 @@ export function PatientSearchPanel({
                   {row.phone ? ` · ${formatPhone(row.phone)}` : ""}
                 </p>
               </div>
-              <Link href={patientChartHref(row.id)} className={buttonClass}>
-                {actionLabel}
-              </Link>
+              {onSelectPatient ? (
+                <button
+                  type="button"
+                  className={buttonClass}
+                  onClick={() => onSelectPatient(row)}
+                >
+                  {actionLabel}
+                </button>
+              ) : (
+                <Link href={patientChartHref(row.id)} className={buttonClass}>
+                  {actionLabel}
+                </Link>
+              )}
             </li>
           ))}
         </ul>

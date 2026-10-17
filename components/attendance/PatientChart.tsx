@@ -324,12 +324,22 @@ export function PatientChart({ patientId }: { patientId: string }) {
 
           {tab === "receitas" ? (
             <section className="card mt-4">
-              <h2 className="text-base font-semibold text-lotus-900">Receitas</h2>
-              <p className="mt-1 text-sm text-lotus-600">
-                Histórico autorizado. Emissão e edição ocorrem no atendimento (Workspace).
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-lotus-900">Receitas</h2>
+                  <p className="mt-1 text-sm text-lotus-600">
+                    Histórico nesta paciente. Nova receita mantém o patientId atual.
+                  </p>
+                </div>
+                <Link
+                  href={`/app/prescriptions?patientId=${patientId}`}
+                  className={buttonClass}
+                >
+                  Nova receita
+                </Link>
+              </div>
               {prescriptions.length === 0 ? (
-                <p className="mt-3 text-sm text-lotus-600">Nenhuma receita listada.</p>
+                <p className="mt-3 text-sm text-lotus-600">Nenhuma receita encontrada.</p>
               ) : (
                 <ul className="mt-4 space-y-2">
                   {prescriptions.map((item) => (
@@ -344,19 +354,34 @@ export function PatientChart({ patientId }: { patientId: string }) {
                 </ul>
               )}
               <p className="mt-3 text-xs text-lotus-500">
-                Para emitir ou corrigir, abra um atendimento da paciente.
+                Módulo completo:{" "}
+                <Link
+                  href={`/app/prescriptions?patientId=${patientId}`}
+                  className="underline underline-offset-2"
+                >
+                  Receitas
+                </Link>
+                {" · "}
+                também disponível no atendimento (Workspace).
               </p>
             </section>
           ) : null}
 
           {tab === "exames" ? (
             <section className="card mt-4">
-              <h2 className="text-base font-semibold text-lotus-900">Exames</h2>
-              <p className="mt-1 text-sm text-lotus-600">
-                Pedidos e resultados permanecem objetos distintos. Gestão no Workspace / ficha.
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-lotus-900">Exames</h2>
+                  <p className="mt-1 text-sm text-lotus-600">
+                    Pedidos e resultados são objetos distintos. Novo pedido mantém o patientId.
+                  </p>
+                </div>
+                <Link href={`/app/exams?patientId=${patientId}`} className={buttonClass}>
+                  Novo pedido
+                </Link>
+              </div>
               {exams.length === 0 ? (
-                <p className="mt-3 text-sm text-lotus-600">Nenhum exame listado.</p>
+                <p className="mt-3 text-sm text-lotus-600">Nenhum pedido de exame encontrado.</p>
               ) : (
                 <ul className="mt-4 space-y-2">
                   {exams.map((item) => (
@@ -372,6 +397,16 @@ export function PatientChart({ patientId }: { patientId: string }) {
                   ))}
                 </ul>
               )}
+              <p className="mt-3 text-xs text-lotus-500">
+                Módulo completo:{" "}
+                <Link
+                  href={`/app/exams?patientId=${patientId}`}
+                  className="underline underline-offset-2"
+                >
+                  Exames
+                </Link>
+                .
+              </p>
             </section>
           ) : null}
 

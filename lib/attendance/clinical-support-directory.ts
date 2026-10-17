@@ -28,8 +28,10 @@ export type ExamGroupRow = {
 export type ExamRequestRow = {
   id: string;
   encounterId: string;
+  patientId?: string | null;
   status: "draft" | "confirmed" | "cancelled";
   notes: string | null;
+  clinicalIndication: string | null;
   confirmedAt: string | null;
   createdAt: string;
   items: Array<{
@@ -38,6 +40,7 @@ export type ExamRequestRow = {
     groupId: string | null;
     customName: string | null;
     catalogName: string | null;
+    groupName: string | null;
   }>;
 };
 
@@ -270,20 +273,12 @@ export async function confirmExamRequest(
   return { error: error ? mapRpcError(error) : null };
 }
 
-export async function listExamRequestsForEncounter(
+async function hydrateExamRequestRows(
   supabase: SupabaseClient,
-  encounterId: string,
+  data: Record<string, unknown>[],
 ): Promise<ExamRequestRow[]> {
-  const { data, error } = await supabase
-    .from("clinical_exam_requests")
-    .select("id, encounter_id, status, notes, confirmed_at, created_at")
-    .eq("encounter_id", encounterId)
-    .order("created_at", { ascending: false });
-  if (error || !data) return [];
-
   const rows: ExamRequestRow[] = [];
-  for (const row of data) {
-    const r = row as Record<string, unknown>;
+  for (const r of data) {
     const id = asString(r.id);
     const enc = asString(r.encounter_id);
     const status = asString(r.status) as ExamRequestRow["status"] | null;
@@ -299,7 +294,11 @@ export async function listExamRequestsForEncounter(
     const catalogIds = (items ?? [])
       .map((item) => asString((item as Record<string, unknown>).catalog_id))
       .filter((x): x is string => Boolean(x));
+    const groupIds = (items ?? [])
+      .map((item) => asString((item as Record<string, unknown>).group_id))
+      .filter((x): x is string => Boolean(x));
     const nameById = new Map<string, string>();
+    const groupNameById = new Map<string, string>();
     if (catalogIds.length > 0) {
       const { data: catalogs } = await supabase
         .from("clinical_exam_catalog")
@@ -312,28 +311,71 @@ export async function listExamRequestsForEncounter(
         if (cid && cname) nameById.set(cid, cname);
       }
     }
+    if (groupIds.length > 0) {
+      const { data: groups } = await supabase
+        .from("clinical_exam_groups")
+        .select("id, name")
+        .in("id", groupIds);
+      for (const group of groups ?? []) {
+        const g = group as Record<string, unknown>;
+        const gid = asString(g.id);
+        const gname = asString(g.name);
+        if (gid && gname) groupNameById.set(gid, gname);
+      }
+    }
 
     rows.push({
       id,
       encounterId: enc,
+      patientId: asString(r.patient_id),
       status,
       notes: asString(r.notes),
+      clinicalIndication: asString(r.clinical_indication),
       confirmedAt: asString(r.confirmed_at),
       createdAt,
       items: (items ?? []).map((item) => {
         const i = item as Record<string, unknown>;
         const catalogId = asString(i.catalog_id);
+        const groupId = asString(i.group_id);
         return {
           id: asString(i.id) ?? "",
           catalogId,
-          groupId: asString(i.group_id),
+          groupId,
           customName: asString(i.custom_name),
           catalogName: catalogId ? nameById.get(catalogId) ?? null : null,
+          groupName: groupId ? groupNameById.get(groupId) ?? null : null,
         };
       }),
     });
   }
   return rows;
+}
+
+export async function listExamRequestsForEncounter(
+  supabase: SupabaseClient,
+  encounterId: string,
+): Promise<ExamRequestRow[]> {
+  const { data, error } = await supabase
+    .from("clinical_exam_requests")
+    .select("id, encounter_id, patient_id, status, notes, clinical_indication, confirmed_at, created_at")
+    .eq("encounter_id", encounterId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return hydrateExamRequestRows(supabase, data as Record<string, unknown>[]);
+}
+
+/** Pedidos clínicos do paciente (pedido ≠ resultado/anexo). */
+export async function listExamRequestsForPatient(
+  supabase: SupabaseClient,
+  patientId: string,
+): Promise<ExamRequestRow[]> {
+  const { data, error } = await supabase
+    .from("clinical_exam_requests")
+    .select("id, encounter_id, patient_id, status, notes, clinical_indication, confirmed_at, created_at")
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return hydrateExamRequestRows(supabase, data as Record<string, unknown>[]);
 }
 
 export async function listPrescriptionTemplates(

@@ -373,15 +373,23 @@ export function ExamRequestPanel({
             <div key={request.id} className="rounded-lg border border-lotus-100 p-3 text-sm">
               <p className="font-medium text-lotus-900">
                 {request.status === "confirmed"
-                  ? "Confirmado"
+                  ? "Solicitado"
                   : request.status === "draft"
                     ? "Rascunho"
                     : "Cancelado"}{" "}
                 · {formatDateTime(request.createdAt)}
               </p>
+              {request.clinicalIndication ? (
+                <p className="mt-1 text-xs text-lotus-600">
+                  Indicação clínica: {request.clinicalIndication}
+                </p>
+              ) : null}
               <ul className="mt-1 list-disc pl-5 text-lotus-700">
                 {request.items.map((item) => (
-                  <li key={item.id}>{item.catalogName || item.customName || "Exame"}</li>
+                  <li key={item.id}>
+                    {item.catalogName || item.customName || "Exame"}
+                    {item.groupName ? ` [grupo: ${item.groupName}]` : ""}
+                  </li>
                 ))}
               </ul>
               <div className="mt-2 flex flex-wrap gap-2">

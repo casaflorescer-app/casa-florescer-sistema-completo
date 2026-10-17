@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ENCOUNTER_STATUS_LABEL, type EncounterRow } from "@/lib/attendance/directory";
+import { patientChartHref } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
 
 const TONE: Record<EncounterRow["status"], string> = {
@@ -68,6 +69,12 @@ export function EncounterHeader({
       <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
         <Link href="/app/agenda" className="text-lotus-800 underline-offset-2 hover:underline">
           Voltar para a agenda
+        </Link>
+        <Link
+          href={patientChartHref(encounter.patientId)}
+          className="text-lotus-800 underline-offset-2 hover:underline"
+        >
+          Prontuário da paciente
         </Link>
         <Link href="/app/records" className="text-lotus-800 underline-offset-2 hover:underline">
           Índice do prontuário

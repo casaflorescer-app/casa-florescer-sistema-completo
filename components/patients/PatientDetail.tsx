@@ -14,6 +14,7 @@ import {
   maskCpf,
   PREFERRED_CHANNEL_LABEL,
   PRIVATE_PAYMENT_METHOD_LABEL,
+  patientChartHref,
   removePatientPhoto,
   uploadPatientPhoto,
   validatePatientPhotoFile,
@@ -160,8 +161,16 @@ export function PatientDetail({
         <Link href="/app/patients" className={`${ghostButtonClass} inline-flex items-center`}>
           Voltar para pacientes
         </Link>
+        {row && physicianMembership ? (
+          <Link
+            href={patientChartHref(patientId)}
+            className={`${buttonClass} inline-flex items-center`}
+          >
+            Abrir prontuário
+          </Link>
+        ) : null}
         {row ? (
-          <Link href={`/app/patients/${patientId}/edit`} className={`${buttonClass} inline-flex items-center`}>
+          <Link href={`/app/patients/${patientId}/edit`} className={`${ghostButtonClass} inline-flex items-center`}>
             Editar cadastro
           </Link>
         ) : null}

@@ -37,8 +37,9 @@ export async function loadPatientClinicalSummary(
   input: {
     practiceId: string;
     patientId: string;
-    currentEncounterId: string;
-    pregnancy: PregnancyContext | null;
+    /** Encounter atual a excluir do "último atendimento"; vazio no prontuário longitudinal. */
+    currentEncounterId?: string;
+    pregnancy?: PregnancyContext | null;
   },
 ): Promise<PatientClinicalSummaryData | null> {
   const patient = await getPatient(supabase, input.patientId);
@@ -58,7 +59,10 @@ export async function loadPatientClinicalSummary(
     listOrientationsForPatient(supabase, input.patientId).catch(() => []),
   ]);
 
-  const prior = encounters.find((item) => item.id !== input.currentEncounterId) ?? null;
+  const excludeId = input.currentEncounterId ?? "";
+  const prior =
+    encounters.find((item) => item.id !== excludeId) ??
+    (excludeId ? null : encounters[0] ?? null);
   const clinicalRow = clinical as Record<string, unknown> | null;
 
   return {

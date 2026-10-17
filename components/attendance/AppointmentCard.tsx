@@ -1,5 +1,7 @@
+import Link from "next/link";
 import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attendance/directory";
 import type { AppointmentPredictionView } from "@/lib/attendance/appointment-prediction";
+import { patientChartHref } from "@/lib/patients/directory";
 import { buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import {
   APPOINTMENT_KIND_LABEL,
@@ -99,6 +101,11 @@ export function AppointmentCard({
       <AppointmentPredictionSummary prediction={prediction} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
+        {row.patientId ? (
+          <Link href={patientChartHref(row.patientId)} className={ghostActionClass}>
+            Abrir prontuário
+          </Link>
+        ) : null}
         {showEdit ? (
           <button
             type="button"

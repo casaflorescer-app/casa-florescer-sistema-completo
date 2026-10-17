@@ -11,8 +11,9 @@ import {
   listRecentEncountersForProfessional,
   type EncounterRow,
 } from "@/lib/attendance/directory";
-import { listPatients, type PatientListRow } from "@/lib/patients/directory";
+import { listPatients, patientChartHref, type PatientListRow } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
+import { PatientSearchPanel } from "@/components/attendance/PatientSearchPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 
 export function RecordsIndex() {
@@ -103,12 +104,15 @@ export function RecordsIndex() {
         </p>
         <h1 className="page-title mt-1">Prontuário</h1>
         <p className="mt-2 max-w-2xl text-sm text-lotus-700">
-          Experiência oficial do atendimento clínico. Inicie ou continue pela agenda; use esta
-          página para retomar encounters abertos ou consultar atendimentos já assinados.
+          Pesquisar uma paciente abre o prontuário centrado nela — sem depender da agenda. Atendimentos
+          abertos e recentes continuam disponíveis abaixo.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/app/agenda" className={buttonClass}>
             Ir para a agenda
+          </Link>
+          <Link href="/app/patients" className={ghostButtonClass}>
+            Cadastro de pacientes
           </Link>
           <button type="button" className={ghostButtonClass} onClick={() => void load()}>
             Atualizar
@@ -136,6 +140,12 @@ export function RecordsIndex() {
         <StatusMessage error={error} />
       </div>
 
+      {supabase ? (
+        <div className="mt-4">
+          <PatientSearchPanel supabase={supabase} autoFocus />
+        </div>
+      ) : null}
+
       <section className="card mt-4">
         <h2 className="text-base font-semibold text-lotus-900">Atendimentos em aberto</h2>
         <p className="mt-1 text-sm text-lotus-600">
@@ -144,7 +154,8 @@ export function RecordsIndex() {
         </p>
         {openRows.length === 0 ? (
           <p className="mt-3 text-sm text-lotus-600">
-            Nenhum atendimento aberto. Use a agenda para iniciar ou continuar.
+            Nenhum atendimento aberto. Use a agenda para iniciar ou continue pelo histórico da
+            paciente.
           </p>
         ) : (
           <ul className="mt-4 space-y-2">
@@ -161,9 +172,14 @@ export function RecordsIndex() {
                     {formatDateTime(row.createdAt)} · {ENCOUNTER_STATUS_LABEL[row.status]}
                   </p>
                 </div>
-                <Link href={`/app/records/${row.id}`} className={buttonClass}>
-                  Continuar atendimento
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={patientChartHref(row.patientId)} className={ghostButtonClass}>
+                    Prontuário
+                  </Link>
+                  <Link href={`/app/records/${row.id}`} className={buttonClass}>
+                    Continuar atendimento
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>
@@ -193,9 +209,14 @@ export function RecordsIndex() {
                     {ENCOUNTER_STATUS_LABEL[row.status]}
                   </p>
                 </div>
-                <Link href={`/app/records/${row.id}`} className={ghostButtonClass}>
-                  Consultar
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={patientChartHref(row.patientId)} className={ghostButtonClass}>
+                    Prontuário
+                  </Link>
+                  <Link href={`/app/records/${row.id}`} className={ghostButtonClass}>
+                    Consultar
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

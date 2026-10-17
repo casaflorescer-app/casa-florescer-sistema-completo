@@ -2,23 +2,35 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
+import { hasStaffRole } from "@/lib/auth/access";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
   listPatients,
   maskCpf,
-  matchesPatientQuery,
+  patientChartHref,
+  searchPatients,
   type PatientListRow,
 } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
-import { StatusMessage, buttonClass, fieldClass } from "@/components/platform/Ui";
+import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 
 export function PatientList() {
+  const { authorization } = useAuth();
+  const canOpenChart = authorization ? hasStaffRole(authorization, "physician") : false;
   const [rows, setRows] = useState<PatientListRow[]>([]);
   const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebounced(query.trim()), 280);
+    return () => window.clearTimeout(t);
+  }, [query]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -42,9 +54,39 @@ export function PatientList() {
       });
   }, []);
 
-  const filtered = useMemo(
-    () => rows.filter((row) => matchesPatientQuery(row, query)),
-    [rows, query],
+  const [filtered, setFiltered] = useState<PatientListRow[]>([]);
+
+  useEffect(() => {
+    if (!debounced) {
+      setFiltered(rows);
+      return;
+    }
+    if (debounced.length < 2) {
+      setFiltered([]);
+      return;
+    }
+    const supabase = createClient();
+    if (!supabase) return;
+    let cancelled = false;
+    setSearching(true);
+    void searchPatients(supabase, debounced, { limit: 40 })
+      .then((data) => {
+        if (!cancelled) setFiltered(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFiltered([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced, rows]);
+
+  const displayRows = useMemo(
+    () => (debounced ? filtered : rows),
+    [debounced, filtered, rows],
   );
 
   return (
@@ -67,9 +109,9 @@ export function PatientList() {
         />
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-lotus-600">
-            {loading
+            {loading || searching
               ? "Carregando…"
-              : `${filtered.length} ${filtered.length === 1 ? "paciente" : "pacientes"}`}
+              : `${displayRows.length} ${displayRows.length === 1 ? "paciente" : "pacientes"}`}
           </p>
           <Link href="/app/patients/new" className={`${buttonClass} inline-flex items-center`}>
             Nova paciente
@@ -81,7 +123,7 @@ export function PatientList() {
         <p className="mt-6 text-sm text-lotus-600">Carregando pacientes…</p>
       ) : null}
 
-      {!loading && !error && filtered.length === 0 ? (
+      {!loading && !error && displayRows.length === 0 ? (
         <section className="card mt-6 text-sm text-lotus-700">
           {rows.length === 0
             ? "Nenhuma paciente visível com o seu vínculo."
@@ -89,10 +131,10 @@ export function PatientList() {
         </section>
       ) : null}
 
-      {!loading && filtered.length > 0 ? (
+      {!loading && displayRows.length > 0 ? (
         <>
           <ul className="mt-6 space-y-3 md:hidden">
-            {filtered.map((row) => (
+            {displayRows.map((row) => (
               <li key={row.id}>
                 <article className="card">
                   <div className="flex gap-3">
@@ -126,12 +168,22 @@ export function PatientList() {
                           <dd className="break-all">{row.email ?? "—"}</dd>
                         </div>
                       </dl>
-                      <Link
-                        href={`/app/patients/${row.id}`}
-                        className="mt-3 inline-flex text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
-                      >
-                        Ver detalhes
-                      </Link>
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        <Link
+                          href={`/app/patients/${row.id}`}
+                          className="inline-flex text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
+                        >
+                          Ver detalhes
+                        </Link>
+                        {canOpenChart ? (
+                          <Link
+                            href={patientChartHref(row.id)}
+                            className="inline-flex text-sm font-semibold text-lotus-900 underline-offset-2 hover:underline"
+                          >
+                            Abrir prontuário
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -154,7 +206,7 @@ export function PatientList() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row) => (
+                {displayRows.map((row) => (
                   <tr key={row.id} className="border-b border-lotus-50 align-top hover:bg-lotus-50/70">
                     <td className="px-3 py-3">
                       <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
@@ -183,12 +235,22 @@ export function PatientList() {
                       {formatDateTime(row.createdAt)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-right">
-                      <Link
-                        href={`/app/patients/${row.id}`}
-                        className="inline-flex min-h-11 items-center text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
-                      >
-                        Ver detalhes
-                      </Link>
+                      <div className="flex flex-col items-end gap-1">
+                        <Link
+                          href={`/app/patients/${row.id}`}
+                          className="inline-flex min-h-11 items-center text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
+                        >
+                          Ver detalhes
+                        </Link>
+                        {canOpenChart ? (
+                          <Link
+                            href={patientChartHref(row.id)}
+                            className={`${ghostButtonClass} inline-flex min-h-11 items-center`}
+                          >
+                            Abrir prontuário
+                          </Link>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -582,6 +582,84 @@ export async function listPatients(supabase: SupabaseClient): Promise<PatientLis
   });
 }
 
+/**
+ * C040.10 — busca server-side de pacientes (RLS já filtra o escopo).
+ * Não retorna dados clínicos. Limite padrão evita carregar a tabela inteira.
+ */
+export async function searchPatients(
+  supabase: SupabaseClient,
+  rawQuery: string,
+  options?: { limit?: number },
+): Promise<PatientListRow[]> {
+  const limit = Math.min(Math.max(options?.limit ?? 30, 1), 50);
+  const query = rawQuery.trim();
+  if (query.length < 2) return [];
+
+  const digits = onlyDigits(query);
+  const pattern = `%${query.replace(/[%_]/g, "")}%`;
+
+  let builder = supabase
+    .from("patients")
+    .select(PATIENT_LIST_PHOTO_COLUMNS)
+    .order("full_name")
+    .limit(limit);
+
+  if (digits.length >= 3 && digits.length === query.replace(/\D/g, "").length) {
+    // CPF / telefone: filtrar no servidor por dígitos quando a query é numérica
+    builder = builder.or(`cpf.ilike.%${digits}%,phone.ilike.%${digits}%`);
+  } else {
+    builder = builder.or(
+      `full_name.ilike.${pattern},social_name.ilike.${pattern}${
+        digits.length >= 3 ? `,cpf.ilike.%${digits}%,phone.ilike.%${digits}%` : ""
+      }`,
+    );
+  }
+
+  let result = await builder;
+  let rowsRaw: Record<string, unknown>[] | null = (result.data ?? null) as Record<
+    string,
+    unknown
+  >[] | null;
+  if (result.error && isMissingPhotoPathColumn(result.error)) {
+    let fallback = supabase
+      .from("patients")
+      .select(PATIENT_LIST_COLUMNS)
+      .order("full_name")
+      .limit(limit);
+    if (digits.length >= 3 && digits.length === query.replace(/\D/g, "").length) {
+      fallback = fallback.or(`cpf.ilike.%${digits}%,phone.ilike.%${digits}%`);
+    } else {
+      fallback = fallback.or(
+        `full_name.ilike.${pattern},social_name.ilike.${pattern}${
+          digits.length >= 3 ? `,cpf.ilike.%${digits}%,phone.ilike.%${digits}%` : ""
+        }`,
+      );
+    }
+    const fb = await fallback;
+    if (fb.error) {
+      logPatientError("search", fb.error);
+      throw new Error(mapListError(fb.error));
+    }
+    rowsRaw = (fb.data ?? null) as Record<string, unknown>[] | null;
+  } else if (result.error) {
+    logPatientError("search", result.error);
+    throw new Error(mapListError(result.error));
+  }
+
+  // Refino local para homônimos / parcial (RLS já restringiu o conjunto)
+  return (rowsRaw ?? [])
+    .flatMap((item) => {
+      const row = toListRow(item);
+      return row && matchesPatientQuery(row, query) ? [row] : [];
+    })
+    .slice(0, limit);
+}
+
+/** Rota oficial do prontuário centrado na paciente (C040.10). Um único conceito. */
+export function patientChartHref(patientId: string): string {
+  return `/app/records/patient/${patientId}`;
+}
+
 export async function getPatient(
   supabase: SupabaseClient,
   patientId: string,

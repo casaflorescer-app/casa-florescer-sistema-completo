@@ -7,15 +7,23 @@ import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
+  CARE_SPECIALTIES,
   listPatients,
   maskCpf,
   patientChartHref,
   searchPatients,
+  type CareSpecialty,
   type PatientListRow,
 } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
+
+const FILTER_LABEL: Record<CareSpecialty | "all", string> = {
+  all: "Todas",
+  gynecology: "Ginecológico",
+  obstetrics: "Obstétrico",
+};
 
 export function PatientList() {
   const { authorization } = useAuth();
@@ -23,6 +31,7 @@ export function PatientList() {
   const [rows, setRows] = useState<PatientListRow[]>([]);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [specialtyFilter, setSpecialtyFilter] = useState<CareSpecialty | "all">("all");
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,15 +93,30 @@ export function PatientList() {
     };
   }, [debounced, rows]);
 
-  const displayRows = useMemo(
-    () => (debounced ? filtered : rows),
-    [debounced, filtered, rows],
-  );
+  /** Especialidades presentes na massa visível — evita chips fictícios. */
+  const availableSpecialties = useMemo(() => {
+    const present = new Set<CareSpecialty>();
+    for (const row of rows) {
+      for (const item of row.careSpecialties) present.add(item);
+    }
+    return CARE_SPECIALTIES.filter((item) => present.has(item));
+  }, [rows]);
+
+  const displayRows = useMemo(() => {
+    const base = debounced ? filtered : rows;
+    if (specialtyFilter === "all") return base;
+    return base.filter((row) => row.careSpecialties.includes(specialtyFilter));
+  }, [debounced, filtered, rows, specialtyFilter]);
+
+  const chipClass = (active: boolean) =>
+    active
+      ? `${buttonClass} inline-flex min-h-10 items-center px-3 py-1.5 text-sm`
+      : `${ghostButtonClass} inline-flex min-h-10 items-center px-3 py-1.5 text-sm`;
 
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Clínica
+        Médico
       </p>
       <h1 className="page-title mt-1">Pacientes</h1>
       <p className="page-sub mt-2">Cadastro e identificação das pacientes</p>
@@ -118,6 +142,34 @@ export function PatientList() {
           </Link>
         </div>
       </div>
+
+      {availableSpecialties.length > 0 ? (
+        <div
+          className="mt-4 flex flex-wrap gap-2"
+          role="group"
+          aria-label="Filtrar por classificação assistencial"
+        >
+          <button
+            type="button"
+            className={chipClass(specialtyFilter === "all")}
+            aria-pressed={specialtyFilter === "all"}
+            onClick={() => setSpecialtyFilter("all")}
+          >
+            {FILTER_LABEL.all}
+          </button>
+          {availableSpecialties.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={chipClass(specialtyFilter === item)}
+              aria-pressed={specialtyFilter === item}
+              onClick={() => setSpecialtyFilter(item)}
+            >
+              {FILTER_LABEL[item]}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {loading ? (
         <p className="mt-6 text-sm text-lotus-600">Carregando pacientes…</p>

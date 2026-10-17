@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
 import {
+  canAccessClinicManagement,
   hasStaffRole,
   isClinicStaff,
   isPatientPortalUser,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/auth/access";
 import { PlatformStatsCards } from "@/components/platform/PlatformStatsCards";
 import { roleLabels } from "@/lib/auth/app-nav";
+import { PhysicianPanel } from "@/components/dashboard/PhysicianPanel";
 
 function DashCard({
   title,
@@ -38,10 +40,41 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
   const roles = uniqueStaffRoles(auth);
   const orgName = auth.organization?.tradeName ?? auth.organization?.legalName ?? null;
   const showPhysician = hasStaffRole(auth, "physician");
-  const showManagers = hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin");
+  const showManagers = canAccessClinicManagement(auth);
   const showSecretary = hasStaffRole(auth, "secretary");
   const showPatient = isPatientPortalUser(auth);
   const showClinicOps = isClinicStaff(auth);
+
+  // C041: médica (inclui sócias OWNER+DOCTOR) usa painel operacional.
+  if (showPhysician) {
+    return (
+      <div className="space-y-6">
+        {auth.isSystemAdmin ? <PlatformStatsCards /> : null}
+        <PhysicianPanel auth={auth} />
+        {showManagers ? (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-lotus-500">
+              Gestão Clínica
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <DashCard title="Gestão de Salas" note="Salas e ocupação." href="/app/rooms" />
+              <DashCard title="Aluguéis" note="Locação de salas." href="/app/rentals" />
+              <DashCard title="Funcionários" note="Profissionais da prática." href="/app/professionals" />
+              <DashCard title="Estoques" note="Insumos e farmácia." href="/app/inventory" />
+            </div>
+          </section>
+        ) : null}
+        <section className="card space-y-1 text-xs text-lotus-600">
+          <p>
+            {orgName ?? "Casa Florescer"}
+            {roles.length ? ` · ${roleLabels(roles)}` : ""}
+            {" · "}
+            {auth.profile?.fullName ?? auth.user.email ?? "—"}
+          </p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -73,40 +106,13 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
       {showManagers ? (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-lotus-500">
-            Gestão da clínica
+            Gestão Clínica
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <DashCard title="Agenda do dia" note="Módulo em implementação." href="/app/agenda" />
-            <DashCard title="Pacientes" note="Módulo em implementação." href="/app/patients" />
-            <DashCard title="Salas" note="Módulo em implementação." href="/app/rooms" />
-            <DashCard
-              title="Profissionais"
-              note="Módulo em implementação."
-              href="/app/professionals"
-            />
-            <DashCard
-              title="Pendências administrativas"
-              note="Indicadores serão apresentados nas próximas fases."
-            />
-          </div>
-        </section>
-      ) : null}
-
-      {showPhysician ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-lotus-500">
-            Assistência clínica
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <DashCard title="Agenda" note="Módulo em implementação." href="/app/agenda" />
-            <DashCard
-              title="Pacientes autorizados"
-              note="O acesso respeita a prática e o clinical_access do membership."
-              href="/app/patients"
-            />
-            <DashCard title="Exames" note="Módulo em implementação." href="/app/exams" />
-            <DashCard title="Receitas" note="Módulo em implementação." href="/app/prescriptions" />
-            <DashCard title="Pendências clínicas" note="Indicadores serão apresentados nas próximas fases." />
+            <DashCard title="Agenda do dia" note="Operação da clínica." href="/app/agenda" />
+            <DashCard title="Pacientes" note="Cadastro administrativo." href="/app/patients" />
+            <DashCard title="Gestão de Salas" note="Salas e ocupação." href="/app/rooms" />
+            <DashCard title="Funcionários" note="Profissionais." href="/app/professionals" />
           </div>
         </section>
       ) : null}
@@ -117,12 +123,13 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
             Secretaria
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <DashCard title="Agenda" note="Módulo em implementação." href="/app/agenda" />
-            <DashCard title="Pacientes" note="Módulo em implementação." href="/app/patients" />
-            <DashCard title="Exames" note="Módulo em implementação." href="/app/exams" />
+            <DashCard title="Agenda" note="Agendamento e confirmação." href="/app/agenda" />
+            <DashCard title="Pacientes" note="Cadastro e identificação." href="/app/patients" />
+            <DashCard title="Exames" note="Pedidos e resultados." href="/app/exams" />
             <DashCard
-              title="Tarefas administrativas"
-              note="A secretaria não altera evolução clínica nem prontuário médico."
+              title="Central de Relacionamentos"
+              note="Fila operacional da secretaria."
+              href="/app/relationship"
             />
           </div>
         </section>

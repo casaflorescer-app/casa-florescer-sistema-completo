@@ -1,17 +1,16 @@
 import type { AuthorizationContext, StaffRole } from "@/lib/auth/authorization";
 import {
-  canViewCarePolicies,
+  canAccessClinicManagement,
   hasStaffRole,
   isClinicStaff,
   isPatientPortalUser,
 } from "@/lib/auth/access";
 
 export type AppNavSectionId =
-  | "inicio"
-  | "clinica"
-  | "assistencia"
-  | "gestao"
-  | "administracao"
+  | "painel"
+  | "medico"
+  | "relacionamentos"
+  | "gestao_clinica"
   | "paciente"
   | "sistema";
 
@@ -30,14 +29,16 @@ export type AppNavSection = {
 
 const clinicStaff = (auth: AuthorizationContext) => isClinicStaff(auth);
 const physician = (auth: AuthorizationContext) => hasStaffRole(auth, "physician");
-const clinicManagers = (auth: AuthorizationContext) =>
-  hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin");
-const carePolicyViewers = (auth: AuthorizationContext) => canViewCarePolicies(auth);
+const clinicManagement = (auth: AuthorizationContext) => canAccessClinicManagement(auth);
 
+/**
+ * C041 — ordem fixa: PAINEL → MÉDICO → CENTRAL → GESTÃO CLÍNICA.
+ * Gestão Clínica nunca usa só role=physician.
+ */
 export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
-    id: "inicio",
-    title: "Início",
+    id: "painel",
+    title: "Painel",
     items: [
       {
         id: "overview",
@@ -48,37 +49,12 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     ],
   },
   {
-    id: "clinica",
-    title: "Clínica",
+    id: "medico",
+    title: "Médico",
     items: [
       { id: "agenda", label: "Agenda", href: "/app/agenda", visible: clinicStaff },
       { id: "patients", label: "Pacientes", href: "/app/patients", visible: clinicStaff },
-      {
-        id: "professionals",
-        label: "Profissionais",
-        href: "/app/professionals",
-        visible: clinicStaff,
-      },
-      {
-        id: "rooms",
-        label: "Salas",
-        href: "/app/rooms",
-        visible: clinicStaff,
-      },
-      {
-        id: "specialties",
-        label: "Especialidades",
-        href: "/app/specialties",
-        visible: clinicManagers,
-      },
-    ],
-  },
-  {
-    id: "assistencia",
-    title: "Assistência",
-    items: [
       { id: "records", label: "Prontuário", href: "/app/records", visible: physician },
-      { id: "obstetrics", label: "Obstetrícia", href: "/app/obstetrics", visible: physician },
       { id: "exams", label: "Exames", href: "/app/exams", visible: clinicStaff },
       {
         id: "prescriptions",
@@ -86,28 +62,18 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         href: "/app/prescriptions",
         visible: clinicStaff,
       },
+      {
+        id: "obstetrics",
+        label: "Obstetrícia",
+        href: "/app/obstetrics",
+        visible: physician,
+      },
     ],
   },
   {
-    id: "gestao",
-    title: "Gestão",
+    id: "relacionamentos",
+    title: "Central de Relacionamentos",
     items: [
-      { id: "rentals", label: "Locação de salas", href: "/app/rentals", visible: clinicManagers },
-      {
-        id: "inventory",
-        label: "Estoque",
-        href: "/app/inventory",
-        visible: (auth) =>
-          clinicManagers(auth) ||
-          auth.memberships.some((item) => item.canManageStock),
-      },
-      { id: "reports", label: "Financeiro e relatórios", href: "/app/reports", visible: clinicManagers },
-      {
-        id: "care-policies",
-        label: "Política de atendimento",
-        href: "/app/care-policies",
-        visible: carePolicyViewers,
-      },
       {
         id: "relationship",
         label: "Central de Relacionamentos",
@@ -120,28 +86,88 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     ],
   },
   {
-    id: "administracao",
-    title: "Administração da clínica",
+    id: "gestao_clinica",
+    title: "Gestão Clínica",
     items: [
-      { id: "clinic-users", label: "Usuários", href: "/app/admin/users", visible: clinicManagers },
+      {
+        id: "rooms",
+        label: "Gestão de Salas",
+        href: "/app/rooms",
+        visible: clinicManagement,
+      },
+      {
+        id: "rentals",
+        label: "Aluguéis",
+        href: "/app/rentals",
+        visible: clinicManagement,
+      },
+      {
+        id: "professionals",
+        label: "Funcionários",
+        href: "/app/professionals",
+        visible: clinicManagement,
+      },
+      {
+        id: "specialties",
+        label: "Especialidades",
+        href: "/app/specialties",
+        visible: clinicManagement,
+      },
+      {
+        id: "inventory",
+        label: "Estoques",
+        href: "/app/inventory",
+        visible: (auth) =>
+          clinicManagement(auth) ||
+          auth.memberships.some((item) => item.canManageStock),
+      },
+      {
+        id: "reports",
+        label: "Financeiro e relatórios",
+        href: "/app/reports",
+        visible: clinicManagement,
+      },
+      {
+        id: "care-policies",
+        label: "Política de atendimento",
+        href: "/app/care-policies",
+        // Menu de gestão: só gestão clínica / secretária com flag — evita abrir o grupo
+        // para médica comum (path /app/care-policies permanece nas PATH_RULES).
+        visible: (auth) =>
+          clinicManagement(auth) ||
+          auth.memberships.some(
+            (item) => item.role === "secretary" && item.canViewCarePolicies,
+          ),
+      },
+      {
+        id: "clinic-users",
+        label: "Usuários",
+        href: "/app/admin/users",
+        visible: clinicManagement,
+      },
       {
         id: "clinic-org",
         label: "Organização",
         href: "/app/admin/organization",
-        visible: clinicManagers,
+        visible: clinicManagement,
       },
       {
         id: "clinic-permissions",
         label: "Permissões",
         href: "/app/admin/permissions",
-        visible: clinicManagers,
+        visible: clinicManagement,
       },
-      { id: "clinic-audit", label: "Auditoria", href: "/app/admin/audit", visible: clinicManagers },
+      {
+        id: "clinic-audit",
+        label: "Auditoria",
+        href: "/app/admin/audit",
+        visible: clinicManagement,
+      },
       {
         id: "clinic-settings",
         label: "Configurações da clínica",
         href: "/app/admin/settings",
-        visible: clinicManagers,
+        visible: clinicManagement,
       },
     ],
   },

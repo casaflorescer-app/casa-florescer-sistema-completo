@@ -2,7 +2,7 @@
 import { isValidCpf, onlyDigits } from "@/lib/patients/format";
 
 export const PATIENT_LIST_COLUMNS =
-  "id, organization_id, full_name, social_name, cpf, birth_date, phone, email, created_by, created_at" as const;
+  "id, organization_id, full_name, social_name, cpf, birth_date, phone, email, created_by, created_at, care_specialties" as const;
 
 export const PATIENT_LIST_PHOTO_COLUMNS = `${PATIENT_LIST_COLUMNS}, photo_path` as const;
 
@@ -97,6 +97,8 @@ export type PatientListRow = {
   createdBy: string | null;
   createdAt: string;
   photoPath: string | null;
+  /** Classificação assistencial (C041 filtro Pacientes). */
+  careSpecialties: CareSpecialty[];
 };
 
 export type PatientDetailRow = PatientListRow & {
@@ -109,7 +111,6 @@ export type PatientDetailRow = PatientListRow & {
   addressState: string | null;
   addressCep: string | null;
   receptionNotes: string | null;
-  careSpecialties: CareSpecialty[];
   billingModality: BillingModality | null;
   insuranceName: string | null;
   insuranceCardNumber: string | null;
@@ -460,6 +461,7 @@ function toListRow(value: Record<string, unknown>): PatientListRow | null {
     createdBy: asString(value.created_by),
     createdAt,
     photoPath: asString(value.photo_path),
+    careSpecialties: parseCareSpecialties(value.care_specialties),
   };
 }
 
@@ -478,7 +480,6 @@ function toDetailRow(value: Record<string, unknown>): PatientDetailRow | null {
     addressState: asTrimmed(value.address_state)?.toUpperCase() ?? null,
     addressCep: asTrimmed(value.address_cep) ? onlyDigits(String(value.address_cep)) : null,
     receptionNotes: asTrimmed(value.reception_notes),
-    careSpecialties: parseCareSpecialties(value.care_specialties),
     billingModality: isBillingModality(value.billing_modality) ? value.billing_modality : null,
     insuranceName: asTrimmed(value.insurance_name),
     insuranceCardNumber: asTrimmed(value.insurance_card_number),

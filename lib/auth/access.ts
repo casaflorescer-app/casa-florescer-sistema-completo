@@ -18,6 +18,15 @@ export function isClinicStaff(auth: AuthorizationContext): boolean {
   return hasAnyStaffRole(auth, CLINIC_STAFF);
 }
 
+/**
+ * C041 — Gestão Clínica (salas, aluguéis, usuários, etc.).
+ * Sócias OWNER+DOCTOR e admins. Não usar role=physician sozinha.
+ * can_manage_stock abre só Estoque no menu, não este gate completo.
+ */
+export function canAccessClinicManagement(auth: AuthorizationContext): boolean {
+  return hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin");
+}
+
 /** UI da política comercial (B1). Não substitui RLS. Secretária comum só com flag. */
 export function canManageCarePolicies(auth: AuthorizationContext): boolean {
   return hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin") || hasStaffRole(auth, "physician");
@@ -167,12 +176,20 @@ const PATH_RULES: PathRule[] = [
     allow: (auth) => isClinicStaff(auth),
   },
   {
+    // C041: Funcionários sob Gestão Clínica.
     prefix: "/app/professionals",
-    allow: (auth) => isClinicStaff(auth),
+    allow: (auth) =>
+      auth.isSystemAdmin ||
+      hasStaffRole(auth, "owner") ||
+      hasStaffRole(auth, "admin"),
   },
   {
+    // C041: Gestão de Salas fica em Gestão Clínica (não no menu médico comum).
     prefix: "/app/rooms",
-    allow: (auth) => auth.isSystemAdmin || isClinicStaff(auth),
+    allow: (auth) =>
+      auth.isSystemAdmin ||
+      hasStaffRole(auth, "owner") ||
+      hasStaffRole(auth, "admin"),
   },
   {
     prefix: "/app/exams",

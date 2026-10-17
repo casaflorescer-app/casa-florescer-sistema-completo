@@ -90,7 +90,7 @@ function navFor(memberships) {
   const sections = [];
   sections.push("Painel");
   if (physician || secretary || clinicManagement) sections.push("Médico");
-  if (secretary || clinicManagement) sections.push("Central");
+  if (secretary || clinicManagement || physician) sections.push("Central");
   if (clinicManagement || stock) sections.push("Gestão Clínica");
   return { clinicManagement, physician, secretary, sections };
 }
@@ -107,6 +107,8 @@ async function main() {
     else fail("médica comum role", JSON.stringify(nav));
     if (!nav.sections.includes("Gestão Clínica")) pass("médica comum: Gestão Clínica NÃO no menu");
     else fail("médica comum vê Gestão Clínica");
+    if (nav.sections.includes("Central")) pass("médica comum: Central VISÍVEL no menu");
+    else fail("médica comum sem Central");
 
     const sb = await login(PHYS_A);
     const { data: rooms, error: roomsErr } = await sb.from("rooms").select("id").limit(1);
@@ -143,6 +145,50 @@ select json_build_object(
   }
   // Espelho do gate: owner ⇒ Gestão Clínica visível
   if (Number(owners.owner_n) >= 1) pass("gate Gestão Clínica para owner = VISÍVEL");
+
+  // Sócias por nome (sem dump de e-mail): owner na CASA
+  const partners = parsePayload(dbQuery(`
+select json_build_object(
+  'samara_owner', (
+    select count(*)::int from public.profiles p
+    join public.user_practice_roles upr on upr.user_id = p.id
+    where upr.practice_id = '${CASA}' and upr.role = 'owner'
+      and (p.full_name ilike '%samara%' or p.email ilike '%samara%')
+  ),
+  'thais_owner', (
+    select count(*)::int from public.profiles p
+    join public.user_practice_roles upr on upr.user_id = p.id
+    where upr.practice_id = '${CASA}' and upr.role = 'owner'
+      and (p.full_name ilike '%thais%' or p.email ilike '%thais%')
+  ),
+  'samara_physician', (
+    select count(*)::int from public.profiles p
+    join public.user_practice_roles upr on upr.user_id = p.id
+    where upr.practice_id = '${CASA}' and upr.role = 'physician'
+      and (p.full_name ilike '%samara%' or p.email ilike '%samara%')
+  ),
+  'thais_physician', (
+    select count(*)::int from public.profiles p
+    join public.user_practice_roles upr on upr.user_id = p.id
+    where upr.practice_id = '${CASA}' and upr.role = 'physician'
+      and (p.full_name ilike '%thais%' or p.email ilike '%thais%')
+  )
+)::text as payload;
+`));
+  if (Number(partners.samara_owner) >= 1) pass("Dra. Samara: owner → Gestão Clínica");
+  else if (Number(partners.samara_physician) >= 1) {
+    fail(
+      "Dra. Samara: Gestão Clínica",
+      "conta encontrada como physician sem role owner (dados; gate por RBAC OK)",
+    );
+  } else fail("Dra. Samara: perfil não localizado");
+  if (Number(partners.thais_owner) >= 1) pass("Dra. Thais: owner → Gestão Clínica");
+  else if (Number(partners.thais_physician) >= 1) {
+    fail(
+      "Dra. Thais: Gestão Clínica",
+      "conta encontrada como physician sem role owner (dados; gate por RBAC OK)",
+    );
+  } else fail("Dra. Thais: perfil não localizado");
 
   // Médica B (outra practice) — se login funcionar com mesma senha UAT
   try {

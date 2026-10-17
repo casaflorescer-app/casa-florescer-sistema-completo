@@ -200,12 +200,13 @@ const PATH_RULES: PathRule[] = [
     allow: (auth) => isClinicStaff(auth),
   },
   {
-    // Central de Relacionamentos (C037): secretaria/gestão — sem médica/paciente.
+    // C041: médica pode abrir a rota (menu). Mutações RPC continuam em can_manage_relationship.
     prefix: "/app/relationship",
     allow: (auth) =>
       hasStaffRole(auth, "secretary") ||
       hasStaffRole(auth, "owner") ||
-      hasStaffRole(auth, "admin"),
+      hasStaffRole(auth, "admin") ||
+      hasStaffRole(auth, "physician"),
   },
   { prefix: "/app/dashboard", exact: true, allow: () => true },
   { prefix: "/app", exact: true, allow: () => true },

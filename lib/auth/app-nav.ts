@@ -62,12 +62,6 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         href: "/app/prescriptions",
         visible: clinicStaff,
       },
-      {
-        id: "obstetrics",
-        label: "Obstetrícia",
-        href: "/app/obstetrics",
-        visible: physician,
-      },
     ],
   },
   {
@@ -78,10 +72,13 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         id: "relationship",
         label: "Central de Relacionamentos",
         href: "/app/relationship",
+        // C041: grupo visível também à médica. Operação de fila permanece
+        // secretaria/owner/admin via canManage na página + RPCs (C037).
         visible: (auth) =>
           hasStaffRole(auth, "secretary") ||
           hasStaffRole(auth, "owner") ||
-          hasStaffRole(auth, "admin"),
+          hasStaffRole(auth, "admin") ||
+          hasStaffRole(auth, "physician"),
       },
     ],
   },

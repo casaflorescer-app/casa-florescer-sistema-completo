@@ -21,6 +21,11 @@ ok(
   /Agenda[\s\S]*Pacientes[\s\S]*Prontuário[\s\S]*Exames[\s\S]*Receitas/.test(nav),
 );
 ok("seção Central de Relacionamentos", nav.includes('id: "relacionamentos"'));
+ok(
+  "Central visível também a physician",
+  /relacionamentos[\s\S]*physician/.test(nav) || nav.includes('hasStaffRole(auth, "physician")'),
+);
+ok("Médico sem Obstetrícia no grupo (lista exata C041)", !/Receitas[\s\S]*obstetrics[\s\S]*relacionamentos/.test(nav));
 ok("seção Gestão Clínica", nav.includes('id: "gestao_clinica"') && nav.includes("Gestão de Salas"));
 ok("Gestão usa canAccessClinicManagement", nav.includes("canAccessClinicManagement"));
 ok("sem email hardcode no nav", !/samara@|thais@|===.*email/i.test(nav));

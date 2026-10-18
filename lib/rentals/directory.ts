@@ -587,9 +587,11 @@ function mapRpcError(message: string): string {
   if (
     message.includes("RENTAL_CONTRACT_ROOM_OVERLAP") ||
     message.includes("exclusion") ||
-    message.includes("rental_contracts_room_no_overlap")
+    message.includes("rental_contracts_room_no_overlap") ||
+    message.includes("rental_contracts_one_active_per_room") ||
+    message.includes("one_active_per_room")
   ) {
-    return "Conflito de sala: já existe contrato ativo/futuro nesta sala no período informado.";
+    return "Conflito de sala: já existe contrato ativo/futuro nesta sala (máx. 1 scheduled/active por sala).";
   }
   if (
     message.includes("sublet_consultorio") ||

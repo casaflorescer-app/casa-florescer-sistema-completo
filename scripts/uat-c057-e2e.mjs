@@ -140,20 +140,26 @@ select jsonb_build_object(
     order by p.full_name
     limit 1
   ),
-  'sublet_room', (
-    select id::text from public.rooms
-    where organization_id = '${ORG}' and room_kind = 'sublet_consultorio' and status = 'active'
-    order by code limit 1
+  -- Preferir sala LIVRE (sem contrato scheduled/active). Todas as sublets seed estão ocupadas.
+  'free_room', (
+    select r.id::text from public.rooms r
+    where r.organization_id = '${ORG}' and r.status = 'active'
+      and not exists (
+        select 1 from public.rental_contracts c
+        where c.room_id = r.id and c.is_active and c.status in ('scheduled','active')
+      )
+    order by case when r.code like 'UAT%' then 0 else 1 end, r.code
+    limit 1
   ),
-  'any_room', (
-    select id::text from public.rooms
-    where organization_id = '${ORG}' and status = 'active'
-    order by code limit 1
-  ),
-  'any_room_kind', (
-    select room_kind::text from public.rooms
-    where organization_id = '${ORG}' and status = 'active'
-    order by code limit 1
+  'free_room_kind', (
+    select r.room_kind::text from public.rooms r
+    where r.organization_id = '${ORG}' and r.status = 'active'
+      and not exists (
+        select 1 from public.rental_contracts c
+        where c.room_id = r.id and c.is_active and c.status in ('scheduled','active')
+      )
+    order by case when r.code like 'UAT%' then 0 else 1 end, r.code
+    limit 1
   ),
   'professional_id', (
     select id::text from public.professionals
@@ -228,19 +234,20 @@ on conflict (user_id, practice_id, role) do nothing;
       pass("migration 0050 detectada");
     }
 
-    roomId = ownerInfo.sublet_room || ownerInfo.any_room;
-    roomKindPrev = ownerInfo.sublet_room ? "sublet_consultorio" : ownerInfo.any_room_kind;
+    roomId = ownerInfo.free_room;
+    roomKindPrev = ownerInfo.free_room_kind;
     if (!roomId) {
-      fail("sala disponível");
+      fail("sala livre disponível");
       process.exitCode = 1;
       return;
     }
 
-    if (!ownerInfo.sublet_room) {
+    // Contrato exige room_kind = sublet_consultorio (trigger 0005).
+    if (roomKindPrev !== "sublet_consultorio") {
       dbQuery(`update public.rooms set room_kind = 'sublet_consultorio' where id = '${roomId}';`);
-      pass("sala temporária classificada sublet (UAT)");
+      pass("sala temporária classificada sublet (UAT)", roomId.slice(0, 8));
     } else {
-      pass("sala sublet existente", roomId.slice(0, 8));
+      pass("sala sublet livre", roomId.slice(0, 8));
     }
 
     const professionalId = ownerInfo.professional_id || null;
@@ -285,33 +292,40 @@ on conflict (user_id, practice_id, role) do nothing;
           notes: `${MARKER}conflito`,
         },
       });
+      const isConflictMsg = (msg) =>
+        /OVERLAP|overlap|exclusion|one_active_per_room|rental_contracts_room_no_overlap/i.test(
+          msg || "",
+        );
+
       if (!errB) {
         contractB = createdB?.id ?? null;
         fail("conflito de sala deveria bloquear");
-      } else if (/OVERLAP|overlap|exclusion|sublet/i.test(errB.message)) {
+      } else if (isConflictMsg(errB.message)) {
         pass("conflito de sala bloqueado", errB.message.slice(0, 80));
       } else {
         fail("conflito mensagem inesperada", errB.message.slice(0, 120));
       }
 
-      // Permitido: 2028-01-01 → 2028-12-31 (após A)
-      const { data: createdOk, error: errOk } = await ownerSb.rpc("rental_contract_create", {
-        p_payload: {
-          organization_id: ORG,
-          room_id: roomId,
-          tenant_name: `${MARKER}Sequencial ${stamp}`,
-          tenant_specialty: "Dermatologia",
-          monthly_rent_cents: 210000,
-          starts_on: "2028-01-01",
-          ends_on: "2028-12-31",
-          notes: `${MARKER}sequencial`,
-        },
-      });
-      if (errOk || !createdOk?.id) {
-        fail("contrato sequencial permitido", errOk?.message ?? "null");
-      } else {
-        contractB = createdOk.id;
-        pass("contrato sequencial permitido", createdOk.contract_code || contractB.slice(0, 8));
+      // Enquanto A está aberto, sequencial 2028 também é bloqueado (1 ativo/sala — 0005).
+      {
+        const { error: seqBusyErr } = await ownerSb.rpc("rental_contract_create", {
+          p_payload: {
+            organization_id: ORG,
+            room_id: roomId,
+            tenant_name: `${MARKER}SeqBusy ${stamp}`,
+            tenant_specialty: "Dermatologia",
+            monthly_rent_cents: 210000,
+            starts_on: "2028-01-01",
+            ends_on: "2028-12-31",
+            notes: `${MARKER}seq_busy`,
+          },
+        });
+        if (!seqBusyErr) fail("sequencial com A ativo deveria bloquear (1 ativo/sala)");
+        else if (isConflictMsg(seqBusyErr.message)) {
+          pass("regra explícita coexistência: máx. 1 scheduled/active por sala");
+        } else {
+          fail("sequencial busy mensagem", seqBusyErr.message.slice(0, 120));
+        }
       }
 
       // Listagem / busca
@@ -324,7 +338,7 @@ on conflict (user_id, practice_id, role) do nothing;
       else if ((listed?.length ?? 0) >= 1) pass("listar/pesquisar contratos", String(listed.length));
       else fail("listar contratos vazia");
 
-      // Detalhe IDOR-ish: org filter
+      // Detalhe
       if (contractA) {
         const { data: detail } = await ownerSb
           .from("rental_contracts")
@@ -336,7 +350,7 @@ on conflict (user_id, practice_id, role) do nothing;
         else fail("detalhe contrato A");
       }
 
-      // Update
+      // Update + histórico (com A ainda mutável)
       if (contractA) {
         const { error: updErr } = await ownerSb.rpc("rental_contract_update", {
           p_contract_id: contractA,
@@ -344,10 +358,7 @@ on conflict (user_id, practice_id, role) do nothing;
         });
         if (updErr) fail("editar contrato", updErr.message);
         else pass("editar contrato");
-      }
 
-      // Histórico
-      if (contractA) {
         const { data: events, error: evErr } = await ownerSb
           .from("rental_contract_events")
           .select("id, event_kind")
@@ -357,7 +368,7 @@ on conflict (user_id, practice_id, role) do nothing;
         else fail("histórico vazio");
       }
 
-      // Renovar A
+      // Renovar A → encerra origem + cria novo
       if (contractA) {
         const { data: renewed, error: renErr } = await ownerSb.rpc("rental_contract_renew", {
           p_contract_id: contractA,
@@ -379,6 +390,37 @@ on conflict (user_id, practice_id, role) do nothing;
         }
       }
 
+      // Sequencial após liberar sala (encerrar renovado)
+      if (renewedId) {
+        const { error: endRenErr } = await ownerSb.rpc("rental_contract_end", {
+          p_contract_id: renewedId,
+          p_reason: `${MARKER}liberar_para_sequencial`,
+        });
+        if (endRenErr) fail("encerrar renovado", endRenErr.message);
+        else pass("encerrar renovado para sequencial");
+      }
+
+      {
+        const { data: createdOk, error: errOk } = await ownerSb.rpc("rental_contract_create", {
+          p_payload: {
+            organization_id: ORG,
+            room_id: roomId,
+            tenant_name: `${MARKER}Sequencial ${stamp}`,
+            tenant_specialty: "Dermatologia",
+            monthly_rent_cents: 210000,
+            starts_on: "2028-01-01",
+            ends_on: "2028-12-31",
+            notes: `${MARKER}sequencial`,
+          },
+        });
+        if (errOk || !createdOk?.id) {
+          fail("contrato sequencial permitido", errOk?.message ?? "null");
+        } else {
+          contractB = createdOk.id;
+          pass("contrato sequencial permitido", createdOk.contract_code || contractB.slice(0, 8));
+        }
+      }
+
       // Encerrar sequencial
       if (contractB) {
         const { error: endErr } = await ownerSb.rpc("rental_contract_end", {
@@ -389,14 +431,29 @@ on conflict (user_id, practice_id, role) do nothing;
         else pass("encerrar contrato");
       }
 
-      // Cancelar renovado
-      if (renewedId) {
-        const { error: cancelErr } = await ownerSb.rpc("rental_contract_cancel", {
-          p_contract_id: renewedId,
-          p_reason: `${MARKER}cancelado`,
+      // Cancelar: criar rascunho futuro e cancelar (renovado já encerrado)
+      {
+        const { data: toCancel, error: cErr } = await ownerSb.rpc("rental_contract_create", {
+          p_payload: {
+            organization_id: ORG,
+            room_id: roomId,
+            tenant_name: `${MARKER}Cancelavel ${stamp}`,
+            tenant_specialty: "GO",
+            monthly_rent_cents: 100000,
+            starts_on: "2030-01-01",
+            ends_on: "2030-06-30",
+            notes: `${MARKER}cancelavel`,
+          },
         });
-        if (cancelErr) fail("cancelar", cancelErr.message);
-        else pass("cancelar contrato");
+        if (cErr || !toCancel?.id) fail("criar para cancelar", cErr?.message ?? "null");
+        else {
+          const { error: cancelErr } = await ownerSb.rpc("rental_contract_cancel", {
+            p_contract_id: toCancel.id,
+            p_reason: `${MARKER}cancelado`,
+          });
+          if (cancelErr) fail("cancelar", cancelErr.message);
+          else pass("cancelar contrato");
+        }
       }
     }
 

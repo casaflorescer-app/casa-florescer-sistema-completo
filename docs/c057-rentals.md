@@ -40,11 +40,14 @@ Não reescreve silenciosamente o contrato encerrado.
 
 ## Conflito de sala
 
-Constraint GiST `rental_contracts_room_no_overlap` (0005): períodos `scheduled`/`active` na mesma sala **não podem sobrepor**.
+Duas regras do schema 0005 (explícitas, sem conflito silencioso):
 
-Mensagem operacional: `RENTAL_CONTRACT_ROOM_OVERLAP`.
+1. **GiST** `rental_contracts_room_no_overlap`: períodos `scheduled`/`active` na mesma sala **não podem sobrepor**.
+2. **Unique parcial** `rental_contracts_one_active_per_room`: no máximo **um** contrato `scheduled`/`active` por sala (mesmo em períodos consecutivos não sobrepostos).
 
-Períodos consecutivos (`A.ends_on + 1 = B.starts_on`) são permitidos.
+Consequência operacional: para criar um contrato sequencial (ex. 2028 após 2027), o contrato anterior deve estar `ended` ou `cancelled`. A renovação já faz isso (encerra origem + cria novo).
+
+Mensagem operacional: conflito de sala / `RENTAL_CONTRACT_ROOM_OVERLAP` (também mapeia violação do unique).
 
 ## RBAC
 

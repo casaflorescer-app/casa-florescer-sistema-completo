@@ -566,19 +566,32 @@ function toPersistPayload(input: PatientCreateInput) {
 }
 
 export async function listPatients(supabase: SupabaseClient): Promise<PatientListRow[]> {
-  let result = await supabase.from("patients").select(PATIENT_LIST_PHOTO_COLUMNS).order("full_name");
+  const primary = await supabase
+    .from("patients")
+    .select(PATIENT_LIST_PHOTO_COLUMNS)
+    .order("full_name");
 
-  if (result.error && isMissingPhotoPathColumn(result.error)) {
-    result = await supabase.from("patients").select(PATIENT_LIST_COLUMNS).order("full_name");
+  let rowsRaw: Record<string, unknown>[] | null = null;
+
+  if (primary.error && isMissingPhotoPathColumn(primary.error)) {
+    const fallback = await supabase
+      .from("patients")
+      .select(PATIENT_LIST_COLUMNS)
+      .order("full_name");
+    if (fallback.error) {
+      logPatientError("list", fallback.error);
+      throw new Error(mapListError(fallback.error));
+    }
+    rowsRaw = (fallback.data ?? null) as Record<string, unknown>[] | null;
+  } else if (primary.error) {
+    logPatientError("list", primary.error);
+    throw new Error(mapListError(primary.error));
+  } else {
+    rowsRaw = (primary.data ?? null) as Record<string, unknown>[] | null;
   }
 
-  if (result.error) {
-    logPatientError("list", result.error);
-    throw new Error(mapListError(result.error));
-  }
-
-  return (result.data ?? []).flatMap((item) => {
-    const row = toListRow(item as Record<string, unknown>);
+  return (rowsRaw ?? []).flatMap((item) => {
+    const row = toListRow(item);
     return row ? [row] : [];
   });
 }
@@ -665,26 +678,34 @@ export async function getPatient(
   supabase: SupabaseClient,
   patientId: string,
 ): Promise<PatientDetailRow | null> {
-  let result = await supabase
+  const primary = await supabase
     .from("patients")
     .select(PATIENT_DETAIL_COLUMNS)
     .eq("id", patientId)
     .maybeSingle();
 
-  if (result.error && isMissingPhotoPathColumn(result.error)) {
-    result = await supabase
+  let rowRaw: Record<string, unknown> | null = null;
+
+  if (primary.error && isMissingPhotoPathColumn(primary.error)) {
+    const fallback = await supabase
       .from("patients")
       .select(PATIENT_LIST_COLUMNS)
       .eq("id", patientId)
       .maybeSingle();
+    if (fallback.error) {
+      logPatientError("get", fallback.error);
+      throw new Error(mapGetError(fallback.error));
+    }
+    rowRaw = (fallback.data ?? null) as Record<string, unknown> | null;
+  } else if (primary.error) {
+    logPatientError("get", primary.error);
+    throw new Error(mapGetError(primary.error));
+  } else {
+    rowRaw = (primary.data ?? null) as Record<string, unknown> | null;
   }
 
-  if (result.error) {
-    logPatientError("get", result.error);
-    throw new Error(mapGetError(result.error));
-  }
-  if (!result.data) return null;
-  return toDetailRow(result.data as Record<string, unknown>);
+  if (!rowRaw) return null;
+  return toDetailRow(rowRaw);
 }
 
 export async function createPatient(

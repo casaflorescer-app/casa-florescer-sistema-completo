@@ -2,6 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { isSupabaseConfigured } from "./config";
 
+type CookieStore = ReturnType<typeof cookies>;
+
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: Parameters<CookieStore["set"]>[2];
+};
+
 export async function createServerSupabase() {
   const jar = cookies();
   if (!isSupabaseConfigured()) return null;
@@ -13,7 +21,7 @@ export async function createServerSupabase() {
         getAll() {
           return jar.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
               jar.set(name, value, options);

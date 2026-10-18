@@ -18,7 +18,8 @@ process.env.NEXT_PUBLIC_BASE_PATH = basePath;
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  typescript: { ignoreBuildErrors: true },
+  /** C056: tipagem deve falhar o build — não mascarar erros. */
+  typescript: { ignoreBuildErrors: false },
   eslint: { ignoreDuringBuilds: true },
 
   images: { unoptimized: STATIC_EXPORT },

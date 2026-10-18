@@ -4,6 +4,12 @@ import type { User } from "@supabase/supabase-js";
 import { APP_PATHNAME_HEADER } from "@/lib/auth/paths";
 import { isSupabaseConfigured } from "./config";
 
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: Parameters<NextResponse["cookies"]["set"]>[2];
+};
+
 function nextWithPathname(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(APP_PATHNAME_HEADER, request.nextUrl.pathname);
@@ -27,7 +33,7 @@ export async function updateSession(request: NextRequest): Promise<{
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });

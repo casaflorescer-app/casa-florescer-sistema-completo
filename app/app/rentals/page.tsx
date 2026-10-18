@@ -1,11 +1,13 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { RentalsModule } from "@/components/rentals/RentalsModule";
 
-export default function RentalsPage() {
-  return (
-    <ModulePlaceholder
-      title="Locação de salas"
-      area="clinica"
-      description="Módulo em implementação."
-    />
-  );
+export default function RentalsPage({
+  searchParams,
+}: {
+  searchParams?: { tab?: string };
+}) {
+  const tab =
+    searchParams?.tab === "contracts" || searchParams?.tab === "contratos"
+      ? "contracts"
+      : "dashboard";
+  return <RentalsModule initialTab={tab} />;
 }

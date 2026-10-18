@@ -99,6 +99,12 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         visible: clinicManagement,
       },
       {
+        id: "contracts",
+        label: "Contratos",
+        href: "/app/rentals?tab=contracts",
+        visible: clinicManagement,
+      },
+      {
         id: "professionals",
         label: "Funcionários",
         href: "/app/professionals",

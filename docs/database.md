@@ -144,9 +144,7 @@ Dois modelos **coexistem** no SQL:
 
 `rooms.room_kind`: `house_consultorio`, `sublet_consultorio`, `pharmacy`, `procedure`, `reception`.
 
-**Problema:** a UI de contratos usa preview (`RENTAL_PREVIEW`); não grava nas tabelas. Há sobreposição conceitual entre occupancy e rental.
-
-**Recomendação:** na etapa de contratos, escolher o modelo operacional da casa (aluguel + utilidades parece ser o da UI) e tratar `occupancy_contracts` como legado ou complementar — sem dropar agora.
+**C057:** UI operacional em `/app/rentals` grava via RPCs em `rental_contracts` (+ `rental_contract_events` na migration `0050`). `occupancy_contracts` permanece legado/complementar — sem dropar.
 
 ### 5.6 Estoque
 

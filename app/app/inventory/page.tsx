@@ -1,11 +1,5 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { InventoryModule } from "@/components/inventory/InventoryModule";
 
 export default function InventoryPage() {
-  return (
-    <ModulePlaceholder
-      title="Estoque"
-      area="clinica"
-      description="Módulo em implementação."
-    />
-  );
+  return <InventoryModule />;
 }

@@ -36,6 +36,7 @@ Não há no repositório: `config.toml`, seeds SQL, Edge Functions, buckets de S
 | `0003_rbac_modules.sql` | Portal da paciente, capacidade, obstetrícia, exames, alertas, auditoria de estoque |
 | `0004_profile_permissions.sql` | `profiles.permissions` (jsonb) + policies de perfil |
 | `0005_physical_ops.sql` | `room_kind`, contratos de aluguel de sublocação, movimentação de estoque por setor |
+| `0051_c058_stock_ops.sql` | C058: RPCs atômicas de estoque (`ideal_qty`, apply delta, receipt/exit/transfer/adjust/inventory) |
 | `0006_patient_complete_cadastro.sql` | Endereço/convênio no MPI + `patient_clinical_data` (GPA, DUM, DPP Naegele) |
 | `0007_master_admin_rls.sql` | `profiles.role` + `is_master_admin()` + policy `master_admin_all` em tabelas com RLS |
 

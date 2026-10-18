@@ -11,6 +11,7 @@ import {
 import { AppointmentPredictionSummary } from "@/components/attendance/AppointmentPredictionSummary";
 import { AppointmentStatusBadge } from "@/components/attendance/AppointmentStatusBadge";
 import { ROOM_NATURE_LABEL, roomNature } from "@/lib/clinic/room-presentation";
+import { parseReturnOfNote } from "@/lib/attendance/return-link";
 
 const actionClass = buttonClass;
 const ghostActionClass = ghostButtonClass;
@@ -50,6 +51,10 @@ export function AppointmentCard({
     ? roomNature({ roomKind: row.roomKind, isHouse: row.roomIsHouse === true })
     : null;
   const showEdit = canEdit && canEditAppointmentStatus(row.status);
+  const isReturnAppointment = Boolean(parseReturnOfNote(row.urgencyNote));
+  const urgencyDisplay = isReturnAppointment
+    ? "Retorno clínico agendado"
+    : row.urgencyNote;
 
   return (
     <article className="card min-w-0">
@@ -84,13 +89,20 @@ export function AppointmentCard({
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">Procedimento</p>
           <p className="mt-1 text-sm text-lotus-900">{procedureLabel}</p>
+          {isReturnAppointment ? (
+            <p className="mt-1">
+              <span className="inline-flex rounded-full border border-lotus-300 bg-lotus-50 px-2.5 py-0.5 text-xs font-semibold text-lotus-800">
+                Retorno
+              </span>
+            </p>
+          ) : null}
         </div>
         <div className="sm:justify-self-end">
           <AppointmentStatusBadge status={row.status} />
         </div>
       </div>
 
-      {row.urgencyNote ? <p className="mt-3 text-sm text-lotus-800">{row.urgencyNote}</p> : null}
+      {urgencyDisplay ? <p className="mt-3 text-sm text-lotus-800">{urgencyDisplay}</p> : null}
 
       {row.arrivalAt ? (
         <p className="mt-2 text-xs font-medium text-emerald-800">

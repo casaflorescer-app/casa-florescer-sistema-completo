@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { hasStaffRole } from "@/lib/auth/access";
@@ -13,6 +13,8 @@ import {
   appointmentSetStatus,
   cancelAgendaBlock,
   encounterOpenFromAppointment,
+  encounterOpenReturn,
+  getAppointment,
   getEncounterByAppointment,
   listAgendaBlocksForDay,
   listAppointments,
@@ -23,6 +25,7 @@ import {
   type AppointmentRow,
   type OperationalAppointmentStatus,
 } from "@/lib/attendance/directory";
+import { parseReturnOfNote } from "@/lib/attendance/return-link";
 import { listPatients, type PatientListRow } from "@/lib/patients/directory";
 import { listProfessionalLabels, type ProfessionalLabel } from "@/lib/pregnancies/directory";
 import type { AppointmentStatus } from "@/lib/types/database";
@@ -53,6 +56,9 @@ function toRoom(value: Record<string, unknown>): AgendaRoomOption | null {
 
 export function AgendaPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnOfFromQuery = searchParams.get("returnOf");
+  const patientIdFromQuery = searchParams.get("patientId");
   const { authorization, authorizationLoading } = useAuth();
   const { selectedPracticeId } = usePracticeUi();
   const [date, setDate] = useState(todayInputDate);
@@ -69,7 +75,7 @@ export function AgendaPage() {
   const [procedures, setProcedures] = useState<AgendaProcedureOption[]>([]);
   const [occupancy, setOccupancy] = useState<RoomOccupancy[]>([]);
   const [procedureNames, setProcedureNames] = useState<Map<string, string>>(new Map());
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(Boolean(returnOfFromQuery || patientIdFromQuery));
   const [showBlockForm, setShowBlockForm] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -337,7 +343,14 @@ export function AgendaPage() {
 
   function onStartEncounter(appointmentId: string) {
     void withClient(appointmentId, async (supabase) => {
-      const result = await encounterOpenFromAppointment(supabase, appointmentId);
+      const appointment = await getAppointment(supabase, appointmentId);
+      const returnOf = parseReturnOfNote(appointment?.urgencyNote ?? null);
+      const result = returnOf
+        ? await encounterOpenReturn(supabase, {
+            sourceEncounterId: returnOf,
+            appointmentId,
+          })
+        : await encounterOpenFromAppointment(supabase, appointmentId);
       if (result.error || !result.encounterId) {
         setError(result.error ?? "Não foi possível iniciar o atendimento.");
         return;
@@ -553,14 +566,21 @@ export function AgendaPage() {
           occupancy={occupancy}
           busy={formBusy}
           onBusy={setFormBusy}
+          initialPatientId={patientIdFromQuery ?? ""}
+          returnOfEncounterId={returnOfFromQuery}
           onCancel={() => setShowForm(false)}
           onCreated={(message, bookedDate) => {
             setShowForm(false);
-            setNotice(message);
+            setNotice(
+              returnOfFromQuery ? "Retorno agendado. Abra pela agenda no dia marcado." : message,
+            );
             setDate(bookedDate);
             setProfessionalId("");
             setStatus("");
             setReloadKey((value) => value + 1);
+            if (returnOfFromQuery || patientIdFromQuery) {
+              router.replace("/app/agenda");
+            }
           }}
         />
       ) : null}

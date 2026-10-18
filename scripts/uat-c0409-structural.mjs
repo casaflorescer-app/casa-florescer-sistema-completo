@@ -44,7 +44,7 @@ const support = read("lib/attendance/clinical-support-directory.ts");
 ok("createExamRequest indication + fallback", support.includes("p_clinical_indication") && support.includes("fallback"));
 
 const workspace = read("components/attendance/EncounterWorkspace.tsx");
-ok("retorno agora C040.10", workspace.includes('stage="C040.10"'));
+ok("retorno operacional C055", workspace.includes("ClinicalReturnPanel") && !workspace.includes("WorkspaceComingSoon"));
 
 const pdf = read("lib/documents/pdf.ts");
 ok("PDF receita com via/apresentação", pdf.includes("item.route") && pdf.includes("item.presentation"));

@@ -321,17 +321,42 @@ export function PatientChart({ patientId }: { patientId: string }) {
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-lotus-950">
                             {formatDateTime(row.signedAt ?? row.createdAt)}
+                            {row.returnOfEncounterId ? " · Retorno" : ""}
                           </p>
                           <p className="text-xs text-lotus-600">
                             {ENCOUNTER_STATUS_LABEL[row.status]}
                           </p>
+                          {row.returnOfEncounterId ? (
+                            <p className="mt-1 text-xs text-lotus-600">
+                              <Link
+                                href={`/app/records/${row.returnOfEncounterId}?from=patient&patientId=${patientId}`}
+                                className="underline-offset-2 hover:underline"
+                              >
+                                Atendimento de origem
+                              </Link>
+                            </p>
+                          ) : null}
                         </div>
-                        <Link
-                          href={`/app/records/${row.id}?from=patient&patientId=${patientId}`}
-                          className={row.status === "open" ? buttonClass : ghostButtonClass}
-                        >
-                          {row.status === "open" ? "Continuar atendimento" : "Visualizar atendimento"}
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                          {!row.returnOfEncounterId && row.status === "signed" ? (
+                            <Link
+                              href={`/app/records/${row.id}?from=patient&patientId=${patientId}#retorno`}
+                              className={ghostButtonClass}
+                            >
+                              Retorno
+                            </Link>
+                          ) : null}
+                          <Link
+                            href={`/app/records/${row.id}?from=patient&patientId=${patientId}`}
+                            className={row.status === "open" ? buttonClass : ghostButtonClass}
+                          >
+                            {row.status === "open"
+                              ? row.returnOfEncounterId
+                                ? "Continuar retorno"
+                                : "Continuar atendimento"
+                              : "Visualizar atendimento"}
+                          </Link>
+                        </div>
                       </li>
                     ))}
                   </ul>

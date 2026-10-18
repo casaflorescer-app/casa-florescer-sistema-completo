@@ -133,13 +133,25 @@ export type TimelineEncounterItem = {
 };
 
 export function toTimelineItems(encounters: EncounterRow[]): TimelineEncounterItem[] {
-  return encounters.map((encounter) => ({
-    encounter,
-    label:
-      encounter.status === "open"
-        ? "Atendimento em andamento"
-        : encounter.status === "signed"
-          ? "Consulta"
-          : ENCOUNTER_STATUS_LABEL[encounter.status],
-  }));
+  return encounters.map((encounter) => {
+    const isReturn = Boolean(encounter.returnOfEncounterId);
+    if (encounter.status === "open") {
+      return {
+        encounter,
+        label: isReturn ? "Retorno em andamento" : "Atendimento em andamento",
+      };
+    }
+    if (encounter.status === "signed") {
+      return {
+        encounter,
+        label: isReturn ? "Retorno" : "Consulta",
+      };
+    }
+    return {
+      encounter,
+      label: isReturn
+        ? `Retorno · ${ENCOUNTER_STATUS_LABEL[encounter.status]}`
+        : ENCOUNTER_STATUS_LABEL[encounter.status],
+    };
+  });
 }

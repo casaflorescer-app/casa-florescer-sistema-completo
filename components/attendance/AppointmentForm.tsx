@@ -13,6 +13,7 @@ import {
   singleOccupancyForProfessional,
   type RoomOccupancy,
 } from "@/lib/clinic/room-occupancy";
+import { encodeReturnOfNote } from "@/lib/attendance/return-link";
 
 const labelClass = "text-sm font-medium text-lotus-800";
 
@@ -44,6 +45,8 @@ export function AppointmentForm({
   onBusy,
   onCreated,
   onCancel,
+  initialPatientId = "",
+  returnOfEncounterId = null,
 }: {
   supabase: SupabaseClient;
   organizationId: string;
@@ -59,8 +62,11 @@ export function AppointmentForm({
   onBusy: (value: boolean) => void;
   onCreated: (message: string, bookedDate: string) => void;
   onCancel: () => void;
+  /** C055 — pré-seleção ao agendar retorno. */
+  initialPatientId?: string;
+  returnOfEncounterId?: string | null;
 }) {
-  const [patientId, setPatientId] = useState("");
+  const [patientId, setPatientId] = useState(initialPatientId);
   const [professionalId, setProfessionalId] = useState("");
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState(defaultDate);
@@ -69,7 +75,11 @@ export function AppointmentForm({
   const [kind, setKind] = useState<AppointmentKind>("consultation");
   const [procedureId, setProcedureId] = useState("");
   const [procedureQuery, setProcedureQuery] = useState("");
-  const [urgencyNote, setUrgencyNote] = useState("");
+  const [urgencyNote, setUrgencyNote] = useState(
+    returnOfEncounterId
+      ? encodeReturnOfNote(returnOfEncounterId, "Retorno clínico")
+      : "",
+  );
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent) {
@@ -146,7 +156,14 @@ export function AppointmentForm({
 
   return (
     <form className="card mt-6" onSubmit={(event) => void onSubmit(event)}>
-      <h2 className="text-base font-semibold text-lotus-900">Novo atendimento</h2>
+      <h2 className="text-base font-semibold text-lotus-900">
+        {returnOfEncounterId ? "Agendar retorno" : "Novo atendimento"}
+      </h2>
+      {returnOfEncounterId ? (
+        <p className="mt-1 text-sm text-lotus-700">
+          Este compromisso será vinculado ao atendimento de origem ao abrir o retorno.
+        </p>
+      ) : null}
       <p className="mt-1 text-sm text-lotus-600">
         O agendamento entra como agendado. O atendimento médico começa depois do check-in.
       </p>

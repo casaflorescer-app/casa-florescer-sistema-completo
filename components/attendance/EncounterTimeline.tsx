@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ENCOUNTER_STATUS_LABEL,
@@ -11,6 +12,7 @@ import { toTimelineItems } from "@/lib/attendance/patient-summary";
 import { soapFromBody } from "@/components/attendance/soap";
 import { formatDateTime } from "@/lib/platform/format";
 import { ghostButtonClass } from "@/components/platform/Ui";
+import { encounterWorkspaceHref } from "@/lib/attendance/return-link";
 
 function snippet(text: string, max = 160) {
   const clean = text.replace(/\s+/g, " ").trim();
@@ -100,22 +102,43 @@ export function EncounterTimeline({
                       </p>
                       <p className="mt-0.5 text-xs text-lotus-600">
                         {ENCOUNTER_STATUS_LABEL[encounter.status]}
+                        {encounter.returnOfEncounterId ? " · retorno" : ""}
                         {isCurrent ? " · atendimento atual" : " · somente leitura"}
                       </p>
+                      {encounter.returnOfEncounterId ? (
+                        <p className="mt-1 text-xs text-lotus-600">
+                          <Link
+                            href={encounterWorkspaceHref(encounter.returnOfEncounterId)}
+                            className="underline-offset-2 hover:underline"
+                          >
+                            Atendimento de origem
+                          </Link>
+                        </p>
+                      ) : null}
                     </div>
-                    {!isCurrent ? (
-                      <button
-                        type="button"
-                        className={ghostButtonClass}
-                        onClick={() =>
-                          setSelectedId((current) =>
-                            current === encounter.id ? null : encounter.id,
-                          )
-                        }
-                      >
-                        {isSelected ? "Fechar" : "Ver registro"}
-                      </button>
-                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      {!isCurrent ? (
+                        <Link
+                          href={encounterWorkspaceHref(encounter.id)}
+                          className={ghostButtonClass}
+                        >
+                          Abrir
+                        </Link>
+                      ) : null}
+                      {!isCurrent ? (
+                        <button
+                          type="button"
+                          className={ghostButtonClass}
+                          onClick={() =>
+                            setSelectedId((current) =>
+                              current === encounter.id ? null : encounter.id,
+                            )
+                          }
+                        >
+                          {isSelected ? "Fechar" : "Ver registro"}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                   {isSelected ? (
                     <div className="mt-2 rounded-lg bg-lotus-50/90 px-3 py-2 text-sm text-lotus-800">

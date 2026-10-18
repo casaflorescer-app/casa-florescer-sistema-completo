@@ -39,7 +39,7 @@ export function EncounterHeader({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-            Atendimento
+            {encounter.returnOfEncounterId ? "Retorno" : "Atendimento"}
           </p>
           <h1 className="page-title mt-1">{patientName ?? "Paciente"}</h1>
           {encounter.practice?.name ? (
@@ -48,6 +48,17 @@ export function EncounterHeader({
           <p className="mt-1 text-sm text-lotus-700">
             {professionalName ?? "Profissional"} · {formatDateTime(encounter.createdAt)}
           </p>
+          {encounter.returnOfEncounterId ? (
+            <p className="mt-1 text-sm text-lotus-600">
+              Retorno vinculado a atendimento anterior ·{" "}
+              <Link
+                href={`/app/records/${encounter.returnOfEncounterId}`}
+                className="underline-offset-2 hover:underline"
+              >
+                ver origem
+              </Link>
+            </p>
+          ) : null}
           {encounter.signedAt ? (
             <p className="mt-1 text-sm text-lotus-600">
               Assinado em {formatDateTime(encounter.signedAt)}
@@ -55,6 +66,11 @@ export function EncounterHeader({
           ) : null}
         </div>
         <div className="flex flex-col items-end gap-1.5">
+          {encounter.returnOfEncounterId ? (
+            <span className="inline-flex rounded-full border border-lotus-300 bg-lotus-50 px-3 py-1 text-xs font-semibold text-lotus-800">
+              Retorno
+            </span>
+          ) : null}
           <span
             className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${TONE[encounter.status]}`}
           >

@@ -83,8 +83,10 @@ import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalS
 import { EncounterRecordingPanel } from "@/components/attendance/EncounterRecordingPanel";
 import { PhysicalExamPanel } from "@/components/attendance/PhysicalExamPanel";
 import { EncounterDocumentsPanel } from "@/components/attendance/EncounterDocumentsPanel";
-import { WorkspaceComingSoon } from "@/components/attendance/WorkspaceComingSoon";
+import { ClinicalReturnPanel } from "@/components/attendance/ClinicalReturnPanel";
 import { WorkspaceSectionNav } from "@/components/attendance/WorkspaceSectionNav";
+import { encounterWorkspaceHref } from "@/lib/attendance/return-link";
+import Link from "next/link";
 import { markEncounterAuditEvent } from "@/lib/attendance/encounter-feedback";
 import {
   listAiAssistance,
@@ -219,6 +221,13 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [anamnesis, setAnamnesis] = useState<AnamnesisEncounterForm>(EMPTY_ANAMNESIS);
   const [physicalExam, setPhysicalExam] = useState<PhysicalExamForm>(EMPTY_PHYSICAL_EXAM);
   const [priorAnamnesis, setPriorAnamnesis] = useState<PriorAnamnesisRef | null>(null);
+  const [fromReturnId, setFromReturnId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const value = new URLSearchParams(window.location.search).get("fromReturn");
+    setFromReturnId(value && /^[0-9a-f-]{36}$/i.test(value) ? value : null);
+  }, [encounterId]);
 
   const load = useCallback(async (quiet = false) => {
     if (!supabase) {
@@ -642,6 +651,17 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
 
   return (
     <div className="overflow-x-hidden pb-8">
+      {fromReturnId ? (
+        <div className="mb-3 rounded-xl border border-lotus-200 bg-lotus-50 px-3 py-2 text-sm text-lotus-800">
+          Visualização do atendimento anterior (somente leitura neste contexto).{" "}
+          <Link
+            href={encounterWorkspaceHref(fromReturnId)}
+            className="font-semibold underline-offset-2 hover:underline"
+          >
+            Voltar ao retorno
+          </Link>
+        </div>
+      ) : null}
       <EncounterHeader
         encounter={encounter}
         patientName={patientName}
@@ -971,7 +991,14 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         />
       ) : null}
 
-      <WorkspaceComingSoon id="retorno" title="Retorno" stage="C040.10" />
+      {supabase ? (
+        <ClinicalReturnPanel
+          supabase={supabase}
+          encounter={encounter}
+          canManage={viewerIsEncounterProfessional(authorization, encounter)}
+          locked={locked}
+        />
+      ) : null}
 
       <EncounterFinalReview
         locked={locked}

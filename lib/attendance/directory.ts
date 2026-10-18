@@ -59,6 +59,9 @@ export const APPOINTMENT_COLUMNS =
 export const ENCOUNTER_COLUMNS =
   "id, organization_id, practice_id, appointment_id, patient_id, professional_id, procedure_id, status, signed_at, signed_by, created_at" as const;
 
+/** C055 — coluna opcional (migration 0049). Não incluir em selects obrigatórios até db push. */
+export const ENCOUNTER_RETURN_OF_COLUMN = "return_of_encounter_id" as const;
+
 export const CLINICAL_NOTE_COLUMNS =
   "id, encounter_id, organization_id, practice_id, body_ciphertext, template_code, version, created_by, created_at" as const;
 
@@ -188,6 +191,27 @@ export function mapAttendanceRpcError(error: { message?: string } | null): strin
   }
   if (message.includes("APPOINTMENT_NOT_ATTENDABLE")) {
     return "Este agendamento não pode ser atendido.";
+  }
+  if (message.includes("RETURN_SOURCE_REQUIRED")) {
+    return "Informe o atendimento de origem do retorno.";
+  }
+  if (message.includes("RETURN_SOURCE_NOT_FOUND")) {
+    return "Atendimento de origem do retorno não encontrado.";
+  }
+  if (message.includes("RETURN_SOURCE_SCOPE_MISMATCH")) {
+    return "O retorno deve permanecer na mesma paciente e prática do atendimento de origem.";
+  }
+  if (message.includes("RETURN_APPOINTMENT_SCOPE_MISMATCH")) {
+    return "O agendamento não corresponde à paciente/prática do atendimento de origem.";
+  }
+  if (message.includes("RETURN_OF_IMMUTABLE") || message.includes("ENCOUNTER_SIGNED_RETURN_LOCKED")) {
+    return "O vínculo de retorno não pode ser alterado.";
+  }
+  if (message.includes("Could not find the function") && message.includes("encounter_open_return")) {
+    return "Retorno ainda não disponível neste ambiente (migration C055 pendente).";
+  }
+  if (message.includes("return_of_encounter_id") && message.includes("column")) {
+    return "Retorno ainda não disponível neste ambiente (migration C055 pendente).";
   }
   if (message.includes("APPOINTMENT_NOT_EDITABLE")) {
     return "Este agendamento não pode mais ser editado.";
@@ -376,10 +400,49 @@ export function toEncounterRow(
     signedAt: asString(value.signed_at),
     signedBy: asString(value.signed_by),
     createdAt,
+    returnOfEncounterId: asString(value.return_of_encounter_id) ?? null,
     patientName: extras?.patientName ?? null,
     professionalName: extras?.professionalName ?? null,
     practice: toEncounterPractice(value.practice_units, practiceId),
   };
+}
+
+/** Lê return_of quando a migration C055 estiver aplicada; senão devolve mapa vazio. */
+export async function loadReturnOfLinks(
+  supabase: SupabaseClient,
+  encounterIds: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const ids = [...new Set(encounterIds.filter(Boolean))];
+  if (!ids.length) return map;
+  const { data, error } = await supabase
+    .from("encounters")
+    .select(`id, ${ENCOUNTER_RETURN_OF_COLUMN}`)
+    .in("id", ids);
+  if (error || !data) return map;
+  for (const raw of data) {
+    const row = raw as Record<string, unknown>;
+    const id = asString(row.id);
+    const source = asString(row.return_of_encounter_id);
+    if (id && source) map.set(id, source);
+  }
+  return map;
+}
+
+export async function enrichEncountersWithReturnOf(
+  supabase: SupabaseClient,
+  rows: EncounterRow[],
+): Promise<EncounterRow[]> {
+  if (!rows.length) return rows;
+  const links = await loadReturnOfLinks(
+    supabase,
+    rows.map((item) => item.id),
+  );
+  if (!links.size) return rows;
+  return rows.map((item) => ({
+    ...item,
+    returnOfEncounterId: links.get(item.id) ?? item.returnOfEncounterId,
+  }));
 }
 
 export function toClinicalNoteRow(value: Record<string, unknown>): ClinicalNoteRow | null {
@@ -604,7 +667,10 @@ export async function getEncounter(
     .eq("id", encounterId)
     .maybeSingle();
   if (error || !data) return null;
-  return toEncounterRow(data as Record<string, unknown>);
+  const row = toEncounterRow(data as Record<string, unknown>);
+  if (!row) return null;
+  const [enriched] = await enrichEncountersWithReturnOf(supabase, [row]);
+  return enriched ?? row;
 }
 
 export async function getEncounterByAppointment(
@@ -617,7 +683,10 @@ export async function getEncounterByAppointment(
     .eq("appointment_id", appointmentId)
     .maybeSingle();
   if (error || !data) return null;
-  return toEncounterRow(data as Record<string, unknown>);
+  const row = toEncounterRow(data as Record<string, unknown>);
+  if (!row) return null;
+  const [enriched] = await enrichEncountersWithReturnOf(supabase, [row]);
+  return enriched ?? row;
 }
 
 export async function listEncountersForPatient(
@@ -632,9 +701,10 @@ export async function listEncountersForPatient(
     .eq("patient_id", patientId)
     .order("created_at", { ascending: false });
   if (error || !data) return [];
-  return data
+  const rows = data
     .map((raw) => toEncounterRow(raw as Record<string, unknown>))
     .filter((item): item is EncounterRow => Boolean(item));
+  return enrichEncountersWithReturnOf(supabase, rows);
 }
 
 /** Encounters abertos do profissional na prática (índice do prontuário — C040.1). */
@@ -691,6 +761,42 @@ export async function encounterOpenFromAppointment(
     encounterId: typeof data === "string" ? data : null,
     error: null,
   };
+}
+
+/** C055: abre retorno vinculado à origem (idempotente para open do mesmo profissional). */
+export async function encounterOpenReturn(
+  supabase: SupabaseClient,
+  input: {
+    sourceEncounterId: string;
+    appointmentId?: string | null;
+  },
+): Promise<{ encounterId: string | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("encounter_open_return", {
+    p_source_encounter_id: input.sourceEncounterId,
+    p_appointment_id: input.appointmentId ?? null,
+  });
+  if (error) return { encounterId: null, error: mapAttendanceRpcError(error) };
+  return {
+    encounterId: typeof data === "string" ? data : null,
+    error: null,
+  };
+}
+
+/** Lista retornos que apontam para este encounter de origem. */
+export async function listReturnsOfEncounter(
+  supabase: SupabaseClient,
+  sourceEncounterId: string,
+): Promise<EncounterRow[]> {
+  const { data, error } = await supabase
+    .from("encounters")
+    .select(ENCOUNTER_COLUMNS)
+    .eq(ENCOUNTER_RETURN_OF_COLUMN, sourceEncounterId)
+    .order("created_at", { ascending: true });
+  if (error || !data) return [];
+  const rows = data
+    .map((raw) => toEncounterRow(raw as Record<string, unknown>))
+    .filter((item): item is EncounterRow => Boolean(item));
+  return enrichEncountersWithReturnOf(supabase, rows);
 }
 
 export async function encounterSign(

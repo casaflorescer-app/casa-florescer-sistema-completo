@@ -138,6 +138,8 @@ export type EncounterRow = {
   signedAt: string | null;
   signedBy: string | null;
   createdAt: string;
+  /** C055: encounter de origem quando este atendimento é um retorno. */
+  returnOfEncounterId: string | null;
   patientName?: string | null;
   professionalName?: string | null;
   /** Prática do próprio encounter, quando a leitura inclui o vínculo. */

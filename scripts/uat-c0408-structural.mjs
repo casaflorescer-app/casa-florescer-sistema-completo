@@ -40,7 +40,7 @@ ok("UI share explícito", panel.includes("Disponibilizar o PDF à paciente"));
 ok("UI distingue publicar vs documento", panel.includes("Publicar no portal") && panel.includes("emitir documento PDF"));
 
 const workspace = read("components/attendance/EncounterWorkspace.tsx");
-ok("retorno agora C040.10", workspace.includes('stage="C040.10"'));
+ok("retorno operacional C055", workspace.includes("ClinicalReturnPanel") && !workspace.includes("WorkspaceComingSoon"));
 
 const docs = read("components/attendance/EncounterDocumentsPanel.tsx");
 ok("central menciona orientação", docs.includes("Orientação"));

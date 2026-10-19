@@ -7,6 +7,7 @@ export function GlobalAlertHost() {
   const pathname = usePathname();
   const { alerts, dismiss } = useAlerts();
   const staffView =
+    pathname.startsWith("/app") ||
     pathname.startsWith("/medica") ||
     pathname.startsWith("/secretaria") ||
     pathname.startsWith("/gestao");
@@ -16,7 +17,7 @@ export function GlobalAlertHost() {
   if (active.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[60] flex justify-center px-4 sm:bottom-auto sm:top-[max(4.75rem,calc(env(safe-area-inset-top)+4.25rem))]">
       <div className="flex w-full max-w-xl flex-col gap-2">
         {active.map((alert) => (
           <div
@@ -39,7 +40,7 @@ export function GlobalAlertHost() {
               <button
                 type="button"
                 onClick={() => dismiss(alert.id)}
-                className="shrink-0 rounded-full px-2 py-1 text-sm opacity-80 hover:opacity-100"
+                className="min-h-11 shrink-0 rounded-full px-3 py-1 text-sm opacity-80 hover:opacity-100"
               >
                 Ok
               </button>

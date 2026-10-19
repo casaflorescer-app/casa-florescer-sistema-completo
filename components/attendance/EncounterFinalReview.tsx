@@ -226,7 +226,7 @@ export function EncounterFinalReview({
 
       {confirmOpen ? (
         <div
-          className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby="sign-confirm-title"

@@ -236,7 +236,7 @@ export function UserManagement() {
 
       {selected ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-lotus-900/40 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-lotus-900/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center"
           role="presentation"
           onClick={close}
         >
@@ -244,7 +244,7 @@ export function UserManagement() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="user-perm-title"
-            className="view-enter w-full max-w-lg rounded-3xl bg-white p-5 shadow-xl"
+            className="view-enter max-h-[min(36rem,calc(100dvh-2rem))] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-5 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">

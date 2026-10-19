@@ -49,12 +49,12 @@ export function PregnancyLinkDialog({
   const linking = mode === "link";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-lotus-900/40 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-lotus-900/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="max-h-[min(32rem,100%)] w-full max-w-lg overflow-y-auto rounded-2xl border border-lotus-100 bg-white p-4 shadow-sm sm:p-5"
+        className="max-h-[min(32rem,calc(100dvh-2rem))] w-full max-w-lg overflow-y-auto rounded-2xl border border-lotus-100 bg-white p-4 shadow-sm sm:p-5"
       >
         <h2 id={titleId} className="text-base font-semibold text-lotus-900">
           {linking ? "Vincular gestação" : "Desvincular gestação"}

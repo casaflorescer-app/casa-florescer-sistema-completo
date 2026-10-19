@@ -25,7 +25,7 @@ export function WorkspaceSectionNav({ activeId }: { activeId?: string }) {
   return (
     <nav
       aria-label="Seções do prontuário"
-      className="sticky top-0 z-20 -mx-1 overflow-x-auto bg-[#FFF8F5]/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#FFF8F5]/80"
+      className="sticky top-[4.5rem] z-20 -mx-1 overflow-x-auto bg-[#FFF8F5]/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#FFF8F5]/80"
     >
       <ul className="flex min-w-max gap-1.5">
         {WORKSPACE_SECTIONS.map((section) => {

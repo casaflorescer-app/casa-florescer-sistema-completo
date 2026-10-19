@@ -659,77 +659,137 @@ export function RelationshipCenter({
             </p>
           </div>
 
-          <div className="card overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-lotus-50 text-lotus-600">
-                <tr>
-                  <th className="px-3 py-2" />
-                  <th className="px-3 py-2">Paciente</th>
-                  <th className="px-3 py-2">Telefone</th>
-                  <th className="px-3 py-2">Canal</th>
-                  <th className="px-3 py-2">Oportunidade</th>
-                  <th className="px-3 py-2">Última consulta</th>
-                  <th className="px-3 py-2">Responsável</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {queue.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-3 py-4 text-lotus-600">
-                      Nenhuma paciente na fila. Atualize oportunidades ou ajuste os filtros.
-                    </td>
-                  </tr>
-                ) : (
-                  queue.map((row) => (
-                    <tr key={row.opportunityId} className="border-t border-lotus-50">
-                      <td className="px-3 py-2">
+          {queue.length === 0 ? (
+            <div className="card text-sm text-lotus-600">
+              Nenhuma paciente na fila. Atualize oportunidades ou ajuste os filtros.
+            </div>
+          ) : (
+            <>
+              <ul className="space-y-3 md:hidden">
+                {queue.map((row) => (
+                  <li key={row.opportunityId}>
+                    <article className="card">
+                      <div className="flex items-start gap-3">
                         <input
                           type="checkbox"
+                          className="mt-1 min-h-5 min-w-5"
                           checked={selectedIds.has(row.opportunityId)}
                           onChange={() => toggleSelect(row.opportunityId)}
+                          aria-label={`Selecionar ${row.patientName || "paciente"}`}
                         />
-                      </td>
-                      <td className="px-3 py-2 font-medium text-lotus-900">{row.patientName || "—"}</td>
-                      <td className="px-3 py-2">{row.phone || "—"}</td>
-                      <td className="px-3 py-2">{row.preferredChannel}</td>
-                      <td className="px-3 py-2">
-                        {OPPORTUNITY_TYPE_LABEL[row.opportunityType] || row.opportunityTitle}
-                      </td>
-                      <td className="px-3 py-2">
-                        {row.lastAppointmentAt ? formatDateTime(row.lastAppointmentAt) : "—"}
-                      </td>
-                      <td className="px-3 py-2">{row.assigneeName || "—"}</td>
-                      <td className="px-3 py-2">{row.status}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-1">
-                          <button
-                            type="button"
-                            className={ghostButtonClass}
-                            onClick={() =>
-                              void setOpportunityStatus(supabase, row.opportunityId, "CONTACTED").then(reload)
-                            }
-                          >
-                            Tratada
-                          </button>
-                          <button
-                            type="button"
-                            className={ghostButtonClass}
-                            onClick={() =>
-                              void setOpportunityStatus(supabase, row.opportunityId, "DISMISSED").then(reload)
-                            }
-                          >
-                            Dispensar
-                          </button>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-lotus-900">{row.patientName || "—"}</p>
+                          <p className="mt-1 text-sm text-lotus-600">
+                            {row.phone || "Sem telefone"} · {row.preferredChannel}
+                          </p>
+                          <p className="mt-2 text-sm text-lotus-800">
+                            {OPPORTUNITY_TYPE_LABEL[row.opportunityType] || row.opportunityTitle}
+                          </p>
+                          <dl className="mt-3 grid grid-cols-2 gap-2 text-sm text-lotus-800">
+                            <div>
+                              <dt className="text-xs uppercase tracking-wide text-lotus-500">Última consulta</dt>
+                              <dd>{row.lastAppointmentAt ? formatDateTime(row.lastAppointmentAt) : "—"}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs uppercase tracking-wide text-lotus-500">Responsável</dt>
+                              <dd>{row.assigneeName || "—"}</dd>
+                            </div>
+                            <div className="col-span-2">
+                              <dt className="text-xs uppercase tracking-wide text-lotus-500">Status</dt>
+                              <dd>{row.status}</dd>
+                            </div>
+                          </dl>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className={ghostButtonClass}
+                              onClick={() =>
+                                void setOpportunityStatus(supabase, row.opportunityId, "CONTACTED").then(reload)
+                              }
+                            >
+                              Tratada
+                            </button>
+                            <button
+                              type="button"
+                              className={ghostButtonClass}
+                              onClick={() =>
+                                void setOpportunityStatus(supabase, row.opportunityId, "DISMISSED").then(reload)
+                              }
+                            >
+                              Dispensar
+                            </button>
+                          </div>
                         </div>
-                      </td>
+                      </div>
+                    </article>
+                  </li>
+                ))}
+              </ul>
+              <div className="card hidden overflow-x-auto md:block">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-lotus-50 text-lotus-600">
+                    <tr>
+                      <th className="px-3 py-2" />
+                      <th className="px-3 py-2">Paciente</th>
+                      <th className="px-3 py-2">Telefone</th>
+                      <th className="px-3 py-2">Canal</th>
+                      <th className="px-3 py-2">Oportunidade</th>
+                      <th className="px-3 py-2">Última consulta</th>
+                      <th className="px-3 py-2">Responsável</th>
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">Ações</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {queue.map((row) => (
+                      <tr key={row.opportunityId} className="border-t border-lotus-50">
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(row.opportunityId)}
+                            onChange={() => toggleSelect(row.opportunityId)}
+                          />
+                        </td>
+                        <td className="px-3 py-2 font-medium text-lotus-900">{row.patientName || "—"}</td>
+                        <td className="px-3 py-2">{row.phone || "—"}</td>
+                        <td className="px-3 py-2">{row.preferredChannel}</td>
+                        <td className="px-3 py-2">
+                          {OPPORTUNITY_TYPE_LABEL[row.opportunityType] || row.opportunityTitle}
+                        </td>
+                        <td className="px-3 py-2">
+                          {row.lastAppointmentAt ? formatDateTime(row.lastAppointmentAt) : "—"}
+                        </td>
+                        <td className="px-3 py-2">{row.assigneeName || "—"}</td>
+                        <td className="px-3 py-2">{row.status}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex flex-wrap gap-1">
+                            <button
+                              type="button"
+                              className={ghostButtonClass}
+                              onClick={() =>
+                                void setOpportunityStatus(supabase, row.opportunityId, "CONTACTED").then(reload)
+                              }
+                            >
+                              Tratada
+                            </button>
+                            <button
+                              type="button"
+                              className={ghostButtonClass}
+                              onClick={() =>
+                                void setOpportunityStatus(supabase, row.opportunityId, "DISMISSED").then(reload)
+                              }
+                            >
+                              Dispensar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <button

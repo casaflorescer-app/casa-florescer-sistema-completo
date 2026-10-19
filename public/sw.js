@@ -1,4 +1,9 @@
-const CACHE = "florescer-static-v2";
+/**
+ * Casa Florescer — service worker conservador (C059).
+ * Cacheia APENAS assets estáticos públicos.
+ * NÃO cacheia HTML autenticado, APIs, prontuário, receitas, exames ou documentos clínicos.
+ */
+const CACHE = "florescer-static-v3";
 const PRECACHE = ["/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 function isStaticAsset(url) {
@@ -32,6 +37,10 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  // Navegação / documentos / APIs: sempre rede. Sem fallback offline clínico.
+  if (event.request.mode === "navigate") return;
+
   const url = new URL(event.request.url);
   if (!isStaticAsset(url)) return;
 

@@ -160,6 +160,14 @@ const PATH_RULES: PathRule[] = [
     allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
   },
   {
+    prefix: "/app/clinical-contracts",
+    allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
+  },
+  {
+    prefix: "/app/workforce",
+    allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
+  },
+  {
     prefix: "/app/specialties",
     allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
   },

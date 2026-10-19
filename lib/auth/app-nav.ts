@@ -88,25 +88,31 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     items: [
       {
         id: "rooms",
-        label: "Gestão de Salas",
+        label: "Salas",
         href: "/app/rooms",
         visible: clinicManagement,
       },
       {
         id: "rentals",
-        label: "Aluguéis",
+        label: "Aluguéis e locação",
         href: "/app/rentals",
         visible: clinicManagement,
       },
       {
-        id: "contracts",
-        label: "Contratos",
+        id: "rental-contracts",
+        label: "Contratos de locação",
         href: "/app/rentals?tab=contracts",
         visible: clinicManagement,
       },
       {
+        id: "clinical-contracts",
+        label: "Contratos clínicos",
+        href: "/app/clinical-contracts",
+        visible: clinicManagement,
+      },
+      {
         id: "professionals",
-        label: "Funcionários",
+        label: "Profissionais",
         href: "/app/professionals",
         visible: clinicManagement,
       },
@@ -114,6 +120,12 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         id: "specialties",
         label: "Especialidades",
         href: "/app/specialties",
+        visible: clinicManagement,
+      },
+      {
+        id: "workforce",
+        label: "Funcionários",
+        href: "/app/workforce",
         visible: clinicManagement,
       },
       {

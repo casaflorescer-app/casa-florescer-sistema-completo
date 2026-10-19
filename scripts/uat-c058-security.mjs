@@ -98,7 +98,22 @@ on conflict (user_id, practice_id, role) do nothing;
 
     const { data: items } = await owner.from("items").select("id").eq("organization_id", ORG).limit(1);
     sampleItemId = items?.[0]?.id ?? null;
-    if (sampleItemId) pass("Owner lê items da org");
+    if (!sampleItemId && migrationOk) {
+      const stamp = Date.now();
+      const { data: created } = await owner.rpc("stock_item_upsert", {
+        p_payload: {
+          organization_id: ORG,
+          sku: `${MARKER}IDOR${stamp}`,
+          name: `${MARKER}IDOR sample`,
+          item_class: "office",
+          unit: "un",
+          min_qty: 0,
+          ideal_qty: 0,
+        },
+      });
+      sampleItemId = created?.id ?? null;
+    }
+    if (sampleItemId) pass("Owner lê/cria item sample para IDOR");
     else pass("Owner sem items (ok)");
 
     // Revogar antes dos testes negativos

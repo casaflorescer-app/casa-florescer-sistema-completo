@@ -23,7 +23,7 @@ export function PhysicianPatients() {
         return (
           <li key={patient.id}>
             <Link
-              href={`/medica/prontuario/ficha?id=${patient.id}`}
+              href={`/app/records/patient/${patient.id}`}
               className="card block hover:border-rose-200"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">

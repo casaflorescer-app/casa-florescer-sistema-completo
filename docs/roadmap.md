@@ -1,6 +1,10 @@
 # Roadmap — Sistema Casa Florescer
 
-Documento de auditoria. Data de referência: 22 de agosto de 2026.
+> **Atualização C063 (homologação final):** o sistema operacional em `/app` está **CONCLUÍDO COM RESSALVAS**.
+> Ciclos C040–C062 publicados. Homologação: `docs/c063-final-homologation.md`.
+> O texto histórico abaixo (Fase 0–N de ago/2026) permanece como arquivo de auditoria inicial — **não** descreve o estado atual dos módulos (já entregues).
+
+Documento de auditoria. Data de referência original: 22 de agosto de 2026.
 
 Sequência recomendada de desenvolvimento. Distingue o que já ocorreu, o que esta etapa entrega, e o que **não** deve ser feito agora.
 

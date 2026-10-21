@@ -119,7 +119,7 @@ export function PatientRegistrationForm({ patientId, variant = "staff" }: Props)
       const saved = await saveStoredPatient(values, existing?.id ?? patientId);
       setNotice("Ficha salva.");
       if (variant === "staff") {
-        router.push("/secretaria/pacientes");
+        router.push("/app/patients");
         router.refresh();
       }
       return saved;

@@ -1,6 +1,9 @@
 # Arquitetura — Sistema Casa Florescer
 
-Documento de auditoria. Data de referência: 22 de agosto de 2026.
+> **C063:** shell oficial `/app`; produção em Vercel; migrations até `0055` no código (`0054` aplicada no remoto até db push).
+> Homologação: `docs/c063-final-homologation.md`. O corpo abaixo é auditoria histórica (ago/2026) e pode estar desatualizado em detalhes.
+
+Documento de auditoria. Data de referência original: 22 de agosto de 2026.
 
 Este arquivo descreve a arquitetura **encontrada no repositório**. Não é um plano de reescrita. O projeto já está iniciado e deve ser preservado.
 

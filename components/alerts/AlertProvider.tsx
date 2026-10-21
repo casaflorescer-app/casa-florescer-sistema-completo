@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import type { AgendaAlert } from "@/lib/types/database";
-import { previewAlerts } from "@/lib/preview/fixtures";
 import { GlobalAlertHost } from "./GlobalAlertHost";
 
 type AlertContextValue = {
@@ -20,7 +19,8 @@ type AlertContextValue = {
 const AlertContext = createContext<AlertContextValue | null>(null);
 
 export function AlertProvider({ children }: { children: React.ReactNode }) {
-  const [alerts, setAlerts] = useState<AgendaAlert[]>(previewAlerts);
+  // Produção: sem fixtures. Alertas reais entram via pushAlert quando houver fonte.
+  const [alerts, setAlerts] = useState<AgendaAlert[]>([]);
 
   const pushAlert = useCallback((alert: AgendaAlert) => {
     setAlerts((current) => [alert, ...current.filter((item) => item.id !== alert.id)]);

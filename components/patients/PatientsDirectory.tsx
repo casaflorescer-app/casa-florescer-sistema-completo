@@ -47,7 +47,7 @@ export function PatientsDirectory() {
           className="w-full max-w-md rounded-xl border border-lotus-200 px-3 py-2 text-sm"
         />
         <Link
-          href="/secretaria/pacientes/cadastro"
+          href="/app/patients/new"
           className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
         >
           Nova paciente
@@ -59,7 +59,7 @@ export function PatientsDirectory() {
           return (
             <li key={patient.id}>
               <Link
-                href={`/secretaria/pacientes/cadastro?id=${patient.id}`}
+                href={`/app/patients/${patient.id}`}
                 className="card block hover:border-rose-200"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">

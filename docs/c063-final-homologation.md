@@ -11,9 +11,11 @@ O sistema é **operacional** no shell `/app`, com módulos essenciais publicados
 | P0 | 0 |
 | Conclusão do produto | CONCLUÍDO COM RESSALVAS |
 | Shell oficial | `/app` |
-| HEAD de referência pré-C063 | `9e1fef8` (Commit 062) |
+| HEAD C063 (publicado) | `6a67c8b` (Commit 063) |
+| HEAD pré-C063 | `9e1fef8` (Commit 062) |
 | Migration código | `0055` (storage own_encounters) |
 | Migration remota | `0054` até autorização de **db push** da `0055` |
+| Deploy Production | READY — `casa-florescer-sistema-completo-kdazccw5w.vercel.app` |
 
 ## Baseline conhecido (C054–C062)
 

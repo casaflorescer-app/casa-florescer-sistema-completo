@@ -23,6 +23,8 @@ import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import { PatientSearchPanel } from "@/components/attendance/PatientSearchPanel";
 import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
+import { RowActions } from "@/components/ui/RowActions";
+import type { OverflowItem } from "@/components/ui/OverflowMenu";
 
 export function PrescriptionsModule() {
   const { authorization, authorizationLoading } = useAuth();
@@ -224,21 +226,28 @@ export function PrescriptionsModule() {
                 {patient.phone ? ` · ${formatPhone(patient.phone)}` : ""}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={patientChartHref(patient.id)} className={buttonClass}>
-                Abrir prontuário
-              </Link>
-              <button type="button" className={ghostButtonClass} onClick={clearPatient}>
-                Trocar paciente
-              </button>
-              <button
-                type="button"
-                className={ghostButtonClass}
-                onClick={() => setShowSearch((v) => !v)}
-              >
-                {showSearch ? "Ocultar pesquisa" : "Pesquisar outra"}
-              </button>
-            </div>
+            <RowActions
+              primary={{
+                id: "chart",
+                label: "Abrir prontuário",
+                href: patientChartHref(patient.id),
+              }}
+              secondary={
+                [
+                  {
+                    id: "swap",
+                    label: "Trocar paciente",
+                    onClick: clearPatient,
+                  },
+                  {
+                    id: "search",
+                    label: showSearch ? "Ocultar pesquisa" : "Pesquisar outra",
+                    onClick: () => setShowSearch((v) => !v),
+                  },
+                ] satisfies OverflowItem[]
+              }
+              compact={false}
+            />
           </div>
         </section>
       ) : null}

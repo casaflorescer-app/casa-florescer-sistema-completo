@@ -26,6 +26,9 @@ import { PatientPregnancies } from "@/components/pregnancies/PatientPregnancies"
 import { ClinicalOrientationsPanel } from "@/components/orientations/ClinicalOrientationsPanel";
 import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
 import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { RowActions } from "@/components/ui/RowActions";
+import type { OverflowItem } from "@/components/ui/OverflowMenu";
 
 export function PatientDetail({
   patientId,
@@ -151,47 +154,63 @@ export function PatientDetail({
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Clínica
-      </p>
-      <h1 className="page-title mt-1">{row?.fullName ?? "Paciente"}</h1>
-      <p className="page-sub mt-2">Cadastro administrativo. Sem dados clínicos nesta tela.</p>
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/app/patients" className={`${ghostButtonClass} inline-flex items-center`}>
-          Voltar para pacientes
-        </Link>
-        {row && physicianMembership ? (
-          <>
-            <Link
-              href={patientChartHref(patientId)}
-              className={`${buttonClass} inline-flex items-center`}
-            >
-              Abrir prontuário
+      <PageHeader
+        eyebrow="Clínica"
+        title={row?.fullName ?? "Paciente"}
+        description="Cadastro administrativo. Sem dados clínicos nesta tela."
+        actions={
+          <div className="flex flex-row flex-wrap items-center gap-2">
+            <Link href="/app/patients" className={ghostButtonClass}>
+              Voltar
             </Link>
-            <Link
-              href={`/app/prescriptions?patientId=${patientId}`}
-              className={`${ghostButtonClass} inline-flex items-center`}
-            >
-              Receitas
-            </Link>
-            <Link
-              href={`/app/exams?patientId=${patientId}`}
-              className={`${ghostButtonClass} inline-flex items-center`}
-            >
-              Exames
-            </Link>
-          </>
-        ) : null}
-        {row ? (
-          <Link href={`/app/patients/${patientId}/edit`} className={`${ghostButtonClass} inline-flex items-center`}>
-            Editar cadastro
-          </Link>
-        ) : null}
-        <Link href="/app/patients/new" className={`${ghostButtonClass} inline-flex items-center`}>
-          Nova paciente
-        </Link>
-      </div>
+            {row && physicianMembership ? (
+              <RowActions
+                primary={{
+                  id: "chart",
+                  label: "Abrir prontuário",
+                  href: patientChartHref(patientId),
+                }}
+                secondary={
+                  [
+                    {
+                      id: "rx",
+                      label: "Receitas",
+                      href: `/app/prescriptions?patientId=${patientId}`,
+                    },
+                    {
+                      id: "exams",
+                      label: "Exames",
+                      href: `/app/exams?patientId=${patientId}`,
+                    },
+                    {
+                      id: "edit",
+                      label: "Editar cadastro",
+                      href: `/app/patients/${patientId}/edit`,
+                    },
+                    { id: "new", label: "Nova paciente", href: "/app/patients/new" },
+                  ] satisfies OverflowItem[]
+                }
+                compact={false}
+              />
+            ) : (
+              <RowActions
+                primary={
+                  row
+                    ? {
+                        id: "edit",
+                        label: "Editar cadastro",
+                        href: `/app/patients/${patientId}/edit`,
+                        variant: "secondary",
+                      }
+                    : null
+                }
+                secondary={[{ id: "new", label: "Nova paciente", href: "/app/patients/new" }]}
+                compact={false}
+              />
+            )}
+          </div>
+        }
+      />
 
       <StatusMessage error={error} notice={notice} />
 

@@ -690,13 +690,13 @@ export function RentalsModule({
                     </p>
                     <button
                       type="button"
-                      className={ghostButtonClass}
+                      className={buttonClass}
                       onClick={() => {
                         setSelected(c);
                         setFormMode(null);
                       }}
                     >
-                      Ver detalhes
+                      Abrir contrato
                     </button>
                   </article>
                 </li>

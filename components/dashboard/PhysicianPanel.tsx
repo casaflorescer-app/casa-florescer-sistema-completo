@@ -25,6 +25,7 @@ import {
   type PatientListRow,
 } from "@/lib/patients/directory";
 import { buttonClass, ghostButtonClass } from "@/components/platform/Ui";
+import { RowActions } from "@/components/ui/RowActions";
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -218,14 +219,20 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
                       {` · ${APPOINTMENT_STATUS_LABEL[row.status]}`}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href={patientChartHref(row.patientId)} className={ghostButtonClass}>
-                      Abrir prontuário
-                    </Link>
-                    <Link href="/app/agenda" className={buttonClass}>
-                      Abrir na agenda
-                    </Link>
-                  </div>
+                  <RowActions
+                    primary={{
+                      id: "agenda",
+                      label: "Abrir na agenda",
+                      href: "/app/agenda",
+                    }}
+                    secondary={[
+                      {
+                        id: "chart",
+                        label: "Abrir prontuário",
+                        href: patientChartHref(row.patientId),
+                      },
+                    ]}
+                  />
                 </li>
               );
             })}

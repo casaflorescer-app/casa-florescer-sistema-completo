@@ -39,6 +39,8 @@ import { ExamRequestPanel } from "@/components/attendance/ExamRequestPanel";
 import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { formatDateTime } from "@/lib/platform/format";
+import { RowActions } from "@/components/ui/RowActions";
+import type { OverflowItem } from "@/components/ui/OverflowMenu";
 
 const REQUEST_STATUS_LABEL: Record<ExamRequestRow["status"], string> = {
   draft: "Rascunho",
@@ -292,14 +294,17 @@ export function ExamsModule() {
                 {patient.phone ? ` · ${formatPhone(patient.phone)}` : ""}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={patientChartHref(patient.id)} className={buttonClass}>
-                Abrir prontuário
-              </Link>
-              <button type="button" className={ghostButtonClass} onClick={clearPatient}>
-                Trocar paciente
-              </button>
-            </div>
+            <RowActions
+              primary={{
+                id: "chart",
+                label: "Abrir prontuário",
+                href: patientChartHref(patient.id),
+              }}
+              secondary={
+                [{ id: "swap", label: "Trocar paciente", onClick: clearPatient }] satisfies OverflowItem[]
+              }
+              compact={false}
+            />
           </div>
         </section>
       ) : null}
@@ -350,24 +355,26 @@ export function ExamsModule() {
                           </p>
                         ) : null}
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {doc?.pdfStoragePath ? (
-                          <button
-                            type="button"
-                            className={ghostButtonClass}
-                            disabled={busyPdf}
-                            onClick={() => void onViewPdf(doc)}
-                          >
-                            Documento / PDF
-                          </button>
-                        ) : null}
-                        <Link
-                          href={`/app/records/${req.encounterId}?from=exams&patientId=${patient.id}`}
-                          className={ghostButtonClass}
-                        >
-                          Ver no atendimento
-                        </Link>
-                      </div>
+                      <RowActions
+                        primary={{
+                          id: "encounter",
+                          label: "Ver no atendimento",
+                          href: `/app/records/${req.encounterId}?from=exams&patientId=${patient.id}`,
+                          variant: "secondary",
+                        }}
+                        secondary={
+                          doc?.pdfStoragePath
+                            ? [
+                                {
+                                  id: "pdf",
+                                  label: "Documento / PDF",
+                                  disabled: busyPdf,
+                                  onClick: () => void onViewPdf(doc),
+                                },
+                              ]
+                            : []
+                        }
+                      />
                     </div>
                   </li>
                 );

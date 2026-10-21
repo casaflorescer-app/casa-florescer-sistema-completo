@@ -1,8 +1,6 @@
-import Link from "next/link";
 import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attendance/directory";
 import type { AppointmentPredictionView } from "@/lib/attendance/appointment-prediction";
 import { patientChartHref } from "@/lib/patients/directory";
-import { buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import {
   APPOINTMENT_KIND_LABEL,
   canEditAppointmentStatus,
@@ -12,9 +10,8 @@ import { AppointmentPredictionSummary } from "@/components/attendance/Appointmen
 import { AppointmentStatusBadge } from "@/components/attendance/AppointmentStatusBadge";
 import { ROOM_NATURE_LABEL, roomNature } from "@/lib/clinic/room-presentation";
 import { parseReturnOfNote } from "@/lib/attendance/return-link";
-
-const actionClass = buttonClass;
-const ghostActionClass = ghostButtonClass;
+import { RowActions, type RowAction } from "@/components/ui/RowActions";
+import type { OverflowItem } from "@/components/ui/OverflowMenu";
 
 export function AppointmentCard({
   row,
@@ -112,103 +109,138 @@ export function AppointmentCard({
 
       <AppointmentPredictionSummary prediction={prediction} />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {row.patientId ? (
-          <>
-            <Link href={patientChartHref(row.patientId)} className={ghostActionClass}>
-              Abrir prontuário
-            </Link>
-            <Link
-              href={`/app/prescriptions?patientId=${row.patientId}`}
-              className={ghostActionClass}
-            >
-              Receitas
-            </Link>
-            <Link href={`/app/exams?patientId=${row.patientId}`} className={ghostActionClass}>
-              Exames
-            </Link>
-          </>
-        ) : null}
-        {showEdit ? (
-          <button
-            type="button"
-            className={ghostActionClass}
-            disabled={busy || editing}
-            onClick={() => onEdit(row.id)}
-          >
-            {editing ? "Editando…" : "Editar"}
-          </button>
-        ) : null}
-        {!row.arrivalAt &&
-        onRecordArrival &&
-        row.status !== "cancelled" &&
-        row.status !== "no_show" &&
-        row.status !== "completed" ? (
-          <button
-            type="button"
-            className={ghostActionClass}
-            disabled={busy}
-            onClick={() => onRecordArrival(row.id)}
-          >
-            Registrar chegada
-          </button>
-        ) : null}
-        {row.status === "scheduled" ? (
-          <>
-            <button
-              type="button"
-              className={actionClass}
-              disabled={busy}
-              onClick={() => onSetStatus(row.id, "confirmed")}
-            >
-              Confirmar
-            </button>
-            <button type="button" className={ghostActionClass} disabled={busy} onClick={cancel}>
-              Cancelar
-            </button>
-          </>
-        ) : null}
-        {row.status === "confirmed" ? (
-          <>
-            <button
-              type="button"
-              className={actionClass}
-              disabled={busy}
-              onClick={() => onSetStatus(row.id, "checked_in")}
-            >
-              Check-in
-            </button>
-            <button type="button" className={ghostActionClass} disabled={busy} onClick={cancel}>
-              Cancelar
-            </button>
-          </>
-        ) : null}
-        {row.status === "checked_in" ? (
-          <>
-            <p className="text-sm text-lotus-700">Aguardar a médica</p>
-            {canStartEncounter ? (
-              <button
-                type="button"
-                className={actionClass}
-                disabled={busy}
-                onClick={() => onStartEncounter(row.id)}
-              >
-                Iniciar atendimento
-              </button>
-            ) : null}
-          </>
-        ) : null}
-        {row.status === "in_progress" && canStartEncounter && onContinueEncounter ? (
-          <button
-            type="button"
-            className={actionClass}
-            disabled={busy}
-            onClick={() => onContinueEncounter(row.id)}
-          >
-            Continuar atendimento
-          </button>
-        ) : null}
-      </div>
+      <AppointmentCardActions
+        row={row}
+        busy={busy}
+        canStartEncounter={canStartEncounter}
+        showEdit={showEdit}
+        editing={editing}
+        onEdit={onEdit}
+        onSetStatus={onSetStatus}
+        onStartEncounter={onStartEncounter}
+        onContinueEncounter={onContinueEncounter}
+        onRecordArrival={onRecordArrival}
+        onCancel={cancel}
+      />
     </article>
+  );
+}
+
+function AppointmentCardActions({
+  row,
+  busy,
+  canStartEncounter,
+  showEdit,
+  editing,
+  onEdit,
+  onSetStatus,
+  onStartEncounter,
+  onContinueEncounter,
+  onRecordArrival,
+  onCancel,
+}: {
+  row: AppointmentRow;
+  busy: boolean;
+  canStartEncounter: boolean;
+  showEdit: boolean;
+  editing: boolean;
+  onEdit: (appointmentId: string) => void;
+  onSetStatus: (appointmentId: string, status: OperationalAppointmentStatus) => void;
+  onStartEncounter: (appointmentId: string) => void;
+  onContinueEncounter?: (appointmentId: string) => void;
+  onRecordArrival?: (appointmentId: string) => void;
+  onCancel: () => void;
+}) {
+  let primary: RowAction | null = null;
+  if (row.status === "scheduled") {
+    primary = {
+      id: "confirm",
+      label: "Confirmar",
+      disabled: busy,
+      onClick: () => onSetStatus(row.id, "confirmed"),
+    };
+  } else if (row.status === "confirmed") {
+    primary = {
+      id: "checkin",
+      label: "Check-in",
+      disabled: busy,
+      onClick: () => onSetStatus(row.id, "checked_in"),
+    };
+  } else if (row.status === "checked_in" && canStartEncounter) {
+    primary = {
+      id: "start",
+      label: "Iniciar atendimento",
+      disabled: busy,
+      onClick: () => onStartEncounter(row.id),
+    };
+  } else if (row.status === "in_progress" && canStartEncounter && onContinueEncounter) {
+    primary = {
+      id: "continue",
+      label: "Continuar atendimento",
+      disabled: busy,
+      onClick: () => onContinueEncounter(row.id),
+    };
+  } else if (row.patientId) {
+    primary = {
+      id: "chart",
+      label: "Abrir prontuário",
+      href: patientChartHref(row.patientId),
+      variant: "secondary",
+    };
+  }
+
+  const secondary: OverflowItem[] = [];
+  if (row.patientId) {
+    if (primary?.id !== "chart") {
+      secondary.push({
+        id: "chart",
+        label: "Abrir prontuário",
+        href: patientChartHref(row.patientId),
+      });
+    }
+    secondary.push(
+      { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${row.patientId}` },
+      { id: "exams", label: "Exames", href: `/app/exams?patientId=${row.patientId}` },
+    );
+  }
+  if (showEdit) {
+    secondary.push({
+      id: "edit",
+      label: editing ? "Editando…" : "Editar",
+      disabled: busy || editing,
+      onClick: () => onEdit(row.id),
+    });
+  }
+  if (
+    !row.arrivalAt &&
+    onRecordArrival &&
+    row.status !== "cancelled" &&
+    row.status !== "no_show" &&
+    row.status !== "completed"
+  ) {
+    secondary.push({
+      id: "arrival",
+      label: "Registrar chegada",
+      disabled: busy,
+      onClick: () => onRecordArrival(row.id),
+    });
+  }
+  if (row.status === "scheduled" || row.status === "confirmed") {
+    secondary.push({
+      id: "cancel",
+      label: "Cancelar",
+      disabled: busy,
+      danger: true,
+      onClick: onCancel,
+    });
+  }
+
+  return (
+    <div className="mt-4 flex flex-row flex-wrap items-center gap-2">
+      {row.status === "checked_in" && !canStartEncounter ? (
+        <p className="text-sm text-lotus-700">Aguardar a médica</p>
+      ) : null}
+      <RowActions primary={primary} secondary={secondary} />
+    </div>
   );
 }

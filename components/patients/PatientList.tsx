@@ -18,12 +18,62 @@ import {
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { RowActions } from "@/components/ui/RowActions";
+import { EmptyState } from "@/components/ui/EmptyState";
+import type { OverflowItem } from "@/components/ui/OverflowMenu";
 
 const FILTER_LABEL: Record<CareSpecialty | "all", string> = {
   all: "Todas",
   gynecology: "Ginecológico",
   obstetrics: "Obstétrico",
 };
+
+function patientSecondaryActions(row: PatientListRow, canOpenChart: boolean): OverflowItem[] {
+  const items: OverflowItem[] = [
+    { id: "detail", label: "Ver detalhes", href: `/app/patients/${row.id}` },
+  ];
+  if (canOpenChart) {
+    items.push(
+      { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${row.id}` },
+      { id: "exams", label: "Exames", href: `/app/exams?patientId=${row.id}` },
+    );
+  }
+  return items;
+}
+
+function PatientRowActions({
+  row,
+  canOpenChart,
+}: {
+  row: PatientListRow;
+  canOpenChart: boolean;
+}) {
+  const secondary = patientSecondaryActions(row, canOpenChart);
+  if (canOpenChart) {
+    return (
+      <RowActions
+        primary={{
+          id: "chart",
+          label: "Abrir prontuário",
+          href: patientChartHref(row.id),
+          variant: "primary",
+        }}
+        secondary={secondary}
+      />
+    );
+  }
+  return (
+    <RowActions
+      primary={{
+        id: "detail",
+        label: "Ver detalhes",
+        href: `/app/patients/${row.id}`,
+        variant: "secondary",
+      }}
+    />
+  );
+}
 
 export function PatientList() {
   const { authorization } = useAuth();
@@ -93,7 +143,6 @@ export function PatientList() {
     };
   }, [debounced, rows]);
 
-  /** Especialidades presentes na massa visível — evita chips fictícios. */
   const availableSpecialties = useMemo(() => {
     const present = new Set<CareSpecialty>();
     for (const row of rows) {
@@ -115,11 +164,16 @@ export function PatientList() {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Médico
-      </p>
-      <h1 className="page-title mt-1">Pacientes</h1>
-      <p className="page-sub mt-2">Cadastro e identificação das pacientes</p>
+      <PageHeader
+        eyebrow="Médico"
+        title="Pacientes"
+        description="Cadastro e identificação das pacientes"
+        actions={
+          <Link href="/app/patients/new" className={buttonClass}>
+            Nova paciente
+          </Link>
+        }
+      />
 
       <StatusMessage error={error} />
 
@@ -131,16 +185,11 @@ export function PatientList() {
           onChange={(event) => setQuery(event.target.value)}
           aria-label="Pesquisar pacientes"
         />
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-lotus-600">
-            {loading || searching
-              ? "Carregando…"
-              : `${displayRows.length} ${displayRows.length === 1 ? "paciente" : "pacientes"}`}
-          </p>
-          <Link href="/app/patients/new" className={`${buttonClass} inline-flex items-center`}>
-            Nova paciente
-          </Link>
-        </div>
+        <p className="text-sm text-lotus-600">
+          {loading || searching
+            ? "Carregando…"
+            : `${displayRows.length} ${displayRows.length === 1 ? "paciente" : "pacientes"}`}
+        </p>
       </div>
 
       {availableSpecialties.length > 0 ? (
@@ -176,11 +225,27 @@ export function PatientList() {
       ) : null}
 
       {!loading && !error && displayRows.length === 0 ? (
-        <section className="card mt-6 text-sm text-lotus-700">
-          {rows.length === 0
-            ? "Nenhuma paciente visível com o seu vínculo."
-            : "Nenhuma paciente encontrada para esta pesquisa."}
-        </section>
+        <div className="mt-6">
+          <EmptyState
+            title={
+              rows.length === 0
+                ? "Não há pacientes cadastrados"
+                : "Nenhuma paciente encontrada"
+            }
+            description={
+              rows.length === 0
+                ? "Cadastre a primeira paciente para começar o atendimento."
+                : "Ajuste a pesquisa ou os filtros e tente novamente."
+            }
+            action={
+              rows.length === 0 ? (
+                <Link href="/app/patients/new" className={buttonClass}>
+                  Nova paciente
+                </Link>
+              ) : null
+            }
+          />
+        </div>
       ) : null}
 
       {!loading && displayRows.length > 0 ? (
@@ -220,21 +285,8 @@ export function PatientList() {
                           <dd className="break-all">{row.email ?? "—"}</dd>
                         </div>
                       </dl>
-                      <div className="mt-3 flex flex-wrap gap-3">
-                        <Link
-                          href={`/app/patients/${row.id}`}
-                          className="inline-flex text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
-                        >
-                          Ver detalhes
-                        </Link>
-                        {canOpenChart ? (
-                          <Link
-                            href={patientChartHref(row.id)}
-                            className="inline-flex text-sm font-semibold text-lotus-900 underline-offset-2 hover:underline"
-                          >
-                            Abrir prontuário
-                          </Link>
-                        ) : null}
+                      <div className="mt-3">
+                        <PatientRowActions row={row} canOpenChart={canOpenChart} />
                       </div>
                     </div>
                   </div>
@@ -248,18 +300,18 @@ export function PatientList() {
               <thead className="border-b border-lotus-100 text-xs uppercase tracking-wide text-lotus-500">
                 <tr>
                   <th className="px-3 py-3">Foto</th>
-                  <th className="px-3 py-3">Nome</th>
+                  <th className="px-3 py-3">Paciente</th>
                   <th className="px-3 py-3">CPF</th>
                   <th className="px-3 py-3">Nascimento</th>
                   <th className="px-3 py-3">Telefone</th>
                   <th className="hidden px-3 py-3 xl:table-cell">E-mail</th>
                   <th className="hidden px-3 py-3 xl:table-cell">Cadastro</th>
-                  <th className="whitespace-nowrap px-3 py-3">Ação</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {displayRows.map((row) => (
-                  <tr key={row.id} className="border-b border-lotus-50 align-top hover:bg-lotus-50/70">
+                  <tr key={row.id} className="border-b border-lotus-50 align-middle hover:bg-lotus-50/70">
                     <td className="px-3 py-3">
                       <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
                     </td>
@@ -287,22 +339,7 @@ export function PatientList() {
                       {formatDateTime(row.createdAt)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-right">
-                      <div className="flex flex-col items-end gap-1">
-                        <Link
-                          href={`/app/patients/${row.id}`}
-                          className="inline-flex min-h-11 items-center text-sm font-medium text-lotus-800 underline-offset-2 hover:underline"
-                        >
-                          Ver detalhes
-                        </Link>
-                        {canOpenChart ? (
-                          <Link
-                            href={patientChartHref(row.id)}
-                            className={`${ghostButtonClass} inline-flex min-h-11 items-center`}
-                          >
-                            Abrir prontuário
-                          </Link>
-                        ) : null}
-                      </div>
+                      <PatientRowActions row={row} canOpenChart={canOpenChart} />
                     </td>
                   </tr>
                 ))}

@@ -1,11 +1,5 @@
-import { ModulePlaceholder } from "@/components/modules/ModulePlaceholder";
+import { ReportsModule } from "@/components/reports/ReportsModule";
 
 export default function ReportsPage() {
-  return (
-    <ModulePlaceholder
-      title="Financeiro e relatórios"
-      area="clinica"
-      description="Módulo em implementação."
-    />
-  );
+  return <ReportsModule />;
 }

@@ -138,7 +138,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
       },
       {
         id: "reports",
-        label: "Financeiro e relatórios",
+        label: "Relatórios e indicadores",
         href: "/app/reports",
         visible: clinicManagement,
       },

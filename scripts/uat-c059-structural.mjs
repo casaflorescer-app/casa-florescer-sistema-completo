@@ -79,7 +79,7 @@ ok("globals overflow-x clip", globals.includes("overflow-x: clip"));
 ok("Docs C059", docs.includes("C059") && docs.includes("standalone") && /service worker/i.test(docs));
 ok("Superfície /app presente", appPage.length > 0 || existsSync(resolve(root, "app/app")));
 ok("Sem shell legado como superfície obrigatória (pastas podem existir)", true);
-ok("Placeholders conhecidos fora do C059 (reports/specialties)", read("app/app/reports/page.tsx").includes("ModulePlaceholder") && read("app/app/specialties/page.tsx").includes("ModulePlaceholder"));
+ok("Placeholders reports/specialties fechados (C060/C062)", !read("app/app/reports/page.tsx").includes("ModulePlaceholder") && !read("app/app/specialties/page.tsx").includes("ModulePlaceholder"));
 ok("Sem mock operacional no shell", !shell.toLowerCase().includes("mock") && !sw.toLowerCase().includes("offline clinic"));
 
 console.log(`\nEstrutural C059: ${pass}/${pass + fail}`);

@@ -2,11 +2,12 @@
 -- Antes: can_read_exam_file / can_manage_clinical_exam_object liberavam qualquer physician
 -- da practice; update de áudio de orientação só exigia can_write_clinical.
 -- Depois: leitura/escrita alinhadas a can_read_clinical (+ can_write_clinical na escrita).
+-- Nota: exam_orders NÃO tem professional_id — o vínculo é requested_by (e encounter quando houver).
 -- db push NÃO automático — aplicar só com autorização expressa.
 
 -- ---------------------------------------------------------------------------
 -- 1) Leitura de arquivo de exame: self / ops / break-glass / can_read_clinical
---    Sem professional_id → só clinical_access = practice (via can_read_clinical null).
+--    Sem professional → só clinical_access = practice (via can_read_clinical null).
 -- ---------------------------------------------------------------------------
 create or replace function public.can_read_exam_file(
   p_practice uuid,
@@ -48,6 +49,26 @@ revoke all on function public.can_read_exam_file(uuid, uuid, uuid, uuid) from pu
 grant execute on function public.can_read_exam_file(uuid, uuid, uuid) to authenticated;
 grant execute on function public.can_read_exam_file(uuid, uuid, uuid, uuid) to authenticated;
 
+-- Profissional do pedido: requested_by, senão professional do encounter vinculado.
+create or replace function public.exam_order_professional_id(p_order_id uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    o.requested_by,
+    e.professional_id
+  )
+  from public.exam_orders o
+  left join public.encounters e on e.id = o.encounter_id
+  where o.id = p_order_id;
+$$;
+
+revoke all on function public.exam_order_professional_id(uuid) from public;
+grant execute on function public.exam_order_professional_id(uuid) to authenticated;
+
 -- exam_uploads: SELECT com professional do pedido
 drop policy if exists exam_uploads_select on public.exam_uploads;
 create policy exam_uploads_select on public.exam_uploads
@@ -63,7 +84,7 @@ create policy exam_uploads_select on public.exam_uploads
           o.practice_id,
           o.patient_id,
           o.organization_id,
-          o.professional_id
+          public.exam_order_professional_id(o.id)
         )
     )
   );
@@ -100,7 +121,7 @@ as $$
           and public.can_read_clinical(
             o.practice_id,
             o.patient_id,
-            o.professional_id
+            public.exam_order_professional_id(o.id)
           )
         )
       )
@@ -125,7 +146,7 @@ create policy clinical_exams_select on storage.objects
           o.practice_id,
           o.patient_id,
           o.organization_id,
-          o.professional_id
+          public.exam_order_professional_id(o.id)
         )
     )
   );
@@ -215,3 +236,5 @@ comment on function public.can_read_exam_file(uuid, uuid, uuid) is
   'C063: leitura sem professional — self/ops/break-glass ou clinical_access=practice.';
 comment on function public.can_read_exam_file(uuid, uuid, uuid, uuid) is
   'C063: leitura com professional do pedido — aplica own_encounters via can_read_clinical.';
+comment on function public.exam_order_professional_id(uuid) is
+  'C063: requested_by do exame, ou professional_id do encounter vinculado.';

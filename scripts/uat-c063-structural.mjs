@@ -62,6 +62,7 @@ ok("Docs c063 presentes", docs.includes("C063") && docs.includes("CONCLUÍDO COM
 ok("Roadmap aponta C063", roadmap.includes("c063-final-homologation") && roadmap.includes("CONCLUÍDO COM RESSALVAS"));
 ok("Migration 0055 presente", Boolean(mig55));
 ok("0055: can_read_clinical em manage/select", migration.includes("can_read_clinical") && migration.includes("can_manage_clinical_exam_object"));
+ok("0055: usa requested_by / exam_order_professional_id", migration.includes("exam_order_professional_id") && migration.includes("requested_by") && !migration.includes("o.professional_id"));
 ok("0055: orientation audio update apertado", migration.includes("clinical_orientations_audio_update"));
 ok("ignoreBuildErrors false", /ignoreBuildErrors\s*:\s*false/.test(nextCfg));
 ok("PATH_RULES /app/reports", access.includes('prefix: "/app/reports"'));

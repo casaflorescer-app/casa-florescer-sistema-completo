@@ -29,6 +29,9 @@ import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPr
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RowActions } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
+import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
+import { isValidWhatsAppPhone } from "@/lib/whatsapp/phone";
 
 export function PatientDetail({
   patientId,
@@ -313,14 +316,29 @@ export function PatientDetail({
           </section>
 
           <section className="card mt-4" aria-labelledby="patient-contact-title">
-            <h2 id="patient-contact-title" className="font-semibold text-lotus-900">
-              Contato
-            </h2>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <h2 id="patient-contact-title" className="font-semibold text-lotus-900">
+                Contato
+              </h2>
+              <WhatsAppAction
+                phone={row.phone}
+                recipientName={row.fullName}
+                message={buildAdministrativeHelloMessage(row.fullName)}
+                compact
+              />
+            </div>
             <dl className="mt-4 grid grid-cols-1 gap-4 text-sm text-lotus-800 sm:grid-cols-2 xl:grid-cols-3">
               <DetailItem label="Telefone" value={row.phone ? formatPhone(row.phone) : "—"} />
               <DetailItem label="E-mail" value={row.email ?? "—"} breakAll />
               <DetailItem label="Canal preferencial" value={PREFERRED_CHANNEL_LABEL[row.preferredChannel]} />
             </dl>
+            {!isValidWhatsAppPhone(row.phone) ? (
+              <p className="mt-3 text-sm text-lotus-600">
+                {!row.phone
+                  ? "Paciente sem telefone cadastrado."
+                  : "Telefone inválido para WhatsApp."}
+              </p>
+            ) : null}
           </section>
 
           <div className="mt-4">

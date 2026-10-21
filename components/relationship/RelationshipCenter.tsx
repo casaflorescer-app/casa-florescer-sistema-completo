@@ -45,6 +45,8 @@ import {
   type RelationshipOpportunity,
 } from "@/lib/relationship/types";
 import { describeChannelAvailability } from "@/lib/relationship/providers";
+import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
+import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 
 type Tab =
   | "dashboard"
@@ -560,8 +562,9 @@ export function RelationshipCenter({
 
       {!channelInfo.configured ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-950">
-          Provider: <strong>StubProvider — SIMULAÇÃO — NÃO ENVIADO</strong>. É possível preparar lotes,
-          mas não há envio real de WhatsApp, e-mail ou push.
+          Lotes em massa: <strong>StubProvider — SIMULAÇÃO — NÃO ENVIADO</strong> (sem API WhatsApp/e-mail/push).
+          Contato individual: use <strong>WhatsApp Web</strong> na fila — o sistema só abre a conversa; o envio é
+          manual no WhatsApp.
         </p>
       ) : null}
 
@@ -700,6 +703,12 @@ export function RelationshipCenter({
                             </div>
                           </dl>
                           <div className="mt-3 flex flex-wrap gap-2">
+                            <WhatsAppAction
+                              phone={row.phone}
+                              recipientName={row.patientName || "Paciente"}
+                              message={buildAdministrativeHelloMessage(row.patientName || "Paciente")}
+                              compact
+                            />
                             <button
                               type="button"
                               className={ghostButtonClass}
@@ -762,7 +771,13 @@ export function RelationshipCenter({
                         <td className="px-3 py-2">{row.assigneeName || "—"}</td>
                         <td className="px-3 py-2">{row.status}</td>
                         <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-row flex-wrap items-center gap-1">
+                            <WhatsAppAction
+                              phone={row.phone}
+                              recipientName={row.patientName || "Paciente"}
+                              message={buildAdministrativeHelloMessage(row.patientName || "Paciente")}
+                              compact
+                            />
                             <button
                               type="button"
                               className={ghostButtonClass}

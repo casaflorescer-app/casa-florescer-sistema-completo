@@ -41,6 +41,8 @@ import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platf
 import { formatDateTime } from "@/lib/platform/format";
 import { RowActions } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
+import { buildDocumentAvailableMessage } from "@/lib/whatsapp/messages";
 
 const REQUEST_STATUS_LABEL: Record<ExamRequestRow["status"], string> = {
   draft: "Rascunho",
@@ -294,17 +296,25 @@ export function ExamsModule() {
                 {patient.phone ? ` · ${formatPhone(patient.phone)}` : ""}
               </p>
             </div>
-            <RowActions
-              primary={{
-                id: "chart",
-                label: "Abrir prontuário",
-                href: patientChartHref(patient.id),
-              }}
-              secondary={
-                [{ id: "swap", label: "Trocar paciente", onClick: clearPatient }] satisfies OverflowItem[]
-              }
-              compact={false}
-            />
+            <div className="flex flex-row flex-wrap items-center gap-2">
+              <RowActions
+                primary={{
+                  id: "chart",
+                  label: "Abrir prontuário",
+                  href: patientChartHref(patient.id),
+                }}
+                secondary={
+                  [{ id: "swap", label: "Trocar paciente", onClick: clearPatient }] satisfies OverflowItem[]
+                }
+                compact={false}
+              />
+              <WhatsAppAction
+                phone={patient.phone}
+                recipientName={patient.fullName}
+                message={buildDocumentAvailableMessage(patient.fullName)}
+                documentHint
+              />
+            </div>
           </div>
         </section>
       ) : null}

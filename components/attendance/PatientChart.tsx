@@ -38,6 +38,8 @@ import { PatientClinicalSummary } from "@/components/attendance/PatientClinicalS
 import { EncounterTimeline } from "@/components/attendance/EncounterTimeline";
 import { PatientSearchPanel } from "@/components/attendance/PatientSearchPanel";
 import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
+import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
+import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 
@@ -211,6 +213,13 @@ export function PatientChart({ patientId }: { patientId: string }) {
             <Link href={`/app/patients/${patient.id}`} className={ghostButtonClass}>
               Ver cadastro
             </Link>
+          ) : null}
+          {patient ? (
+            <WhatsAppAction
+              phone={patient.phone}
+              recipientName={patient.fullName}
+              message={buildAdministrativeHelloMessage(patient.fullName)}
+            />
           ) : null}
           <button
             type="button"

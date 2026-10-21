@@ -25,6 +25,8 @@ import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPr
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { RowActions } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
+import { buildDocumentAvailableMessage } from "@/lib/whatsapp/messages";
 
 export function PrescriptionsModule() {
   const { authorization, authorizationLoading } = useAuth();
@@ -226,28 +228,36 @@ export function PrescriptionsModule() {
                 {patient.phone ? ` · ${formatPhone(patient.phone)}` : ""}
               </p>
             </div>
-            <RowActions
-              primary={{
-                id: "chart",
-                label: "Abrir prontuário",
-                href: patientChartHref(patient.id),
-              }}
-              secondary={
-                [
-                  {
-                    id: "swap",
-                    label: "Trocar paciente",
-                    onClick: clearPatient,
-                  },
-                  {
-                    id: "search",
-                    label: showSearch ? "Ocultar pesquisa" : "Pesquisar outra",
-                    onClick: () => setShowSearch((v) => !v),
-                  },
-                ] satisfies OverflowItem[]
-              }
-              compact={false}
-            />
+            <div className="flex flex-row flex-wrap items-center gap-2">
+              <RowActions
+                primary={{
+                  id: "chart",
+                  label: "Abrir prontuário",
+                  href: patientChartHref(patient.id),
+                }}
+                secondary={
+                  [
+                    {
+                      id: "swap",
+                      label: "Trocar paciente",
+                      onClick: clearPatient,
+                    },
+                    {
+                      id: "search",
+                      label: showSearch ? "Ocultar pesquisa" : "Pesquisar outra",
+                      onClick: () => setShowSearch((v) => !v),
+                    },
+                  ] satisfies OverflowItem[]
+                }
+                compact={false}
+              />
+              <WhatsAppAction
+                phone={patient.phone}
+                recipientName={patient.fullName}
+                message={buildDocumentAvailableMessage(patient.fullName)}
+                documentHint
+              />
+            </div>
           </div>
         </section>
       ) : null}

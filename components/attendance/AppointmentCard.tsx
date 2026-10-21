@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attendance/directory";
 import type { AppointmentPredictionView } from "@/lib/attendance/appointment-prediction";
-import { patientChartHref } from "@/lib/patients/directory";
+import { getPatient, patientChartHref } from "@/lib/patients/directory";
+import { createClient } from "@/lib/supabase/client";
 import {
   APPOINTMENT_KIND_LABEL,
   canEditAppointmentStatus,
@@ -12,6 +16,8 @@ import { ROOM_NATURE_LABEL, roomNature } from "@/lib/clinic/room-presentation";
 import { parseReturnOfNote } from "@/lib/attendance/return-link";
 import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { WhatsAppComposeDialog } from "@/components/whatsapp/WhatsAppComposeDialog";
+import { buildAppointmentConfirmationMessage } from "@/lib/whatsapp/messages";
 
 export function AppointmentCard({
   row,
@@ -151,6 +157,51 @@ function AppointmentCardActions({
   onRecordArrival?: (appointmentId: string) => void;
   onCancel: () => void;
 }) {
+  const [waOpen, setWaOpen] = useState(false);
+  const [waPhone, setWaPhone] = useState<string | null>(null);
+  const [waName, setWaName] = useState(row.patientName ?? "Paciente");
+  const [waMessage, setWaMessage] = useState("");
+  const [waBusy, setWaBusy] = useState(false);
+
+  async function openWhatsAppCompose() {
+    if (!row.patientId || waBusy) return;
+    setWaBusy(true);
+    try {
+      const supabase = createClient();
+      if (!supabase) return;
+      const patient = await getPatient(supabase, row.patientId);
+      const name = patient?.fullName || row.patientName || "Paciente";
+      const dateLabel = new Date(row.startsAt).toLocaleDateString("pt-BR");
+      const timeLabel = formatClock(row.startsAt);
+      setWaName(name);
+      setWaPhone(patient?.phone ?? null);
+      setWaMessage(
+        buildAppointmentConfirmationMessage({
+          patientName: name,
+          dateLabel,
+          timeLabel,
+          professionalName: row.professionalName ?? undefined,
+          roomName: row.roomName ?? undefined,
+          kindLabel: APPOINTMENT_KIND_LABEL[row.kind],
+        }),
+      );
+      setWaOpen(true);
+    } catch {
+      setWaPhone(null);
+      setWaName(row.patientName ?? "Paciente");
+      setWaMessage(
+        buildAppointmentConfirmationMessage({
+          patientName: row.patientName ?? "Paciente",
+          dateLabel: new Date(row.startsAt).toLocaleDateString("pt-BR"),
+          timeLabel: formatClock(row.startsAt),
+        }),
+      );
+      setWaOpen(true);
+    } finally {
+      setWaBusy(false);
+    }
+  }
+
   let primary: RowAction | null = null;
   if (row.status === "scheduled") {
     primary = {
@@ -201,6 +252,12 @@ function AppointmentCardActions({
     secondary.push(
       { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${row.patientId}` },
       { id: "exams", label: "Exames", href: `/app/exams?patientId=${row.patientId}` },
+      {
+        id: "whatsapp",
+        label: waBusy ? "WhatsApp…" : "WhatsApp",
+        disabled: waBusy,
+        onClick: () => void openWhatsAppCompose(),
+      },
     );
   }
   if (showEdit) {
@@ -241,6 +298,13 @@ function AppointmentCardActions({
         <p className="text-sm text-lotus-700">Aguardar a médica</p>
       ) : null}
       <RowActions primary={primary} secondary={secondary} />
+      <WhatsAppComposeDialog
+        open={waOpen}
+        onClose={() => setWaOpen(false)}
+        recipientName={waName}
+        phone={waPhone}
+        initialMessage={waMessage}
+      />
     </div>
   );
 }

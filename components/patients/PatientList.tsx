@@ -22,25 +22,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { WhatsAppComposeDialog } from "@/components/whatsapp/WhatsAppComposeDialog";
+import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
+import { isValidWhatsAppPhone } from "@/lib/whatsapp/phone";
 
 const FILTER_LABEL: Record<CareSpecialty | "all", string> = {
   all: "Todas",
   gynecology: "Ginecológico",
   obstetrics: "Obstétrico",
 };
-
-function patientSecondaryActions(row: PatientListRow, canOpenChart: boolean): OverflowItem[] {
-  const items: OverflowItem[] = [
-    { id: "detail", label: "Ver detalhes", href: `/app/patients/${row.id}` },
-  ];
-  if (canOpenChart) {
-    items.push(
-      { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${row.id}` },
-      { id: "exams", label: "Exames", href: `/app/exams?patientId=${row.id}` },
-    );
-  }
-  return items;
-}
 
 function PatientRowActions({
   row,
@@ -49,29 +39,55 @@ function PatientRowActions({
   row: PatientListRow;
   canOpenChart: boolean;
 }) {
-  const secondary = patientSecondaryActions(row, canOpenChart);
+  const [waOpen, setWaOpen] = useState(false);
+  const secondary: OverflowItem[] = [
+    { id: "detail", label: "Ver detalhes", href: `/app/patients/${row.id}` },
+  ];
   if (canOpenChart) {
-    return (
-      <RowActions
-        primary={{
-          id: "chart",
-          label: "Abrir prontuário",
-          href: patientChartHref(row.id),
-          variant: "primary",
-        }}
-        secondary={secondary}
-      />
+    secondary.push(
+      { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${row.id}` },
+      { id: "exams", label: "Exames", href: `/app/exams?patientId=${row.id}` },
     );
   }
+  if (isValidWhatsAppPhone(row.phone)) {
+    secondary.push({
+      id: "whatsapp",
+      label: "WhatsApp",
+      onClick: () => setWaOpen(true),
+    });
+  }
+
   return (
-    <RowActions
-      primary={{
-        id: "detail",
-        label: "Ver detalhes",
-        href: `/app/patients/${row.id}`,
-        variant: "secondary",
-      }}
-    />
+    <>
+      {canOpenChart ? (
+        <RowActions
+          primary={{
+            id: "chart",
+            label: "Abrir prontuário",
+            href: patientChartHref(row.id),
+            variant: "primary",
+          }}
+          secondary={secondary}
+        />
+      ) : (
+        <RowActions
+          primary={{
+            id: "detail",
+            label: "Ver detalhes",
+            href: `/app/patients/${row.id}`,
+            variant: "secondary",
+          }}
+          secondary={secondary.filter((item) => item.id !== "detail")}
+        />
+      )}
+      <WhatsAppComposeDialog
+        open={waOpen}
+        onClose={() => setWaOpen(false)}
+        recipientName={row.fullName}
+        phone={row.phone}
+        initialMessage={buildAdministrativeHelloMessage(row.fullName)}
+      />
+    </>
   );
 }
 

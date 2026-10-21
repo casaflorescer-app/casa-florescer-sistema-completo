@@ -205,17 +205,30 @@ on conflict (user_id, practice_id, role) do nothing;
       if (recErr) fail("Entrada medicamento+lote", recErr.message);
       else pass("Entrada medicamento+lote");
 
-      const { error: exitErr } = await ownerSb.rpc("stock_movement_exit", {
-        p_payload: {
-          organization_id: ORG,
-          warehouse_id: whId,
-          item_id: medId,
-          qty: 1,
-          reason: "UAT C061 saída",
-        },
-      });
-      if (exitErr) fail("Saída", exitErr.message);
-      else pass("Saída");
+      const { data: lots } = await ownerSb
+        .from("item_lots")
+        .select("id")
+        .eq("item_id", medId)
+        .eq("warehouse_id", whId)
+        .gt("qty_on_hand", 0)
+        .order("expires_on", { ascending: true })
+        .limit(1);
+      const lotId = lots?.[0]?.id ?? null;
+      if (!lotId) fail("Lote FEFO para saída", "nenhum lote com saldo");
+      else {
+        const { error: exitErr } = await ownerSb.rpc("stock_movement_exit", {
+          p_payload: {
+            organization_id: ORG,
+            warehouse_id: whId,
+            item_id: medId,
+            qty: 1,
+            lot_id: lotId,
+            reason: "UAT C061 saída",
+          },
+        });
+        if (exitErr) fail("Saída", exitErr.message);
+        else pass("Saída com lote FEFO");
+      }
     }
 
     // Equipamento

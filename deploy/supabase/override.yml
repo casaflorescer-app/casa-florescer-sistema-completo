@@ -1,0 +1,20 @@
+# Fecha o que o compose oficial do Supabase publicaria na internet.
+# Exige Docker Compose 2.24 ou mais novo por causa de !override.
+# Não suba este arquivo sozinho: use deploy/up.sh.
+
+services:
+  api-gw:
+    ports: !override
+      - "127.0.0.1:8000:8000"
+  auth:
+    environment:
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+  supavisor:
+    profiles: ["manual"]
+    ports: !override
+      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:6543:6543"
+  functions:
+    profiles: ["manual"]

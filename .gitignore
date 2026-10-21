@@ -27,3 +27,8 @@ agent-transcripts/
 
 supabase/temp/
 .vercel
+
+# hospedagem — segredos, clone do Supabase e backups locais
+deploy/.env
+deploy/supabase-docker/
+deploy/backups/

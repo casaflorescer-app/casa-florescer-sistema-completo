@@ -39,6 +39,8 @@ export type AlertAudience = "secretary" | "physician" | "admin" | "all_staff";
 export type ItemClass =
   | "clinical_lot_controlled"
   | "clinical_consumable"
+  | "surgical_consumable"
+  | "procedure_consumable"
   | "pantry"
   | "housekeeping"
   | "office";

@@ -8,6 +8,7 @@ import {
   fieldClass,
   ghostButtonClass,
 } from "@/components/platform/Ui";
+import { EquipmentPanel } from "@/components/inventory/EquipmentPanel";
 import {
   getItem,
   listBalancesForItem,
@@ -25,6 +26,7 @@ import {
   upsertItem,
   upsertWarehouse,
 } from "@/lib/inventory/directory";
+import { listStockRooms } from "@/lib/inventory/equipment";
 import {
   ITEM_CLASSES,
   ITEM_CLASS_LABEL,
@@ -35,12 +37,13 @@ import {
   type ItemRow,
   type LotRow,
   type MovementRow,
+  type RoomOption,
   type StockAlert,
   type StockDashboardStats,
   type WarehouseRow,
 } from "@/lib/inventory/types";
 
-type TabId = "dashboard" | "items" | "move" | "inventory";
+type TabId = "dashboard" | "items" | "move" | "inventory" | "equipment";
 
 function fmtQty(n: number, unit?: string): string {
   const v = Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/\.?0+$/, "");
@@ -92,7 +95,8 @@ export function InventoryModule({
   });
 
   const [showWhForm, setShowWhForm] = useState(false);
-  const [whForm, setWhForm] = useState({ code: "", name: "", notes: "" });
+  const [whForm, setWhForm] = useState({ code: "", name: "", notes: "", roomId: "" });
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
 
   const [moveForm, setMoveForm] = useState({
     type: "receipt" as "receipt" | "exit" | "transfer" | "adjust",
@@ -124,7 +128,7 @@ export function InventoryModule({
     setLoading(true);
     setError(null);
     try {
-      const [dash, itemRows, whRows, movs] = await Promise.all([
+      const [dash, itemRows, whRows, movs, roomRows] = await Promise.all([
         loadStockDashboard(orgId),
         listItems({
           organizationId: orgId,
@@ -133,6 +137,7 @@ export function InventoryModule({
         }),
         listWarehouses(orgId),
         listMovements({ organizationId: orgId, limit: 30 }),
+        listStockRooms(orgId),
       ]);
       setStats(dash.stats);
       setAlerts(dash.alerts);
@@ -143,6 +148,7 @@ export function InventoryModule({
       setItems(list);
       setWarehouses(whRows);
       setMovements(movs);
+      setRooms(roomRows);
 
       if (focusItemId) {
         const found =
@@ -259,12 +265,13 @@ export function InventoryModule({
         code: whForm.code.trim().toUpperCase(),
         name: whForm.name.trim(),
         notes: whForm.notes.trim() || null,
+        room_id: whForm.roomId || null,
         handles_pantry: true,
         is_active: true,
       });
       setNotice("Local de estoque criado.");
       setShowWhForm(false);
-      setWhForm({ code: "", name: "", notes: "" });
+      setWhForm({ code: "", name: "", notes: "", roomId: "" });
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível salvar o local.");
@@ -385,8 +392,9 @@ export function InventoryModule({
       </p>
       <h1 className="page-title mt-1">Estoque e Materiais</h1>
       <p className="page-sub mt-2 max-w-3xl">
-        Controle administrativo de materiais e insumos. Não substitui prescrição, prontuário
-        nem dispensação clínica ao paciente.
+        Materiais consumíveis (medicamentos, alimentos, cirúrgicos, procedimento e gerais) e,
+        em aba separada, equipamentos patrimoniais. Não substitui prescrição, prontuário nem
+        dispensação clínica ao paciente.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -394,6 +402,7 @@ export function InventoryModule({
           [
             ["dashboard", "Painel"],
             ["items", "Materiais"],
+            ["equipment", "Equipamentos"],
             ["move", "Movimentar"],
             ["inventory", "Inventário"],
           ] as const
@@ -407,37 +416,41 @@ export function InventoryModule({
             {label}
           </button>
         ))}
-        <button
-          type="button"
-          className={buttonClass}
-          onClick={() => {
-            setItemForm({
-              id: "",
-              sku: "",
-              name: "",
-              itemClass: "clinical_consumable",
-              unit: "un",
-              minQty: "10",
-              idealQty: "30",
-              description: "",
-              notes: "",
-            });
-            setShowItemForm(true);
-            setTab("items");
-          }}
-        >
-          Novo material
-        </button>
-        <button
-          type="button"
-          className={ghostButtonClass}
-          onClick={() => {
-            setShowWhForm(true);
-            setTab("items");
-          }}
-        >
-          Novo local
-        </button>
+        {tab !== "equipment" ? (
+          <>
+            <button
+              type="button"
+              className={buttonClass}
+              onClick={() => {
+                setItemForm({
+                  id: "",
+                  sku: "",
+                  name: "",
+                  itemClass: "procedure_consumable",
+                  unit: "un",
+                  minQty: "10",
+                  idealQty: "30",
+                  description: "",
+                  notes: "",
+                });
+                setShowItemForm(true);
+                setTab("items");
+              }}
+            >
+              Novo material
+            </button>
+            <button
+              type="button"
+              className={ghostButtonClass}
+              onClick={() => {
+                setShowWhForm(true);
+                setTab("items");
+              }}
+            >
+              Novo local
+            </button>
+          </>
+        ) : null}
       </div>
 
       <div className="mt-4">
@@ -458,6 +471,8 @@ export function InventoryModule({
               { label: "Vencidos", value: stats?.expired ?? 0 },
               { label: "Locais", value: stats?.warehouses ?? 0 },
               { label: "Mov. 7 dias", value: stats?.recentMovements ?? 0 },
+              { label: "Equipamentos", value: stats?.equipmentTotal ?? 0 },
+              { label: "Eq. manutenção", value: stats?.equipmentMaintenance ?? 0 },
             ].map((c) => (
               <article key={c.label} className="card min-w-0 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">
@@ -871,6 +886,21 @@ export function InventoryModule({
                     placeholder="Farmácia"
                   />
                 </label>
+                <label className="text-sm md:col-span-2">
+                  Sala física (opcional)
+                  <select
+                    className={fieldClass}
+                    value={whForm.roomId}
+                    onChange={(e) => setWhForm((f) => ({ ...f, roomId: e.target.value }))}
+                  >
+                    <option value="">— não vinculada —</option>
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.code} — {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -892,6 +922,10 @@ export function InventoryModule({
             </section>
           ) : null}
         </section>
+      ) : null}
+
+      {!loading && tab === "equipment" && orgId ? (
+        <EquipmentPanel organizationId={orgId} />
       ) : null}
 
       {!loading && tab === "move" ? (

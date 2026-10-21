@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { countEquipmentStats } from "@/lib/inventory/equipment";
 import {
   STOCK_EXPIRING_SOON_DAYS,
   type BalanceRow,
@@ -270,7 +271,7 @@ export async function loadStockDashboard(
   const today = new Date().toISOString().slice(0, 10);
   const soon = addDaysIso(today, STOCK_EXPIRING_SOON_DAYS);
 
-  const [itemsRes, whRes, balsRes, lotsRes, movRes] = await Promise.all([
+  const [itemsRes, whRes, balsRes, lotsRes, movRes, equipStats] = await Promise.all([
     supabase
       .from("items")
       .select("id, is_active, min_qty, name, sku")
@@ -290,6 +291,7 @@ export async function loadStockDashboard(
       .select("id")
       .eq("organization_id", organizationId)
       .gte("occurred_at", new Date(Date.now() - 7 * 86400000).toISOString()),
+    countEquipmentStats(organizationId).catch(() => ({ total: 0, maintenance: 0 })),
   ]);
 
   if (itemsRes.error) throw new Error(itemsRes.error.message);
@@ -364,6 +366,8 @@ export async function loadStockDashboard(
       expired,
       warehouses: (whRes.data ?? []).length,
       recentMovements: (movRes.data ?? []).length,
+      equipmentTotal: equipStats.total,
+      equipmentMaintenance: equipStats.maintenance,
     },
     alerts,
   };

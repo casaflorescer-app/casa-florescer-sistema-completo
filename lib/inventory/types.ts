@@ -1,8 +1,10 @@
-/** C058 — tipos do módulo Estoque (reusa items/warehouses/stock_*). */
+/** C058/C061 — tipos do módulo Estoque (reusa items/warehouses/stock_* + clinic_equipment). */
 
 export const ITEM_CLASSES = [
   "clinical_lot_controlled",
   "clinical_consumable",
+  "surgical_consumable",
+  "procedure_consumable",
   "pantry",
   "housekeeping",
   "office",
@@ -11,12 +13,43 @@ export const ITEM_CLASSES = [
 export type ItemClass = (typeof ITEM_CLASSES)[number];
 
 export const ITEM_CLASS_LABEL: Record<ItemClass, string> = {
-  clinical_lot_controlled: "Medicamento/lote",
-  clinical_consumable: "Material clínico",
-  pantry: "Insumo / pantry",
-  housekeeping: "Higiene / limpeza",
-  office: "Escritório",
+  clinical_lot_controlled: "Medicamento",
+  clinical_consumable: "Material clínico (legado)",
+  surgical_consumable: "Material cirúrgico",
+  procedure_consumable: "Material de procedimento",
+  pantry: "Gênero alimentício",
+  housekeeping: "Material geral — higiene/limpeza",
+  office: "Material geral — escritório/admin",
 };
+
+/** Agrupamento operacional na UI (consumíveis vs patrimoniais). */
+export const CONSUMABLE_CLASS_GROUPS = [
+  {
+    id: "medicamentos",
+    label: "Medicamentos",
+    classes: ["clinical_lot_controlled"] as const,
+  },
+  {
+    id: "alimentos",
+    label: "Gêneros alimentícios",
+    classes: ["pantry"] as const,
+  },
+  {
+    id: "cirurgicos",
+    label: "Materiais cirúrgicos",
+    classes: ["surgical_consumable"] as const,
+  },
+  {
+    id: "procedimento",
+    label: "Materiais de procedimento",
+    classes: ["procedure_consumable"] as const,
+  },
+  {
+    id: "gerais",
+    label: "Materiais gerais",
+    classes: ["housekeeping", "office", "clinical_consumable"] as const,
+  },
+] as const;
 
 export const STOCK_UNITS = [
   "un",
@@ -40,6 +73,38 @@ export const MOVEMENT_KIND_LABEL: Record<string, string> = {
 };
 
 export const STOCK_EXPIRING_SOON_DAYS = 30;
+
+export const EQUIPMENT_STATUSES = [
+  "active",
+  "maintenance",
+  "inactive",
+  "disposed",
+  "transferred",
+] as const;
+
+export type EquipmentStatus = (typeof EQUIPMENT_STATUSES)[number];
+
+export const EQUIPMENT_STATUS_LABEL: Record<EquipmentStatus, string> = {
+  active: "Ativo",
+  maintenance: "Em manutenção",
+  inactive: "Inativo",
+  disposed: "Baixado",
+  transferred: "Transferido",
+};
+
+export const EQUIPMENT_CATEGORIES = [
+  "medico",
+  "informatica",
+  "mobiliario",
+  "geral",
+] as const;
+
+export const EQUIPMENT_CATEGORY_LABEL: Record<string, string> = {
+  medico: "Equipamento médico",
+  informatica: "Informática",
+  mobiliario: "Mobiliário",
+  geral: "Geral",
+};
 
 export type WarehouseRow = {
   id: string;
@@ -104,6 +169,36 @@ export type MovementRow = {
   createdBy: string;
 };
 
+export type EquipmentRow = {
+  id: string;
+  organizationId: string;
+  name: string;
+  category: string;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  assetTag: string | null;
+  acquiredOn: string | null;
+  roomId: string | null;
+  roomCode?: string | null;
+  roomName?: string | null;
+  status: EquipmentStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EquipmentEventRow = {
+  id: string;
+  equipmentId: string;
+  eventKind: string;
+  fromRoomId: string | null;
+  toRoomId: string | null;
+  detail: Record<string, unknown>;
+  createdAt: string;
+  actorId: string | null;
+};
+
 export type StockDashboardStats = {
   itemsTotal: number;
   itemsActive: number;
@@ -113,10 +208,18 @@ export type StockDashboardStats = {
   expired: number;
   warehouses: number;
   recentMovements: number;
+  equipmentTotal: number;
+  equipmentMaintenance: number;
 };
 
 export type StockAlert = {
   id: string;
   severity: "warn" | "error";
   message: string;
+};
+
+export type RoomOption = {
+  id: string;
+  code: string;
+  name: string;
 };

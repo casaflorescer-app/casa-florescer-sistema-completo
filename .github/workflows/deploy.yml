@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      static_ok: ${{ steps.static_build.outcome == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,7 +31,11 @@ jobs:
       - name: Install
         run: npm install
 
-      - name: Build static export
+      # Produção operacional é Vercel (SSR). O export estático do Pages falha com
+      # rotas force-dynamic — não deve falhar o check nem bloquear o pipeline.
+      - name: Build static export (Pages preview; best-effort)
+        id: static_build
+        continue-on-error: true
         env:
           STATIC_EXPORT: "true"
           NEXT_PUBLIC_STATIC_EXPORT: "true"
@@ -40,20 +46,22 @@ jobs:
           set -o pipefail
           npm run build 2>&1 | tee build.log
 
-      - name: Surface Next.js error
-        if: failure()
+      - name: Surface Next.js warning
+        if: steps.static_build.outcome == 'failure'
         run: |
-          echo "::error title=Next.js build failed::$(tail -c 1800 build.log | tr '\n' ' | ')"
-          echo '## Next.js build log' >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=GitHub Pages static export failed (non-blocking)::$(tail -c 1800 build.log | tr '\n' ' | ')"
+          echo '## Next.js static export log (non-blocking)' >> "$GITHUB_STEP_SUMMARY"
           tail -n 80 build.log >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Pages artifact
+        if: steps.static_build.outcome == 'success'
         uses: actions/upload-pages-artifact@v3
         with:
           path: out
 
   deploy:
     needs: build
+    if: needs.build.outputs.static_ok == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

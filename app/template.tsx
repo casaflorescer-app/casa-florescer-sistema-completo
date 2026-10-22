@@ -8,11 +8,15 @@ export default function AppTemplate({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <AlertProvider>
-        {children}
-        <PwaRegister />
-      </AlertProvider>
-    </AuthProvider>
+    <html lang="pt-BR">
+      <body className="font-sans antialiased" data-casa="layout-8">
+        <AuthProvider>
+          <AlertProvider>
+            {children}
+            <PwaRegister />
+          </AlertProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

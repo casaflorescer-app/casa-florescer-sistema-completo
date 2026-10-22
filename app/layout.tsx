@@ -35,11 +35,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="pt-BR">
-      <body className="font-sans antialiased" data-casa="layout-7">
-        {children}
-      </body>
-    </html>
-  );
+  // No ar o Next deixa este layout fora do HTML. A casca fica no template,
+  // que é o componente que realmente entra na resposta de /login.
+  return <>{children}</>;
 }

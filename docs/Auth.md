@@ -12,7 +12,7 @@ O app continua com Supabase Auth e cookie de sessão (`middleware.ts`, `lib/supa
 
 A tela `app/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
 
-O layout raiz exporta `dynamic = "force-dynamic"`. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele.
+O layout raiz só desenha `<html>` e `<body>`. `AuthProvider`, `AlertProvider` e `PwaRegister` ficam em `app/template.tsx`. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele.
 
 `requireAppRouteAccess` e `requireSession` só chamam `redirect("/login")` quando o middleware informa um caminho protegido em `x-casa-pathname`. Sem esse caminho, o guard não redireciona. Assumir `/app` nesse caso fazia o Next responder 307 para `/login` na própria tela de login.
 
@@ -55,6 +55,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-22 — layout raiz voltou a ser só a casca `html`/`body`. Providers foram para `app/template.tsx`. `force-dynamic` saiu do layout raiz.
 - 2026-10-22 — `/login` deixou o 307 e passou a responder 500. `useAuth()` sem provider derrubava a tela no navegador. Sem provider, o hook agora responde como sessão ausente.
 - 2026-10-21 — middleware limitado às rotas com sessão. `/login` ficou de fora depois que `x-casa-rev: 3` no ar continuou em 307.
 - 2026-10-21 — rotas públicas não passam pelo Auth no middleware; guards não redirecionam caminho público de volta a `/login`.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { mapAuthError } from "@/lib/auth/errors";
@@ -16,7 +16,6 @@ function isValidEmail(value: string) {
 
 export function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -59,7 +58,9 @@ export function LoginForm() {
         return;
       }
 
-      const destination = resolveAuthenticatedPath(searchParams.get("next"));
+      const destination = resolveAuthenticatedPath(
+        new URLSearchParams(window.location.search).get("next"),
+      );
       router.replace(destination);
       router.refresh();
     } catch (err) {

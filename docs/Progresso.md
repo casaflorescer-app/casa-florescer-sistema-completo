@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-22 — Com "entrada 8" no ar, o formulário permaneceu, mas só chegava o CSS da fonte (4 KB). O Tailwind ficou no template, que é o trecho incluído na resposta. O texto de conferência saiu da tela de login.
 - 2026-10-22 — A imagem com "entrada 6" e o template novo ainda respondia sem abrir `<html>` nem `<body>`. A casca passou para `app/template.tsx` (`data-casa="layout-8"`, texto "entrada 8").
 - 2026-10-22 — Com "entrada 6" no ar, o formulário aparecia e sumia. A resposta de `/login` não trazia `<html>` nem `<body>`. O layout raiz ficou só com essa casca (`data-casa="layout-7"`). Providers foram para `app/template.tsx`.
 - 2026-10-22 — Com "entrada 5" no ar, `/login` respondeu 500 e o navegador mostrou exceção de cliente. A causa é `useAuth()` sem o provider do layout. O hook passou a tratar isso como sessão ausente.

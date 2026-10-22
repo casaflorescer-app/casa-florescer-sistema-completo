@@ -1,6 +1,7 @@
 import { AlertProvider } from "@/components/alerts/AlertProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
+import "./globals.css";
 
 export default function AppTemplate({
   children,

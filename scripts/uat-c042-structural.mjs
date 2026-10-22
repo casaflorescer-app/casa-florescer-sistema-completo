@@ -25,8 +25,8 @@ function read(rel) {
   return readFileSync(p, "utf8");
 }
 
-const rxPage = read("app/app/prescriptions/page.tsx");
-const exPage = read("app/app/exams/page.tsx");
+const rxPage = read("app/(shell)/app/prescriptions/page.tsx");
+const exPage = read("app/(shell)/app/exams/page.tsx");
 const rxMod = read("components/prescriptions/PrescriptionsModule.tsx");
 const exMod = read("components/exams/ExamsModule.tsx");
 const rxPanel = read("components/prescriptions/ClinicalPrescriptionPanel.tsx");

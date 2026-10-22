@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-22 — A tela branca na navegação vinha do template, que recriava `<html>` e `<body>`. A casca foi para `app/(shell)/layout.tsx` (`layout-9`). Sessão que não responde em 8 segundos segue como ausente, e a ida ao login é carregamento inteiro. Build e navegação local conferidos. O ar só muda depois de um novo deploy do florescerweb.
 - 2026-10-22 — Auditoria pré-produção na branch `auditoria-pre-producao`. A transcrição só baixa o áudio do próprio registro. UAT estrutural reexecutado. Sem banco isolado e sem deploy. Classificação no relatório: não apto para produção até o ar ser revisto. Relatório em `docs/auditoria-pre-producao.md`.
 - 2026-10-22 — O primeiro acesso entrou. Ao navegar, a tela ficava branca porque `/app` perdia a casca e o roteador trocava o documento vazio. A casca permanece, `/app` não volta sozinho ao login e o botão Entrar recarrega a página. Ainda precisa de deploy do florescerweb.
 - 2026-10-22 — A API pública voltou a responder. O login falhava com `email_provider_disabled` porque `ENABLE_EMAIL_SIGNUP=false` desliga a senha no GoTrue. A correção é `true` no `deploy/.env` da VPS e recriar só o serviço `auth`. O cadastro público continua desligado.

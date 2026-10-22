@@ -39,18 +39,18 @@ const mig55 = migrations.find((f) => f.startsWith("0055"));
 const migration = mig55 ? read(`supabase/migrations/${mig55}`) : "";
 
 const appPages = [
-  "app/app/page.tsx",
-  "app/app/agenda/page.tsx",
-  "app/app/patients/page.tsx",
-  "app/app/records/page.tsx",
-  "app/app/prescriptions/page.tsx",
-  "app/app/exams/page.tsx",
-  "app/app/portal/page.tsx",
-  "app/app/reports/page.tsx",
-  "app/app/inventory/page.tsx",
-  "app/app/rentals/page.tsx",
-  "app/app/clinical-contracts/page.tsx",
-  "app/app/workforce/page.tsx",
+  "app/(shell)/app/page.tsx",
+  "app/(shell)/app/agenda/page.tsx",
+  "app/(shell)/app/patients/page.tsx",
+  "app/(shell)/app/records/page.tsx",
+  "app/(shell)/app/prescriptions/page.tsx",
+  "app/(shell)/app/exams/page.tsx",
+  "app/(shell)/app/portal/page.tsx",
+  "app/(shell)/app/reports/page.tsx",
+  "app/(shell)/app/inventory/page.tsx",
+  "app/(shell)/app/rentals/page.tsx",
+  "app/(shell)/app/clinical-contracts/page.tsx",
+  "app/(shell)/app/workforce/page.tsx",
 ];
 
 ok("AlertProvider sem previewAlerts", !alerts.includes("previewAlerts") && alerts.includes("useState<AgendaAlert[]>([])"));
@@ -85,7 +85,7 @@ ok("Sem ModulePlaceholder em app/app", (() => {
     }
     return true;
   };
-  return walk(resolve(root, "app/app"));
+  return walk(resolve(root, "app/(shell)/app"));
 })());
 
 console.log(`\nEstrutural C063: ${pass}/${pass + fail}`);

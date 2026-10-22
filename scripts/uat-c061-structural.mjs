@@ -24,7 +24,7 @@ function read(rel) {
   return readFileSync(p, "utf8");
 }
 
-const page = read("app/app/inventory/page.tsx");
+const page = read("app/(shell)/app/inventory/page.tsx");
 const mod = read("components/inventory/InventoryModule.tsx");
 const equipUi = read("components/inventory/EquipmentPanel.tsx");
 const dir = read("lib/inventory/directory.ts");

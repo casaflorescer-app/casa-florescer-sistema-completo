@@ -75,7 +75,7 @@ ok("AppointmentForm encodeReturnOfNote", apptForm.includes("encodeReturnOfNote")
 ok("AppointmentCard badge Retorno", apptCard.includes("isReturnAppointment"));
 ok("Workspace Voltar ao retorno", workspace.includes("Voltar ao retorno") && workspace.includes("fromReturn"));
 ok("WorkspaceComingSoon ainda existe (não usado no retorno)", comingSoon.includes("Em breve"));
-ok("Sem prontuário paralelo /app/return", !existsSync(resolve(root, "app/app/return")) && !existsSync(resolve(root, "app/return")));
+ok("Sem prontuário paralelo /app/return", !existsSync(resolve(root, "app/(shell)/app/return")) && !existsSync(resolve(root, "app/return")));
 
 console.log(`\nEstrutural C055: ${pass}/${pass + fail}`);
 if (fail > 0) process.exit(1);

@@ -105,7 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (loadContext) void refreshAuthorization(next);
     };
 
+    const timeout = window.setTimeout(() => {
+      if (cancelled || handledInitial) return;
+      handledInitial = true;
+      applyUser(null, false);
+    }, 8000);
+
     supabase.auth.getUser().then(({ data }) => {
+      window.clearTimeout(timeout);
       handledInitial = true;
       applyUser(data.user ?? null, Boolean(data.user));
     });
@@ -135,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, [clearAuthorization, refreshAuthorization]);

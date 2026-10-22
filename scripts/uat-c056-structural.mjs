@@ -35,8 +35,8 @@ const clinicalAi = read("app/api/encounters/clinical-ai/route.ts");
 const transcribe = read("app/api/encounters/transcribe/route.ts");
 const returnPanel = read("components/attendance/ClinicalReturnPanel.tsx");
 const workspace = read("components/attendance/EncounterWorkspace.tsx");
-const medicaHome = read("app/medica/page.tsx");
-const medicaAgenda = read("app/medica/agenda/page.tsx");
+const medicaHome = read("app/(shell)/medica/page.tsx");
+const medicaAgenda = read("app/(shell)/medica/agenda/page.tsx");
 
 ok("ignoreBuildErrors false", /ignoreBuildErrors:\s*false/.test(nextConfig));
 ok("PATH_RULES records=physician", access.includes('prefix: "/app/records"') && access.includes('hasStaffRole(auth, "physician")'));

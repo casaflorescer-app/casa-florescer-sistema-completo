@@ -35,7 +35,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // No ar o Next deixa este layout fora do HTML. A casca fica no template,
-  // que é o componente que realmente entra na resposta de /login.
+  // No ar o Next deixa este layout fora do HTML. A casca fica no grupo
+  // (shell), que permanece montado na navegação.
   return <>{children}</>;
 }

@@ -13,10 +13,10 @@ const ok = (name, cond, detail = "") => {
 };
 const read = (rel) => readFileSync(resolve(root, rel), "utf8");
 
-ok("rota oficial patient chart", existsSync(resolve(root, "app/app/records/patient/[patientId]/page.tsx")));
+ok("rota oficial patient chart", existsSync(resolve(root, "app/(shell)/app/records/patient/[patientId]/page.tsx")));
 ok(
   "alias convergência /patients/.../prontuario",
-  existsSync(resolve(root, "app/app/patients/[patientId]/prontuario/page.tsx")),
+  existsSync(resolve(root, "app/(shell)/app/patients/[patientId]/prontuario/page.tsx")),
 );
 ok("PatientChart.tsx", existsSync(resolve(root, "components/attendance/PatientChart.tsx")));
 ok("PatientSearchPanel.tsx", existsSync(resolve(root, "components/attendance/PatientSearchPanel.tsx")));
@@ -25,7 +25,7 @@ const dir = read("lib/patients/directory.ts");
 ok("searchPatients server-side", dir.includes("export async function searchPatients"));
 ok("patientChartHref único", dir.includes("patientChartHref") && dir.includes("/app/records/patient/"));
 
-const alias = read("app/app/patients/[patientId]/prontuario/page.tsx");
+const alias = read("app/(shell)/app/patients/[patientId]/prontuario/page.tsx");
 ok("alias redirect patientChartHref", alias.includes("redirect") && alias.includes("patientChartHref"));
 
 const chart = read("components/attendance/PatientChart.tsx");

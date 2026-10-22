@@ -21,7 +21,9 @@
 - `POST /api/encounters/transcribe` e `POST /api/orientations/transcribe` recebiam o caminho do áudio do browser e baixavam esse objeto com a sessão, sem comparar com o caminho gravado no segmento ou na versão. Quem podia ler outro áudio da prática conseguia transcrever o arquivo de outro atendimento. A rota agora exige igualdade com `audio_storage_path` e só baixa depois que a RPC autoriza.
 - `ENABLE_EMAIL_SIGNUP=false` no `deploy/.env` desliga o provedor de e-mail do GoTrue. Quem já tem conta recebe HTTP 422 `email_provider_disabled`, e a tela mostra “Não foi possível entrar”. O cadastro público é `DISABLE_SIGNUP=true`. Para corrigir no ar, grave `ENABLE_EMAIL_SIGNUP=true` e recrie só o container `auth`. Não rode `deploy/up.sh`.
 - O domínio `api.thvp.cloud` no EasyPanel aponta para o serviço Compose `porta-api` na porta 80. Na porta 3000 o Traefik mostra “Service is not reachable” e o login vira “Não foi possível conectar”. O Caddy desse serviço escuta só HTTP na porta 80; o aviso de HTTPS automático é esperado. Com a porta certa, `/auth/v1/health` responde 401 e o CORS libera `https://sistema.thvp.cloud`.
+- `app/template.tsx` entra no HTML de produção, mas o Next desmonta e monta esse arquivo de novo em toda navegação interna. Recriar `<html>` e `<body>` apaga a página: o primeiro HTML tem texto e, depois do JavaScript, a tela fica branca. A casca persistente é o layout de grupo `app/(shell)/layout.tsx` (`data-casa="layout-9"`). O layout raiz continua de fora do HTML no ar. Conferir o próximo deploy por `layout-9`, não por `layout-8`.
 
 ## Histórico
 
+- 2026-10-22 — a casca do documento saiu do template, que remontava a página, e foi para o grupo `(shell)`.
 - 2026-10-21 — registros da preparação da VPS.

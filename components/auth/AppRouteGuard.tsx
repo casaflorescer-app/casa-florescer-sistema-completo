@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppLoadingShell, AppShell } from "@/components/layout/AppShell";
@@ -10,15 +10,14 @@ import { resolveAppRouteAccess } from "@/lib/auth/guards";
 /** ACL client/UX. Autorização server-side: requireAppRouteAccess (B3.4.1). Dados: RLS/RPC. */
 export function AppRouteGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/app";
-  const router = useRouter();
   const { authorization, authorizationLoading } = useAuth();
   const decision = resolveAppRouteAccess(authorization, authorizationLoading, pathname);
 
   useEffect(() => {
     if (decision === "deny") {
-      router.replace("/unauthorized");
+      window.location.replace("/unauthorized");
     }
-  }, [decision, router]);
+  }, [decision]);
 
   if (decision === "wait") {
     return <AppLoadingShell />;

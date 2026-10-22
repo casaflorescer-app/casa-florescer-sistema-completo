@@ -24,8 +24,8 @@ function read(rel) {
   return readFileSync(p, "utf8");
 }
 
-const page = read("app/app/rentals/page.tsx");
-const detail = read("app/app/rentals/[id]/page.tsx");
+const page = read("app/(shell)/app/rentals/page.tsx");
+const detail = read("app/(shell)/app/rentals/[id]/page.tsx");
 const moduleUi = read("components/rentals/RentalsModule.tsx");
 const directory = read("lib/rentals/directory.ts");
 const types = read("lib/rentals/types.ts");

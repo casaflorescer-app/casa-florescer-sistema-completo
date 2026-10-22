@@ -60,6 +60,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-22 — transcrição de atendimento e de orientação só baixa o áudio cujo caminho é o do registro da sessão. Um caminho diferente responde 403 e não segue para o provedor.
 - 2026-10-22 — a navegação depois do login deixava a tela branca. `/app` passou a manter a casca, o middleware não devolve mais essa rota ao login, e o formulário entra com carregamento inteiro da página.
 - 2026-10-22 — login por e-mail ficou explícito no override. `ENABLE_EMAIL_SIGNUP=false` desligava a senha e o Auth respondia `email_provider_disabled`.
 - 2026-10-22 — `globals.css` passou a ser importado em `app/template.tsx`. No ar, o CSS do layout não entra na página e o login ficava sem o Tailwind.

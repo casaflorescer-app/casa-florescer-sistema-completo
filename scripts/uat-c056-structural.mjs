@@ -45,7 +45,7 @@ ok("PATH_RULES admin/owner gestão", access.includes('prefix: "/app/rooms"') && 
 ok("canAccessClinicManagement owner|admin", clinica.includes("canAccessClinicManagement") && clinica.includes('hasStaffRole(auth, "owner")') && clinica.includes('hasStaffRole(auth, "admin")'));
 ok("LEGACY_PORTAL_PREFIXES inclui medica/secretaria/gestao", paths.includes('"/medica"') && paths.includes('"/secretaria"') && paths.includes('"/gestao"'));
 ok("middleware redireciona legado autenticado", mwRoot.includes("isLegacyPortalPath") && mwRoot.includes("AUTHENTICATED_HOME"));
-ok("middleware exige login", mwRoot.includes('pathname = "/login"'));
+ok("middleware exige login no portal legado", mwRoot.includes('"/login"') && mwRoot.includes("isLegacyPortalPath"));
 ok("API render-pdf usa createServerSupabase", renderPdf.includes("createServerSupabase"));
 ok("API clinical-ai autenticada", clinicalAi.includes("createServerSupabase") || clinicalAi.includes("getUser") || clinicalAi.includes("auth"));
 ok("API transcribe autenticada", transcribe.includes("createServerSupabase") || transcribe.includes("getUser") || transcribe.includes("auth"));

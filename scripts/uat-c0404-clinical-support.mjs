@@ -80,7 +80,7 @@ ok("API unavailable message", api.includes("Auxílio de IA indisponível"));
 const workspace = read("components/attendance/EncounterWorkspace.tsx");
 ok("Workspace monta AiAssistancePanel", workspace.includes("AiAssistancePanel"));
 ok("Workspace monta ExamRequestPanel", workspace.includes("ExamRequestPanel"));
-ok("Workspace monta EncounterCloseChecklist", workspace.includes("EncounterCloseChecklist"));
+ok("Workspace monta revisão final com checklist", workspace.includes("EncounterFinalReview"));
 ok("Aceite IA aplica SOAP sem autosave silencioso", workspace.includes("onApplySoap"));
 
 const nav = read("components/attendance/WorkspaceSectionNav.tsx");

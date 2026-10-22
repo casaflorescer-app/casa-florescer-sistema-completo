@@ -1,11 +1,16 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppWorkspace } from "@/components/auth/AppRouteGuard";
 import { PermissionsProvider } from "@/lib/hooks/usePermissions";
+import { APP_PATHNAME_HEADER, isPublicPath } from "@/lib/auth/paths";
 import { getSessionContext } from "@/lib/auth/session";
 import type { ModuleId } from "@/lib/permissions";
 import type { SessionContext, UiRole } from "@/lib/types/domain";
 
-export async function requireSession(): Promise<SessionContext> {
+export async function requireSession(): Promise<SessionContext | null> {
+  const headerPath = headers().get(APP_PATHNAME_HEADER);
+  if (headerPath && isPublicPath(headerPath)) return null;
+
   const session = await getSessionContext();
   if (!session) redirect("/login");
   return session;
@@ -35,6 +40,7 @@ export async function requireModule(_moduleId: ModuleId) {
 
 export async function StaffAppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
+  if (!session) return <>{children}</>;
   return (
     <PermissionsProvider session={session}>
       <AppWorkspace>{children}</AppWorkspace>

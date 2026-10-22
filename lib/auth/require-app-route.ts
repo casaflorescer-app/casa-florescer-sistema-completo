@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAccessAppPath } from "@/lib/auth/access";
 import { loadAuthorizationContext } from "@/lib/auth/authorization";
-import { APP_PATHNAME_HEADER } from "@/lib/auth/paths";
+import { APP_PATHNAME_HEADER, isPublicPath } from "@/lib/auth/paths";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 function normalizePath(pathname: string) {
@@ -23,7 +23,11 @@ function normalizePath(pathname: string) {
  */
 export async function requireAppRouteAccess(pathnameFromCaller?: string) {
   const headerPath = headers().get(APP_PATHNAME_HEADER);
-  const pathname = normalizePath(pathnameFromCaller || headerPath || "/app");
+  const raw = pathnameFromCaller || headerPath;
+  // Caminho público não pode cair em /login de novo: isso é o ciclo 307.
+  if (raw && isPublicPath(raw)) return null;
+
+  const pathname = normalizePath(raw || "/app");
 
   // /unauthorized não passa por este layout; defesa contra loop se reutilizado.
   if (pathname === "/unauthorized") {

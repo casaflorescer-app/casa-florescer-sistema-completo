@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import {
   AUTHENTICATED_HOME,
-  isAuthEntryPath,
   isLegacyPortalPath,
   isPublicPath,
 } from "@/lib/auth/paths";
@@ -18,6 +17,12 @@ function redirectTo(request: NextRequest, pathname: string, search = "") {
     return null;
   }
   return NextResponse.redirect(url);
+}
+
+function stamp(response: NextResponse, pathname: string) {
+  response.headers.set("x-casa-rev", "3");
+  response.headers.set("x-casa-path", pathname);
+  return response;
 }
 
 function isAssetPath(pathname: string) {
@@ -36,16 +41,9 @@ function isAssetPath(pathname: string) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const { response, user } = await updateSession(request);
+  stamp(response, pathname);
 
-  if (isAssetPath(pathname)) {
-    return response;
-  }
-
-  if (isPublicPath(pathname)) {
-    if (user && (isAuthEntryPath(pathname) || pathname === "/")) {
-      const redirect = redirectTo(request, AUTHENTICATED_HOME);
-      return redirect ?? response;
-    }
+  if (isAssetPath(pathname) || isPublicPath(pathname)) {
     return response;
   }
 
@@ -56,7 +54,7 @@ export async function middleware(request: NextRequest) {
       "/login",
       `?next=${encodeURIComponent(next)}`,
     );
-    return redirect ?? response;
+    return redirect ? stamp(redirect, pathname) : response;
   }
 
   // B3.2 / C038: portais legados — paciente vai para /app/portal; demais para /app
@@ -67,7 +65,7 @@ export async function middleware(request: NextRequest) {
         ? "/app/portal"
         : AUTHENTICATED_HOME,
     );
-    return redirect ?? response;
+    return redirect ? stamp(redirect, pathname) : response;
   }
 
   return response;

@@ -17,7 +17,9 @@ A tela `app/login/criar/page.tsx` já informa que a clínica libera o acesso. A 
 
 O layout raiz guarda `metadata` e `viewport` e só repassa os filhos. `<html>` e `<body>` ficam em `app/template.tsx`, junto com `AuthProvider`, `AlertProvider`, `PwaRegister` e o `import` de `globals.css`. No ar, o layout raiz não entra no HTML. Sem esse import no template, a produção só recebe o CSS da fonte e a tela de login fica sem o visual. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele.
 
-`requireAppRouteAccess` e `requireSession` só chamam `redirect("/login")` quando o middleware informa um caminho protegido em `x-casa-pathname`. Sem esse caminho, o guard não redireciona. Assumir `/app` nesse caso fazia o Next responder 307 para `/login` na própria tela de login.
+`requireSession` só chama `redirect("/login")` quando o middleware informa um caminho protegido em `x-casa-pathname`. Sem esse caminho, esse guard não redireciona.
+
+Em `/app`, a casca aparece mesmo sem esse cabeçalho. Se o servidor não vê a sessão, a página mostra “Verificando sessão…” e o browser decide. Redirecionar `/app` para `/login` nesse caso, com a sessão já gravada no browser, trocava as duas telas até a navegação ficar branca. O middleware não manda `/app` nem `/unauthorized` para o login. Quem está deslogado volta pelo gate do cliente. Depois do login, a entrada em `/app` é um carregamento inteiro da página, não uma troca interna do roteador.
 
 ## URLs
 
@@ -58,6 +60,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-22 — a navegação depois do login deixava a tela branca. `/app` passou a manter a casca, o middleware não devolve mais essa rota ao login, e o formulário entra com carregamento inteiro da página.
 - 2026-10-22 — login por e-mail ficou explícito no override. `ENABLE_EMAIL_SIGNUP=false` desligava a senha e o Auth respondia `email_provider_disabled`.
 - 2026-10-22 — `globals.css` passou a ser importado em `app/template.tsx`. No ar, o CSS do layout não entra na página e o login ficava sem o Tailwind.
 - 2026-10-22 — a casca `<html>`/`<body>` foi para `app/template.tsx` (`data-casa="layout-8"`). O layout raiz ficou só com metadata e viewport.

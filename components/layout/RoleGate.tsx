@@ -45,13 +45,12 @@ export async function requireModule(_moduleId: ModuleId) {
 }
 
 export async function StaffAppLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireSession();
-  if (!session) return <>{children}</>;
-  return (
-    <PermissionsProvider session={session}>
-      <AppWorkspace>{children}</AppWorkspace>
-    </PermissionsProvider>
-  );
+  // Sem o pathname do middleware a casca não pode sumir: a página interna
+  // devolve vazio e a navegação fica branca. O cliente confirma a sessão.
+  const session = await getSessionContext();
+  const workspace = <AppWorkspace>{children}</AppWorkspace>;
+  if (!session) return workspace;
+  return <PermissionsProvider session={session}>{workspace}</PermissionsProvider>;
 }
 
 export async function RoleLayout({

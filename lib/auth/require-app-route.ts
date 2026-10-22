@@ -22,7 +22,7 @@ function normalizePath(pathname: string) {
  * Reutiliza canAccessAppPath (mesmas regras do AppRouteGuard client).
  * Não substitui RLS/RPC. Não substitui ACL client (UX).
  *
- * Sem sessão → /login
+ * Sem sessão no servidor → o cliente mostra o carregamento ou volta ao login.
  * Sem acesso à rota (inativo, sem membership, papel insuficiente, etc.) → /unauthorized
  */
 export async function requireAppRouteAccess(pathnameFromCaller?: string) {
@@ -40,19 +40,26 @@ export async function requireAppRouteAccess(pathnameFromCaller?: string) {
   }
 
   const supabase = await createServerSupabase();
-  if (!supabase) {
-    redirect("/login");
+  if (!supabase) return null;
+
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      const text = `${error.name ?? ""} ${error.message ?? ""}`.toLowerCase();
+      if (text.includes("fetch") || text.includes("network")) return null;
+    }
+    user = data.user;
+  } catch {
+    return null;
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Sem usuário no servidor, o cliente decide. Redirecionar daqui para /login
+  // enquanto o browser já tem sessão troca as duas telas até a página ficar branca.
+  if (!user) return null;
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { context } = await loadAuthorizationContext(supabase, user);
+  const { context, error } = await loadAuthorizationContext(supabase, user);
+  if (error?.kind === "network") return null;
 
   if (!canAccessAppPath(context, pathname)) {
     redirect("/unauthorized");

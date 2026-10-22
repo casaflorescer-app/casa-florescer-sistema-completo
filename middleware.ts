@@ -48,6 +48,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user) {
+    // /app e /unauthorized ficam na página. O gate do cliente manda para o
+    // login se a sessão não existir. Redirecionar aqui, com a sessão só no
+    // browser, entra em ciclo e a tela fica branca.
+    if (pathname === "/app" || pathname.startsWith("/app/") || pathname === "/unauthorized") {
+      return response;
+    }
     const next = isLegacyPortalPath(pathname) ? AUTHENTICATED_HOME : pathname;
     const redirect = redirectTo(
       request,

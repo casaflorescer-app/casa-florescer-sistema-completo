@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { mapAuthError } from "@/lib/auth/errors";
@@ -15,7 +14,6 @@ function isValidEmail(value: string) {
 }
 
 export function LoginForm() {
-  const router = useRouter();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -61,8 +59,8 @@ export function LoginForm() {
       const destination = resolveAuthenticatedPath(
         new URLSearchParams(window.location.search).get("next"),
       );
-      router.replace(destination);
-      router.refresh();
+      // Navegação inteira: a troca pelo roteador do Next apagava o documento.
+      window.location.assign(destination);
     } catch (err) {
       setError(mapAuthError(err, "Não foi possível entrar. Tente novamente."));
       setBusy(false);

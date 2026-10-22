@@ -6,7 +6,9 @@ import { RoleDashboard } from "@/components/dashboard/RoleDashboard";
 export default function AppHomePage() {
   const { authorization, authorizationError } = useAuth();
 
-  if (!authorization) return null;
+  if (!authorization) {
+    return <p className="px-4 py-6 text-sm text-lotus-600">Carregando o painel…</p>;
+  }
 
   return (
     <div className="space-y-4">

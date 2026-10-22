@@ -4,6 +4,10 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
 import "./globals.css";
 
+// O middleware grava o cookie de sessão. Com a página estática, o Next
+// responde 307 para a mesma URL e o navegador fica em ciclo.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Casa Florescer",
   description: "Sistema de gestão clínica Casa Florescer",

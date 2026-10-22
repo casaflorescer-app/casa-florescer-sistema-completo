@@ -12,6 +12,8 @@ O app continua com Supabase Auth e cookie de sessão (`middleware.ts`, `lib/supa
 
 A tela `app/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
 
+O layout raiz exporta `dynamic = "force-dynamic"`. O middleware grava o cookie de sessão. Com a página estática, o Next responde 307 para a mesma URL e o navegador entra em ciclo em `/login`.
+
 ## URLs
 
 `deploy/up.sh` grava, a partir de `APP_HOST` e `API_HOST`:
@@ -52,3 +54,4 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 ## Histórico
 
 - 2026-10-21 — signup público desligado, URLs de redirect e bootstrap do primeiro admin e da clínica.
+- 2026-10-21 — layout raiz dinâmico para o cookie de sessão não gerar ciclo 307 em `/login`.

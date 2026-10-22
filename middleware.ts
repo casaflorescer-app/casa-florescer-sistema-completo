@@ -7,6 +7,19 @@ import {
   isPublicPath,
 } from "@/lib/auth/paths";
 
+function redirectTo(request: NextRequest, pathname: string, search = "") {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = search;
+  if (
+    url.pathname === request.nextUrl.pathname &&
+    url.search === request.nextUrl.search
+  ) {
+    return null;
+  }
+  return NextResponse.redirect(url);
+}
+
 function isAssetPath(pathname: string) {
   return (
     pathname.startsWith("/_next") ||
@@ -30,34 +43,31 @@ export async function middleware(request: NextRequest) {
 
   if (isPublicPath(pathname)) {
     if (user && (isAuthEntryPath(pathname) || pathname === "/")) {
-      const url = request.nextUrl.clone();
-      url.pathname = AUTHENTICATED_HOME;
-      url.search = "";
-      return NextResponse.redirect(url);
+      const redirect = redirectTo(request, AUTHENTICATED_HOME);
+      return redirect ?? response;
     }
     return response;
   }
 
   if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "";
-    // Legado → login com next=/app (evita round-trip e open-redirect via next)
-    url.searchParams.set(
-      "next",
-      isLegacyPortalPath(pathname) ? AUTHENTICATED_HOME : pathname,
+    const next = isLegacyPortalPath(pathname) ? AUTHENTICATED_HOME : pathname;
+    const redirect = redirectTo(
+      request,
+      "/login",
+      `?next=${encodeURIComponent(next)}`,
     );
-    return NextResponse.redirect(url);
+    return redirect ?? response;
   }
 
   // B3.2 / C038: portais legados — paciente vai para /app/portal; demais para /app
   if (isLegacyPortalPath(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = pathname === "/paciente" || pathname.startsWith("/paciente/")
-      ? "/app/portal"
-      : AUTHENTICATED_HOME;
-    url.search = "";
-    return NextResponse.redirect(url);
+    const redirect = redirectTo(
+      request,
+      pathname === "/paciente" || pathname.startsWith("/paciente/")
+        ? "/app/portal"
+        : AUTHENTICATED_HOME,
+    );
+    return redirect ?? response;
   }
 
   return response;

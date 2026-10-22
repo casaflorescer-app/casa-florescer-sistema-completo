@@ -15,7 +15,7 @@ export const buttonVariantClass: Record<ButtonVariant, string> = {
 
 /** Compacto para ações em linha de tabela */
 export const buttonCompactClass =
-  "min-h-10 px-3 py-1.5 text-sm";
+  "min-h-9 shrink-0 whitespace-nowrap px-2.5 py-1 text-sm";
 
 /** Compatível com código legado */
 export const buttonClass = buttonVariantClass.primary;

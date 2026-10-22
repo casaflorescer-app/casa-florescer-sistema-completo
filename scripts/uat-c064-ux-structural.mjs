@@ -42,7 +42,7 @@ const detail = read("components/patients/PatientDetail.tsx");
 const docs = read("docs/c064-ux-modernization.md");
 const platformUi = read("components/platform/Ui.tsx");
 
-ok("PatientList usa RowActions", list.includes("RowActions") && list.includes("Abrir prontuário"));
+ok("PatientList usa RowActions", list.includes("RowActions") && list.includes('label: "Prontuário"'));
 ok("PatientList sem flex-col items-end na coluna ações", !list.includes("flex-col items-end"));
 ok("PatientList PageHeader + EmptyState", list.includes("PageHeader") && list.includes("EmptyState"));
 ok("AppointmentCard usa RowActions", card.includes("RowActions") && card.includes("OverflowItem"));

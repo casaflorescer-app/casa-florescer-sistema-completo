@@ -22,9 +22,9 @@ Abrir prontuário
 
 **Padrão C064:**
 
-`[ Abrir prontuário ] [ ⋯ ]`
+`[ Prontuário ] [ ⋯ ]` — sempre em linha (`flex-nowrap`); label curto na lista para caber numa única linha horizontal.
 
-Menu ⋯: Ver detalhes · Receitas · Exames
+Menu ⋯: Ver detalhes · Receitas · Exames · WhatsApp
 
 ## Componentes novos (`components/ui/`)
 

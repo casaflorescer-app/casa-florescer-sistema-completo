@@ -63,7 +63,7 @@ function PatientRowActions({
         <RowActions
           primary={{
             id: "chart",
-            label: "Abrir prontuário",
+            label: "Prontuário",
             href: patientChartHref(row.id),
             variant: "primary",
           }}
@@ -73,7 +73,7 @@ function PatientRowActions({
         <RowActions
           primary={{
             id: "detail",
-            label: "Ver detalhes",
+            label: "Detalhes",
             href: `/app/patients/${row.id}`,
             variant: "secondary",
           }}
@@ -312,49 +312,49 @@ export function PatientList() {
           </ul>
 
           <div className="mt-6 hidden min-w-0 max-w-full overflow-x-auto rounded-2xl border border-lotus-100 bg-white md:block">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[56rem] table-fixed text-left text-sm">
               <thead className="border-b border-lotus-100 text-xs uppercase tracking-wide text-lotus-500">
                 <tr>
-                  <th className="px-3 py-3">Foto</th>
-                  <th className="px-3 py-3">Paciente</th>
-                  <th className="px-3 py-3">CPF</th>
-                  <th className="px-3 py-3">Nascimento</th>
-                  <th className="px-3 py-3">Telefone</th>
-                  <th className="hidden px-3 py-3 xl:table-cell">E-mail</th>
-                  <th className="hidden px-3 py-3 xl:table-cell">Cadastro</th>
-                  <th className="whitespace-nowrap px-3 py-3 text-right">Ações</th>
+                  <th className="w-14 px-2 py-2.5">Foto</th>
+                  <th className="px-2 py-2.5">Paciente</th>
+                  <th className="w-[8.5rem] px-2 py-2.5">CPF</th>
+                  <th className="w-[7.5rem] px-2 py-2.5">Nascimento</th>
+                  <th className="w-[9rem] px-2 py-2.5">Telefone</th>
+                  <th className="hidden px-2 py-2.5 xl:table-cell">E-mail</th>
+                  <th className="hidden w-[10.5rem] px-2 py-2.5 xl:table-cell">Cadastro</th>
+                  <th className="w-[10.5rem] whitespace-nowrap px-2 py-2.5 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {displayRows.map((row) => (
                   <tr key={row.id} className="border-b border-lotus-50 align-middle hover:bg-lotus-50/70">
-                    <td className="px-3 py-3">
+                    <td className="px-2 py-2">
                       <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
                     </td>
-                    <td className="px-3 py-3">
-                      <Link href={`/app/patients/${row.id}`} className="block hover:text-lotus-700">
-                        <p className="font-medium text-lotus-900">{row.fullName}</p>
+                    <td className="min-w-0 px-2 py-2">
+                      <Link href={`/app/patients/${row.id}`} className="block min-w-0 hover:text-lotus-700">
+                        <p className="truncate font-medium text-lotus-900">{row.fullName}</p>
                         {row.socialName ? (
-                          <p className="mt-0.5 text-xs text-lotus-600">{row.socialName}</p>
+                          <p className="mt-0.5 truncate text-xs text-lotus-600">{row.socialName}</p>
                         ) : null}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3">{maskCpf(row.cpf)}</td>
-                    <td className="whitespace-nowrap px-3 py-3">
+                    <td className="whitespace-nowrap px-2 py-2">{maskCpf(row.cpf)}</td>
+                    <td className="whitespace-nowrap px-2 py-2">
                       {row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3">
+                    <td className="whitespace-nowrap px-2 py-2">
                       {row.phone ? formatPhone(row.phone) : "—"}
                     </td>
-                    <td className="hidden max-w-[16rem] px-3 py-3 xl:table-cell">
+                    <td className="hidden min-w-0 px-2 py-2 xl:table-cell">
                       <span className="block truncate" title={row.email ?? undefined}>
                         {row.email ?? "—"}
                       </span>
                     </td>
-                    <td className="hidden whitespace-nowrap px-3 py-3 xl:table-cell">
+                    <td className="hidden whitespace-nowrap px-2 py-2 xl:table-cell">
                       {formatDateTime(row.createdAt)}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                    <td className="whitespace-nowrap px-2 py-2 text-right">
                       <PatientRowActions row={row} canOpenChart={canOpenChart} />
                     </td>
                   </tr>

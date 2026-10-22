@@ -109,4 +109,4 @@ export function OverflowMenu({
   );
 }
 
-const buttonCompactPad = "min-h-10 w-11 px-0";
+const buttonCompactPad = "min-h-9 w-9 shrink-0 px-0";

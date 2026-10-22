@@ -49,7 +49,7 @@ ok("Agenda → Abrir prontuário", card.includes("Abrir prontuário") && card.in
 
 const list = read("components/patients/PatientList.tsx");
 ok("lista usa searchPatients", list.includes("searchPatients"));
-ok("lista Abrir prontuário", list.includes("Abrir prontuário"));
+ok("lista Abrir prontuário", list.includes("Prontuário") && list.includes("patientChartHref"));
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\nEstrutural C040.10: ${results.length - failed.length}/${results.length}`);

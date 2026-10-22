@@ -19,8 +19,7 @@ export type RowAction = {
 
 /**
  * Padrão obrigatório C064: uma ação principal visível + menu ⋯ para secundárias.
- * Sempre em linha (flex-row); no mobile o wrap é horizontal, nunca empilhamento
- * de dois botões full-width na coluna de tabela.
+ * Sempre em linha (flex-nowrap) — nunca empilha o botão principal sobre o ⋯.
  */
 export function RowActions({
   primary,
@@ -37,7 +36,7 @@ export function RowActions({
 
   return (
     <div
-      className={`inline-flex flex-row flex-wrap items-center justify-end gap-2 ${className}`}
+      className={`inline-flex flex-row flex-nowrap items-center justify-end gap-1.5 ${className}`}
       data-row-actions="true"
     >
       {primary ? <ActionControl action={primary} sizeClass={size} /> : null}

@@ -7,8 +7,11 @@ O app continua com Supabase Auth e cookie de sessão (`middleware.ts`, `lib/supa
 `deploy/supabase/override.yml` força, no serviço `auth`:
 
 - cadastro público desligado
+- login por e-mail e senha ligado
 - login por telefone desligado
 - usuário anônimo desligado
+
+No compose oficial do Supabase, `ENABLE_EMAIL_SIGNUP=false` vira `GOTRUE_EXTERNAL_EMAIL_ENABLED=false` e o Auth responde `email_provider_disabled` até para quem já tem conta. O cadastro público fica fechado por `DISABLE_SIGNUP=true`, não por essa variável.
 
 A tela `app/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
 
@@ -55,6 +58,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-22 — login por e-mail ficou explícito no override. `ENABLE_EMAIL_SIGNUP=false` desligava a senha e o Auth respondia `email_provider_disabled`.
 - 2026-10-22 — `globals.css` passou a ser importado em `app/template.tsx`. No ar, o CSS do layout não entra na página e o login ficava sem o Tailwind.
 - 2026-10-22 — a casca `<html>`/`<body>` foi para `app/template.tsx` (`data-casa="layout-8"`). O layout raiz ficou só com metadata e viewport.
 - 2026-10-22 — layout raiz voltou a ser só a casca `html`/`body`. Providers foram para `app/template.tsx`. `force-dynamic` saiu do layout raiz.

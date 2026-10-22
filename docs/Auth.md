@@ -55,7 +55,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
-- 2026-10-21 — guards só redirecionam para `/login` com caminho protegido confirmado pelo middleware. A imagem com "entrada 4" ainda respondia 307 `NEXT_REDIRECT` sem `x-casa-rev`.
+- 2026-10-22 — `/login` deixou o 307 e passou a responder 500. `useAuth()` sem provider derrubava a tela no navegador. Sem provider, o hook agora responde como sessão ausente.
 - 2026-10-21 — middleware limitado às rotas com sessão. `/login` ficou de fora depois que `x-casa-rev: 3` no ar continuou em 307.
 - 2026-10-21 — rotas públicas não passam pelo Auth no middleware; guards não redirecionam caminho público de volta a `/login`.
 - 2026-10-21 — signup público desligado, URLs de redirect e bootstrap do primeiro admin e da clínica.

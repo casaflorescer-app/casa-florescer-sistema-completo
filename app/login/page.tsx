@@ -45,7 +45,7 @@ export default function LoginPage() {
           <p className="mt-3 text-sm font-medium text-rose-900">
             Bem-vinda! Acesse sua conta.
           </p>
-          <p className="mt-1 text-xs text-[#9B406C]/70">entrada 5</p>
+          <p className="mt-1 text-xs text-[#9B406C]/70">entrada 6</p>
 
           <Suspense fallback={<p className="mt-6 text-sm text-rose-900/70">Carregando…</p>}>
             <LoginForm />

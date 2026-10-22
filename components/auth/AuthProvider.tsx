@@ -169,10 +169,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+const loggedOut: AuthContextValue = {
+  user: null,
+  loading: false,
+  configured: false,
+  authorization: null,
+  authorizationLoading: false,
+  authorizationError: null,
+  signOut: async () => {},
+};
+
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth() precisa do AuthProvider");
-  }
-  return ctx;
+  // Na tela pública o layout às vezes não entrega o provider. Tratar como
+  // deslogado evita a exceção que derruba o /login no navegador.
+  return useContext(AuthContext) ?? loggedOut;
 }

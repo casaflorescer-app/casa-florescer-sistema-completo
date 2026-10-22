@@ -2,14 +2,20 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppWorkspace } from "@/components/auth/AppRouteGuard";
 import { PermissionsProvider } from "@/lib/hooks/usePermissions";
-import { APP_PATHNAME_HEADER, isPublicPath } from "@/lib/auth/paths";
+import {
+  APP_PATHNAME_HEADER,
+  isProtectedPath,
+  isPublicPath,
+} from "@/lib/auth/paths";
 import { getSessionContext } from "@/lib/auth/session";
 import type { ModuleId } from "@/lib/permissions";
 import type { SessionContext, UiRole } from "@/lib/types/domain";
 
 export async function requireSession(): Promise<SessionContext | null> {
   const headerPath = headers().get(APP_PATHNAME_HEADER);
-  if (headerPath && isPublicPath(headerPath)) return null;
+  if (!headerPath || isPublicPath(headerPath) || !isProtectedPath(headerPath)) {
+    return null;
+  }
 
   const session = await getSessionContext();
   if (!session) redirect("/login");

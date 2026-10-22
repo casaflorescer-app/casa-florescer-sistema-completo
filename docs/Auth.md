@@ -12,7 +12,9 @@ O app continua com Supabase Auth e cookie de sessão (`middleware.ts`, `lib/supa
 
 A tela `app/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
 
-O layout raiz exporta `dynamic = "force-dynamic"`. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele. No VPS, o middleware rodar em `/login` bastava para o Next responder 307 para a mesma URL.
+O layout raiz exporta `dynamic = "force-dynamic"`. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele.
+
+`requireAppRouteAccess` e `requireSession` só chamam `redirect("/login")` quando o middleware informa um caminho protegido em `x-casa-pathname`. Sem esse caminho, o guard não redireciona. Assumir `/app` nesse caso fazia o Next responder 307 para `/login` na própria tela de login.
 
 ## URLs
 
@@ -53,6 +55,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-21 — guards só redirecionam para `/login` com caminho protegido confirmado pelo middleware. A imagem com "entrada 4" ainda respondia 307 `NEXT_REDIRECT` sem `x-casa-rev`.
 - 2026-10-21 — middleware limitado às rotas com sessão. `/login` ficou de fora depois que `x-casa-rev: 3` no ar continuou em 307.
 - 2026-10-21 — rotas públicas não passam pelo Auth no middleware; guards não redirecionam caminho público de volta a `/login`.
 - 2026-10-21 — signup público desligado, URLs de redirect e bootstrap do primeiro admin e da clínica.

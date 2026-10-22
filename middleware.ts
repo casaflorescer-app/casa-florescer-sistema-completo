@@ -72,5 +72,19 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Só rotas com sessão. /, /login e /auth ficam de fora: no VPS,
+  // o middleware rodar nessas páginas basta para o Next responder 307.
+  matcher: [
+    "/app",
+    "/app/:path*",
+    "/medica",
+    "/medica/:path*",
+    "/secretaria",
+    "/secretaria/:path*",
+    "/gestao",
+    "/gestao/:path*",
+    "/paciente",
+    "/paciente/:path*",
+    "/unauthorized",
+  ],
 };

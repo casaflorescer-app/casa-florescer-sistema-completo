@@ -12,9 +12,7 @@ O app continua com Supabase Auth e cookie de sessão (`middleware.ts`, `lib/supa
 
 A tela `app/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
 
-O layout raiz exporta `dynamic = "force-dynamic"`. O middleware grava o cookie de sessão. Com a página estática, o Next responde 307 para a mesma URL e o navegador entra em ciclo em `/login`.
-
-Nas rotas públicas (`/`, `/login` e o fluxo de senha) o middleware não reescreve o pedido e não chama o Auth. A resposta leva `x-casa-rev: 3`. `requireAppRouteAccess` e `requireSession` não chamam `redirect("/login")` quando o caminho já é público.
+O layout raiz exporta `dynamic = "force-dynamic"`. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele. No VPS, o middleware rodar em `/login` bastava para o Next responder 307 para a mesma URL.
 
 ## URLs
 
@@ -55,6 +53,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-21 — middleware limitado às rotas com sessão. `/login` ficou de fora depois que `x-casa-rev: 3` no ar continuou em 307.
 - 2026-10-21 — rotas públicas não passam pelo Auth no middleware; guards não redirecionam caminho público de volta a `/login`.
 - 2026-10-21 — signup público desligado, URLs de redirect e bootstrap do primeiro admin e da clínica.
 - 2026-10-21 — layout raiz dinâmico para o cookie de sessão não gerar ciclo 307 em `/login`.

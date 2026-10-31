@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppWorkspace } from "@/components/auth/AppRouteGuard";
 import { PermissionsProvider } from "@/lib/hooks/usePermissions";
@@ -7,7 +7,9 @@ import {
   isProtectedPath,
   isPublicPath,
 } from "@/lib/auth/paths";
+import { COOKIE_NAME, openCasaSession } from "@/lib/auth/casa-session";
 import { getSessionContext } from "@/lib/auth/session";
+import { isCasaDatabaseConfigured } from "@/lib/db/casa";
 import type { ModuleId } from "@/lib/permissions";
 import type { SessionContext, UiRole } from "@/lib/types/domain";
 
@@ -48,6 +50,10 @@ export async function StaffAppLayout({ children }: { children: React.ReactNode }
   // Sem o pathname do middleware a casca não pode sumir: a página interna
   // devolve vazio e a navegação fica branca. O cliente confirma a sessão.
   const session = await getSessionContext();
+  if (isCasaDatabaseConfigured()) {
+    const opened = await openCasaSession(cookies().get(COOKIE_NAME)?.value);
+    if (opened && !session) redirect("/login");
+  }
   const workspace = <AppWorkspace>{children}</AppWorkspace>;
   if (!session) return workspace;
   return <PermissionsProvider session={session}>{workspace}</PermissionsProvider>;

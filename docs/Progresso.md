@@ -2,6 +2,10 @@
 
 ## Histórico
 
+- 2026-10-31 — C081: catálogo do BancoFlorescerPP lido. `citext`, `btree_gist` e `pgcrypto` disponíveis e não instaladas. Schemas `auth`, `storage` e `extensions` ausentes. 0 tabelas em `public`. Backup, ordem e rollback escritos. Nada foi aplicado.
+- 2026-10-31 — C080: SSH com chave para `deploy` e `root` em `2.25.151.136` recusado (`Permission denied (publickey,password)`). Consultas não rodaram. Extensões seguem sem lista. Nada foi aplicado.
+- 2026-10-31 — C079: o `psql -c` não interativo não chegou ao BancoFlorescerPP. Extensões e schemas seguem sem lista. `casa_login` e a revogação de sessão ficaram só como proposta. Nada foi aplicado.
+- 2026-10-31 — C078, só leitura: `BancoFlorescerPP` é PostgreSQL 18.6. Schemas e extensões não voltaram. `api.thvp.cloud` segue GoTrue, REST e Storage 1.81.0. Nada foi aplicado. A infraestrutura não está validada.
 - 2026-10-31 — C077 no repositório: `0057` separa a ficha por prática, tira alergia, exame e receita da secretária, abre o rateio da própria fatura e o repasse das duas para a administradora. O teste `supabase/tests/c077_practice_isolation.sql` não foi executado. O `SELECT` de schemas e extensões no BancoFlorescerPP não voltou. Nada foi aplicado.
 - 2026-10-31 — C076 no repositório: prelúdio `0000`, papéis em `scripts/c076-roles.sql`, isolamento `0056`, sessão Argon2id e consulta no papel `casa_app`. Nada foi aplicado no BancoFlorescerPP. A API `api.thvp.cloud` não foi trocada. As telas, fora o login opcional, ainda usam o cliente Supabase. Conferência do SQL e do typecheck nesta sessão. Sem deploy.
 - 2026-10-22 — A tela branca na navegação vinha do template, que recriava `<html>` e `<body>`. A casca foi para `app/(shell)/layout.tsx` (`layout-9`). Sessão que não responde em 8 segundos segue como ausente, e a ida ao login é carregamento inteiro. Build e navegação local conferidos. O ar só muda depois de um novo deploy do florescerweb.

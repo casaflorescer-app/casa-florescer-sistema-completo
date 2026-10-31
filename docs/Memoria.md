@@ -1,5 +1,25 @@
 # Memória
 
+## 2026-10-31 — C081 catálogo fechado
+
+- No SSH do host `srv2083061`, o administrador leu o BancoFlorescerPP no container `cap-romao_bancoflorescer.1.ztmjkauvhnvygcuyck02n14sy`. `citext` 1.8, `btree_gist` 1.8 e `pgcrypto` 1.4 estão disponíveis e não instaladas. Só existem os schemas de sistema e `public`, com 0 tabelas. `auth`, `storage` e `extensions` não existem.
+- `deploy/backup.sh` não serve para esse database. A ordem futura é papéis fora de transação, `0000`, `0001`–`0057`, `GRANT` explícito sem reabrir `staff_credentials`, e o teste da C077 em transação desfeita. Antes disso, dump custom, checksum, `pg_restore -l` e ensaio num database descartável. Nada disso rodou. `casa_login` e a revogação do cookie continuam só descritos.
+
+## 2026-10-31 — C080 SSH recusado
+
+- `ssh -o BatchMode=yes` para `deploy@2.25.151.136` e para `root@2.25.151.136` devolveu `Permission denied (publickey,password)`. Não há `~/.ssh/config`. Nenhuma senha foi enviada e o console do EasyPanel não foi usado. O `docker exec` não chegou ao BancoFlorescerPP. Schemas e extensões seguem sem lista.
+
+## 2026-10-31 — C079 comando que não entrou
+
+- `psql -U "$POSTGRES_USER" -d BancoFlorescerPP -X -P pager=off -v ON_ERROR_STOP=1 -tA -c 'select current_database()'` foi escrito no textarea do console e não apareceu no prompt, nem depois de alguns segundos nem depois de um clique na tela. Enter não foi enviado, para não repetir a linha colada da C078. Schemas, extensões, `organizations` e a contagem de tabelas continuam sem esta leitura.
+- `casa_login` e a lista de sessões revogáveis foram só descritos. Nenhum papel foi criado e o cookie não mudou.
+
+## 2026-10-31 — C078 console e versão
+
+- O `psql` no console do `bancoflorescer` abriu em `BancoFlorescerPP` e o prompt `#` é superusuário. `select current_database()` devolveu esse nome. `select version()` devolveu PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2) e o pager (`less`) escondeu o restante até `q`.
+- O comando seguinte entra no textarea do xterm e só aparece no prompt com atraso, ou não aparece. Enter com o texto só no textarea limpa o campo e não executa. Dois comandos colados na mesma linha geraram `select ... 1echo`, um erro de sintaxe, sem gravação. A lista de schemas e de extensões não voltou. Isso não prova que `citext`, `btree_gist` ou `pgcrypto` faltem.
+- `AGENTS.md` ainda diz PostgreSQL 17. O database lido é 18.6. A sequência `0000`–`0057` não foi aplicada.
+
 ## 2026-10-31 — C077 ficha e catálogo
 
 - A ficha `patient_clinical_data` nascia uma linha por paciente, sem `practice_id`. Com a paciente nas duas práticas, as duas médicas liam a mesma alergia e a mesma DUM. A `0057` torna a linha única por paciente e prática. A `0056` não foi editada.
@@ -38,6 +58,10 @@
 
 ## Histórico
 
+- 2026-10-31 — o catálogo do BancoFlorescerPP fechou por SSH do administrador; a implantação não rodou.
+- 2026-10-31 — a chave deste computador continua sem autorização na VPS; as consultas do BancoFlorescerPP não saíram daqui.
+- 2026-10-31 — o `psql -c` não interativo também ficou no textarea; `casa_login` não foi criado.
+- 2026-10-31 — BancoFlorescerPP é PostgreSQL 18.6; o catálogo de schemas e extensões continua sem resposta porque o console não entrega o comando ao `psql`.
 - 2026-10-31 — o catálogo de extensões do BancoFlorescerPP não voltou; a ficha clínica única por paciente vaza entre as duas práticas até a `0057`, que ainda não foi aplicada.
 - 2026-10-31 — BancoFlorescerPP não tem o schema da clínica; a casa no Next fica no repositório até autorização de apply e de conexão.
 - 2026-10-22 — a casca do documento saiu do template, que remontava a página, e foi para o grupo `(shell)`.

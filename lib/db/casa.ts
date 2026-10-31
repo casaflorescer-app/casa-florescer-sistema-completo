@@ -9,6 +9,10 @@ export function isCasaDatabaseConfigured() {
   return Boolean(process.env.CASA_DATABASE_URL);
 }
 
+export function connectionIsUnsafe(rolsuper: boolean, rolbypassrls: boolean) {
+  return rolsuper || rolbypassrls;
+}
+
 function getPool() {
   const connectionString = process.env.CASA_DATABASE_URL;
   if (!connectionString) {
@@ -36,17 +40,20 @@ async function assertNotSuperuser(client: PoolClient) {
   }
 }
 
-export async function withCasaUser<T>(
-  userId: string,
-  run: (client: PoolClient) => Promise<T>,
-) {
-  if (!UUID.test(userId)) throw new Error("Usuário da sessão inválido.");
+async function releaseCasa(client: PoolClient) {
+  try {
+    await client.query("reset role");
+  } catch {
+    // A conexão já pode ter caído. Devolver mesmo assim.
+  }
+  client.release();
+}
+
+async function withCasaConnection<T>(run: (client: PoolClient) => Promise<T>) {
   const client = await getPool().connect();
   try {
     await client.query("begin");
     await assertNotSuperuser(client);
-    await client.query("select set_config('app.user_id', $1, true)", [userId]);
-    await client.query("set local role authenticated");
     const value = await run(client);
     await client.query("commit");
     return value;
@@ -54,25 +61,77 @@ export async function withCasaUser<T>(
     await client.query("rollback");
     throw error;
   } finally {
-    client.release();
+    await releaseCasa(client);
   }
 }
 
+export async function withCasaUser<T>(
+  userId: string,
+  run: (client: PoolClient) => Promise<T>,
+) {
+  if (!UUID.test(userId)) throw new Error("Usuário da sessão inválido.");
+  return withCasaConnection(async (client) => {
+    await client.query("select set_config('app.user_id', $1, true)", [userId]);
+    await client.query("set local role authenticated");
+    return run(client);
+  });
+}
+
 export async function staffLoginHash(email: string) {
-  const client = await getPool().connect();
-  try {
-    await client.query("begin");
-    await assertNotSuperuser(client);
+  return withCasaConnection(async (client) => {
     const result = await client.query<{ user_id: string; password_hash: string }>(
       "select user_id, password_hash from public.staff_login_hash($1)",
       [email],
     );
-    await client.query("commit");
     return result.rows[0] ?? null;
-  } catch (error) {
-    await client.query("rollback");
-    throw error;
-  } finally {
-    client.release();
+  });
+}
+
+export async function startCasaSession(sessionId: string, userId: string, expiresAt: Date) {
+  if (!UUID.test(sessionId) || !UUID.test(userId)) {
+    throw new Error("Sessão inválida.");
   }
+  await withCasaConnection(async (client) => {
+    await client.query("select public.casa_session_start($1, $2, $3)", [
+      sessionId,
+      userId,
+      expiresAt.toISOString(),
+    ]);
+  });
+}
+
+export async function casaSessionActive(sessionId: string) {
+  if (!UUID.test(sessionId)) return null;
+  return withCasaConnection(async (client) => {
+    const result = await client.query<{ casa_session_active: string | null }>(
+      "select public.casa_session_active($1)",
+      [sessionId],
+    );
+    return result.rows[0]?.casa_session_active ?? null;
+  });
+}
+
+export async function revokeCasaSession(sessionId: string) {
+  if (!UUID.test(sessionId)) return;
+  await withCasaConnection(async (client) => {
+    await client.query("select public.casa_session_revoke($1)", [sessionId]);
+  });
+}
+
+export async function staffPasswordHash(userId: string) {
+  if (!UUID.test(userId)) return null;
+  return withCasaConnection(async (client) => {
+    const result = await client.query<{ casa_staff_hash: string | null }>(
+      "select public.casa_staff_hash($1)",
+      [userId],
+    );
+    return result.rows[0]?.casa_staff_hash ?? null;
+  });
+}
+
+export async function replaceStaffPassword(userId: string, passwordHash: string) {
+  if (!UUID.test(userId)) throw new Error("Usuário inválido.");
+  await withCasaConnection(async (client) => {
+    await client.query("select public.casa_password_replace($1, $2)", [userId, passwordHash]);
+  });
 }

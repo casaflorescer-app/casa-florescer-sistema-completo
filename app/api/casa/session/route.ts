@@ -8,7 +8,13 @@ import {
   openCasaSession,
   sealCasaSession,
 } from "@/lib/auth/casa-session";
-import { isCasaDatabaseConfigured, staffLoginHash } from "@/lib/db/casa";
+import {
+  casaSessionActive,
+  isCasaDatabaseConfigured,
+  revokeCasaSession,
+  staffLoginHash,
+  startCasaSession,
+} from "@/lib/db/casa";
 
 export const runtime = "nodejs";
 
@@ -53,7 +59,10 @@ export async function POST(request: Request) {
       : DUMMY_HASH;
     const matches = await verifyArgon2(hash, parsed.data.password);
     if (!row || !matches) return refused();
-    const token = await sealCasaSession(row.user_id);
+    const sessionId = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 12 * 1000);
+    await startCasaSession(sessionId, row.user_id, expiresAt);
+    const token = await sealCasaSession(row.user_id, sessionId);
     const response = NextResponse.json({ ok: true });
     response.cookies.set(COOKIE_NAME, token, casaSessionCookieOptions());
     return response;
@@ -68,10 +77,16 @@ export async function POST(request: Request) {
 export async function GET() {
   const session = await openCasaSession(cookies().get(COOKIE_NAME)?.value);
   if (!session) return NextResponse.json({ error: "Sem sessão." }, { status: 401 });
+  const active = await casaSessionActive(session.sessionId);
+  if (active !== session.userId) {
+    return NextResponse.json({ error: "Sem sessão." }, { status: 401 });
+  }
   return NextResponse.json({ id: session.userId });
 }
 
 export async function DELETE() {
+  const session = await openCasaSession(cookies().get(COOKIE_NAME)?.value);
+  if (session) await revokeCasaSession(session.sessionId);
   const response = NextResponse.json({ ok: true });
   response.cookies.set(COOKIE_NAME, "", { ...casaSessionCookieOptions(), maxAge: 0 });
   return response;

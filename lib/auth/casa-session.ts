@@ -6,6 +6,7 @@ export { COOKIE_NAME, MAX_AGE_SECONDS };
 type Payload = {
   v: 1;
   sub: string;
+  sid: string;
   exp: number;
 };
 
@@ -46,13 +47,14 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-export async function sealCasaSession(userId: string, now = Date.now()) {
-  if (!isUuid(userId)) throw new Error("Sessão sem usuário válido.");
+export async function sealCasaSession(userId: string, sessionId: string, now = Date.now()) {
+  if (!isUuid(userId) || !isUuid(sessionId)) throw new Error("Sessão sem usuário válido.");
   const key = await hmacKey("sign");
   if (!key) throw new Error("CASA_SESSION_SECRET ausente.");
   const payload: Payload = {
     v: 1,
     sub: userId,
+    sid: sessionId,
     exp: Math.floor(now / 1000) + MAX_AGE_SECONDS,
   };
   const body = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
@@ -81,8 +83,15 @@ export async function openCasaSession(token: string | undefined, now = Date.now(
   } catch {
     return null;
   }
-  if (payload.v !== 1 || !isUuid(payload.sub) || payload.exp * 1000 <= now) return null;
-  return { userId: payload.sub };
+  if (
+    payload.v !== 1 ||
+    !isUuid(payload.sub) ||
+    !isUuid(payload.sid) ||
+    payload.exp * 1000 <= now
+  ) {
+    return null;
+  }
+  return { userId: payload.sub, sessionId: payload.sid };
 }
 
 export function casaSessionCookieOptions() {

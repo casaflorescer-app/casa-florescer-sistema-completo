@@ -5,6 +5,7 @@ import {
   isClinicStaff,
   isPatientPortalUser,
 } from "@/lib/auth/access";
+import { getChatwootUrl } from "@/lib/integrations/external-services";
 
 export type AppNavSectionId =
   | "painel"
@@ -18,8 +19,16 @@ export type AppNavItem = {
   id: string;
   label: string;
   href: string;
+  /** Link externo: abre em nova aba (não usa Next Link). */
+  external?: boolean;
   visible: (auth: AuthorizationContext) => boolean;
 };
+
+const relationshipVisible = (auth: AuthorizationContext) =>
+  hasStaffRole(auth, "secretary") ||
+  hasStaffRole(auth, "owner") ||
+  hasStaffRole(auth, "admin") ||
+  hasStaffRole(auth, "physician");
 
 export type AppNavSection = {
   id: AppNavSectionId;
@@ -74,16 +83,19 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     id: "relacionamentos",
     title: "Relacionamentos",
     items: [
-      // C070-C4.1 — único item da seção.
       {
         id: "relationship-central",
         label: "Central de Relacionamentos",
         href: "/app/relationship",
-        visible: (auth) =>
-          hasStaffRole(auth, "secretary") ||
-          hasStaffRole(auth, "owner") ||
-          hasStaffRole(auth, "admin") ||
-          hasStaffRole(auth, "physician"),
+        visible: relationshipVisible,
+      },
+      // C070-C8 — atalho externo (nova aba); não duplica a seção.
+      {
+        id: "relationship-chatwoot",
+        label: "Chatwoot",
+        href: getChatwootUrl(),
+        external: true,
+        visible: relationshipVisible,
       },
     ],
   },

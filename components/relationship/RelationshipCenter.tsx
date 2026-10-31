@@ -48,7 +48,10 @@ import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ExternalServiceLink } from "@/components/ui/ExternalServiceLink";
 import { searchPatientOptions } from "@/lib/search/entity-search";
+import { getChatwootUrl } from "@/lib/integrations/external-services";
 
 type Tab =
   | "dashboard"
@@ -472,25 +475,27 @@ export function RelationshipCenter({
 
   return (
     <div className="space-y-5 overflow-x-hidden">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-            Relacionamento · não clínico
-          </p>
-          <h1 className="page-title mt-1">Central de Relacionamentos</h1>
-          <p className="page-sub mt-2 max-w-3xl">
-            Ferramenta operacional da Secretaria e da Gestão. Sem acesso a prontuário, SOAP, exames,
-            orientações ou receitas. Contato individual:{" "}
-            <strong className="font-medium text-lotus-800">WhatsApp Web</strong> (abre a conversa; o
-            envio é manual). Não há API de WhatsApp nem status de entrega.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={buttonClass} disabled={busy} onClick={() => void onRefreshOpportunities()}>
-            Atualizar oportunidades
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Relacionamentos · não clínico"
+        title="Central de Relacionamentos"
+        description="Gestão dos contatos e relacionamento com pacientes. Sem acesso a prontuário. Contato individual via WhatsApp Web (envio manual)."
+        actions={
+          <>
+            <ExternalServiceLink href={getChatwootUrl()} label="Abrir Chatwoot" />
+            <button
+              type="button"
+              className={ghostButtonClass}
+              disabled={busy}
+              onClick={() => void onRefreshOpportunities()}
+            >
+              Atualizar oportunidades
+            </button>
+          </>
+        }
+      />
+      <p className="text-sm text-lotus-600">
+        Chatwoot: atendimento e relacionamento (abre em outra aba).
+      </p>
 
       <StatusMessage error={error} notice={notice} />
 

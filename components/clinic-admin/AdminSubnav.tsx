@@ -5,6 +5,7 @@ const ITEMS = [
   { id: "users", label: "Usuários", href: "/app/admin/users" },
   { id: "organization", label: "Organização", href: "/app/admin/organization" },
   { id: "permissions", label: "Permissões", href: "/app/admin/permissions" },
+  { id: "integrations", label: "Integrações", href: "/app/admin/integrations" },
   { id: "policies", label: "Política de atendimento", href: "/app/care-policies" },
   { id: "audit", label: "Auditoria", href: "/app/admin/audit" },
 ] as const;

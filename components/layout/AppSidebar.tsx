@@ -69,6 +69,7 @@ export function AppSidebar({
             </p>
             <ul className="mt-2 space-y-0.5">
               {section.items.map((item) => {
+                const isExternal = Boolean(item.external);
                 const isHub =
                   item.href === "/app" ||
                   item.href === "/app/system" ||
@@ -91,21 +92,24 @@ export function AppSidebar({
                 const systemActive =
                   item.href === "/app/system" &&
                   (pathname === "/app/system" || pathname.startsWith("/app/system/"));
-                const active = peopleActive
-                  ? true
-                  : adminActive
+                const active = isExternal
+                  ? false
+                  : peopleActive
                     ? true
-                    : systemActive
+                    : adminActive
                       ? true
-                      : isHub
-                        ? pathname === item.href
-                        : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                      : systemActive
+                        ? true
+                        : isHub
+                          ? pathname === item.href
+                          : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <li key={item.id}>
                     <NavItem
                       href={item.href}
                       label={item.label}
                       active={active}
+                      external={isExternal}
                       onNavigate={onNavigate}
                     />
                   </li>

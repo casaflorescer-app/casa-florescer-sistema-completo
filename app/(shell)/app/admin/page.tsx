@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminSubnav } from "@/components/clinic-admin/AdminSubnav";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const LINKS = [
   {
@@ -18,6 +19,11 @@ const LINKS = [
     note: "Módulos de interface (não substituem membership clínico).",
   },
   {
+    href: "/app/admin/integrations",
+    label: "Integrações",
+    note: "Chatwoot e administração WhatsApp (serviços externos).",
+  },
+  {
     href: "/app/care-policies",
     label: "Política de atendimento",
     note: "Regras publicadas por profissional.",
@@ -32,14 +38,11 @@ const LINKS = [
 export default function ClinicAdminHomePage() {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Administração da clínica
-      </p>
-      <h1 className="page-title mt-1">Administração</h1>
-      <p className="page-sub mt-2">
-        Usuários, organização, permissões e auditoria da Casa Florescer. Distinta da administração
-        técnica da plataforma.
-      </p>
+      <PageHeader
+        eyebrow="Administração da clínica"
+        title="Administração"
+        description="Usuários, organização, permissões, integrações e auditoria da Casa Florescer. Distinta da administração técnica da plataforma."
+      />
       <div className="mt-4">
         <AdminSubnav active="hub" />
       </div>

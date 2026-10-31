@@ -19,7 +19,9 @@ import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { RowActions } from "@/components/ui/RowActions";
+import { TableActionsCell } from "@/components/ui/TableActionsCell";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchField } from "@/components/ui/SearchField";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
@@ -190,15 +192,10 @@ export function PatientList() {
   return (
     <div>
       <PageHeader
-        eyebrow="Médico"
+        eyebrow="Clínico"
         title="Pacientes"
         description="Cadastro e identificação das pacientes"
-        actions={
-          <Link href="/app/patients/new" className={buttonClass}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Nova paciente
-          </Link>
-        }
+        actions={<PrimaryCreateButton label="Nova paciente" href="/app/patients/new" />}
       />
 
       <StatusMessage error={error} />
@@ -337,16 +334,16 @@ export function PatientList() {
                   <th className="w-[9rem] px-2 py-2.5">Telefone</th>
                   <th className="hidden px-2 py-2.5 xl:table-cell">E-mail</th>
                   <th className="hidden w-[10.5rem] px-2 py-2.5 xl:table-cell">Cadastro</th>
-                  <th className="w-[10.5rem] whitespace-nowrap px-2 py-2.5 text-right">Ações</th>
+                  <th className="w-[12.5rem] whitespace-nowrap px-2 py-2.5 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {displayRows.map((row) => (
                   <tr key={row.id} className="border-b border-lotus-50 align-middle hover:bg-lotus-50/70">
-                    <td className="px-2 py-2">
+                    <td className="px-2 py-2 align-middle">
                       <PatientPhotoThumb photoPath={row.photoPath} patientName={row.fullName} />
                     </td>
-                    <td className="min-w-0 px-2 py-2">
+                    <td className="min-w-0 px-2 py-2 align-middle">
                       <Link href={`/app/patients/${row.id}`} className="block min-w-0 hover:text-lotus-700">
                         <p className="truncate font-medium text-lotus-900">{row.fullName}</p>
                         {row.socialName ? (
@@ -354,28 +351,28 @@ export function PatientList() {
                         ) : null}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2">{maskCpf(row.cpf)}</td>
-                    <td className="whitespace-nowrap px-2 py-2">
+                    <td className="whitespace-nowrap px-2 py-2 align-middle">{maskCpf(row.cpf)}</td>
+                    <td className="whitespace-nowrap px-2 py-2 align-middle">
                       {row.birthDate ? formatIsoDateBr(row.birthDate) : "—"}
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2">
+                    <td className="whitespace-nowrap px-2 py-2 align-middle">
                       {row.phone ? formatPhone(row.phone) : "—"}
                     </td>
-                    <td className="hidden min-w-0 px-2 py-2 xl:table-cell">
+                    <td className="hidden min-w-0 px-2 py-2 align-middle xl:table-cell">
                       <span className="block truncate" title={row.email ?? undefined}>
                         {row.email ?? "—"}
                       </span>
                     </td>
-                    <td className="hidden whitespace-nowrap px-2 py-2 xl:table-cell">
+                    <td className="hidden whitespace-nowrap px-2 py-2 align-middle xl:table-cell">
                       {formatDateTime(row.createdAt)}
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-right">
+                    <TableActionsCell className="px-2 py-2">
                       <PatientRowActions
                         row={row}
                         canOpenChart={canOpenChart}
                         onQuickView={setQuickViewId}
                       />
-                    </td>
+                    </TableActionsCell>
                   </tr>
                 ))}
               </tbody>

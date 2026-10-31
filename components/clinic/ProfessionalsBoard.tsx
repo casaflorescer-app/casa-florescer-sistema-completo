@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { StatusMessage } from "@/components/platform/Ui";
 import { ROOM_NATURE_LABEL, roomNature, type RoomNature } from "@/lib/clinic/room-presentation";
 import { parseRoomOccupancy, singleOccupancyForProfessional } from "@/lib/clinic/room-occupancy";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type RoomRow = {
   id: string;
@@ -120,16 +121,11 @@ export function ProfessionalsBoard() {
 
   return (
     <div className="min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Pessoas / Profissionais
-      </p>
-      <h1 className="page-title mt-1">Profissionais</h1>
-      <p className="page-sub mt-2">
-        Consulta dos profissionais de saúde (casa ou locatários).{" "}
-        <strong className="font-medium text-lotus-800">Somente leitura nesta versão</strong> — cadastro e
-        edição entram em ciclo posterior. Locatário com contrato de sala não é funcionário; veja
-        Funcionários para RH/prestadores e Especialidades para o catálogo.
-      </p>
+      <PageHeader
+        eyebrow="Pessoas"
+        title="Profissionais"
+        description="Consulta dos profissionais de saúde (casa ou locatários). Somente leitura nesta versão — cadastro e edição entram em ciclo posterior."
+      />
       <StatusMessage error={error} />
       {loading ? <p className="mt-6 text-sm text-lotus-600">Carregando profissionais…</p> : null}
       {!loading && !error && rows.length === 0 ? (

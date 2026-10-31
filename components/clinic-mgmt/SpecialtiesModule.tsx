@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
+import { StatusMessage, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import { listClinicSpecialties, upsertClinicSpecialty } from "@/lib/clinic-mgmt/specialties";
 import type { ClinicSpecialty } from "@/lib/clinic-mgmt/types";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
+import { FormActions } from "@/components/ui/FormActions";
 
 export function SpecialtiesModule() {
   const { authorization } = useAuth();
@@ -79,14 +82,23 @@ export function SpecialtiesModule() {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Pessoas / Especialidades
-      </p>
-      <h1 className="page-title mt-1">Especialidades</h1>
-      <p className="page-sub mt-2">
-        Catálogo administrativo de especialidades. Distinto de cargo/função de funcionários e do vínculo
-        locatário–sala.
-      </p>
+      <PageHeader
+        eyebrow="Pessoas"
+        title="Especialidades"
+        description="Catálogo administrativo de especialidades. Distinto de cargo/função de funcionários e do vínculo locatário–sala."
+        actions={
+          <PrimaryCreateButton
+            label="Nova especialidade"
+            onClick={() => {
+              startCreate();
+              document.getElementById("specialty-create-form")?.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+              });
+            }}
+          />
+        }
+      />
       <StatusMessage error={error} notice={notice} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -150,7 +162,7 @@ export function SpecialtiesModule() {
           </div>
         </section>
 
-        <aside className="card h-fit">
+        <aside className="card h-fit" id="specialty-create-form">
           <h2 className="text-base font-semibold text-lotus-900">
             {editing ? "Editar especialidade" : "Nova especialidade"}
           </h2>
@@ -171,16 +183,13 @@ export function SpecialtiesModule() {
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             Ativa
           </label>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className={buttonClass} disabled={busy || !name.trim()} onClick={() => void onSave()}>
-              {busy ? "Salvando…" : "Salvar"}
-            </button>
-            {editing ? (
-              <button type="button" className={ghostButtonClass} onClick={startCreate}>
-                Cancelar
-              </button>
-            ) : null}
-          </div>
+          <FormActions
+            primaryLabel="Salvar"
+            primaryBusy={busy}
+            primaryDisabled={!name.trim()}
+            onPrimary={() => void onSave()}
+            onCancel={editing ? startCreate : undefined}
+          />
         </aside>
       </div>
     </div>

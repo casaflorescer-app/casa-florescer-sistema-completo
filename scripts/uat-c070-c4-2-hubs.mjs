@@ -81,10 +81,23 @@ ok("SystemSubnav organizações/usuários/audit",
     systemSub.includes("/app/system/users") &&
     systemSub.includes("/app/system/audit"));
 
-ok("Dashboard Pessoas único", dash.includes('title="Pessoas"') && dash.includes("/app/people"));
-ok("Dashboard sem card Profissionais flat", !dash.includes('title="Profissionais"'));
-ok("Dashboard sem card Funcionários flat", !dash.includes('title="Funcionários"'));
-ok("Dashboard Plataforma hub", dash.includes('title="Plataforma"') && dash.includes('href="/app/system"'));
+ok(
+  "Dashboard Pessoas único",
+  (dash.includes('title="Pessoas"') || dash.includes('title: "Pessoas"')) && dash.includes("/app/people"),
+);
+ok(
+  "Dashboard sem card Profissionais flat",
+  !dash.includes('title="Profissionais"') && !dash.includes('title: "Profissionais"'),
+);
+ok(
+  "Dashboard sem card Funcionários flat",
+  !dash.includes('title="Funcionários"') && !dash.includes('title: "Funcionários"'),
+);
+ok(
+  "Dashboard Plataforma hub",
+  (dash.includes('title="Plataforma"') || dash.includes('title: "Plataforma"')) &&
+    (dash.includes('href="/app/system"') || dash.includes('href: "/app/system"')),
+);
 ok("Dashboard Salas e Locações único", dash.includes("Salas e Locações") && !dash.includes("Aluguéis e contratos"));
 
 ok("Rotas filhas preservadas (professionals page)", prosPage.includes("ProfessionalsBoard"));

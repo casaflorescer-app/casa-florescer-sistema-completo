@@ -38,6 +38,8 @@ import { PatientSearchPanel } from "@/components/attendance/PatientSearchPanel";
 import { ExamRequestPanel } from "@/components/attendance/ExamRequestPanel";
 import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { formatDateTime } from "@/lib/platform/format";
 import { RowActions } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
@@ -229,15 +231,12 @@ export function ExamsModule() {
 
   return (
     <div className="overflow-x-hidden">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Médico</p>
-        <h1 className="page-title mt-1">Exames</h1>
-        <p className="page-sub mt-2">
-          Pedidos e resultados/anexos são coisas distintas. Para um <strong>novo pedido</strong>,
-          abra primeiro o atendimento da paciente na Agenda ou no prontuário. Receita digital
-          regulatória (SNCR) e assinatura ICP-Brasil não fazem parte desta versão.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Clínico"
+        title="Exames"
+        description="Pedidos e resultados/anexos são distintos. Para um novo pedido, abra primeiro o atendimento na Agenda ou no prontuário."
+        actions={<PrimaryCreateButton label="Novo exame" href="/app/agenda" />}
+      />
 
       {physicianMemberships.length > 1 ? (
         <label className="mt-4 block text-sm text-lotus-800">

@@ -2,8 +2,8 @@ import Link from "next/link";
 
 const ITEMS = [
   { id: "salas", label: "Salas", href: "/app/rooms" },
-  { id: "alugueis", label: "Aluguéis", href: "/app/rentals" },
-  { id: "contratos", label: "Contratos de locação", href: "/app/rentals?tab=contracts" },
+  { id: "alugueis", label: "Locações", href: "/app/rentals" },
+  { id: "contratos", label: "Contratos", href: "/app/rentals?tab=contracts" },
 ] as const;
 
 export type LocacoesSubnavId = (typeof ITEMS)[number]["id"];

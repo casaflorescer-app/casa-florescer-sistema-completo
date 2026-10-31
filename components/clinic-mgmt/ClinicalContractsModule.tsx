@@ -24,6 +24,8 @@ import {
 } from "@/lib/clinic-mgmt/clinical-contracts";
 import { createClient } from "@/lib/supabase/client";
 import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import {
   searchPatientOptions,
   searchProfessionalOptions,
@@ -167,13 +169,26 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Gestão Clínica</p>
-      <h1 className="page-title mt-1">Contratos clínicos</h1>
-      <p className="page-sub mt-2">
-        Distintos da locação de sala. Contrato obstétrico ≠ pré-natal. Termo de riscos ≠ checkbox.
-        Locação permanece em{" "}
+      <PageHeader
+        eyebrow="Gestão"
+        title="Contratos clínicos"
+        description="Distintos da locação de sala. Contrato obstétrico ≠ pré-natal. Locação permanece em Salas e Locações → Contratos."
+        actions={
+          <PrimaryCreateButton
+            label={tab === "obstetric" ? "Novo contrato" : "Novo termo"}
+            onClick={() =>
+              document.getElementById("clinical-contract-form")?.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+              })
+            }
+          />
+        }
+      />
+      <p className="mt-1 text-sm text-lotus-600">
+        Locação:{" "}
         <Link className="underline" href="/app/rentals?tab=contracts">
-          Aluguéis / Contratos
+          Contratos de locação
         </Link>
         .
       </p>
@@ -363,7 +378,7 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
           )}
         </section>
 
-        <aside className="card h-fit">
+        <aside className="card h-fit" id="clinical-contract-form">
           <h2 className="text-base font-semibold text-lotus-900">
             {tab === "obstetric" ? "Novo contrato obstétrico" : "Novo termo / contrato"}
           </h2>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProfessionalLabel } from "@/lib/pregnancies/directory";
 import {
@@ -11,6 +11,9 @@ import {
 } from "@/lib/attendance/directory";
 import type { AgendaRoomOption } from "@/components/attendance/AppointmentForm";
 import { buttonClass } from "@/components/platform/Ui";
+import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { FormActions } from "@/components/ui/FormActions";
+import type { EntitySearchOption } from "@/lib/search/entity-search";
 
 const REASON_OPTIONS = Object.entries(AGENDA_BLOCK_REASON_LABEL) as Array<
   [AgendaBlockReasonCode, string]
@@ -46,7 +49,9 @@ export function AgendaBlockForm({
 }) {
   const [step, setStep] = useState<Step>("form");
   const [professionalId, setProfessionalId] = useState("");
+  const [professionalLabel, setProfessionalLabel] = useState("");
   const [roomId, setRoomId] = useState("");
+  const [roomLabel, setRoomLabel] = useState("");
   const [date, setDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("14:30");
@@ -57,8 +62,36 @@ export function AgendaBlockForm({
   const startsAt = useMemo(() => toIsoLocal(date, startTime), [date, startTime]);
   const endsAt = useMemo(() => toIsoLocal(date, endTime), [date, endTime]);
 
-  const professionalName =
-    professionals.find((item) => item.id === professionalId)?.fullName ?? "Profissional";
+  const professionalName = professionalLabel || "Profissional";
+
+  const searchProfessionalsLocal = useCallback(
+    async (query: string): Promise<EntitySearchOption[]> => {
+      const q = query.trim().toLocaleLowerCase("pt-BR");
+      return professionals
+        .filter((item) => !q || item.fullName.toLocaleLowerCase("pt-BR").includes(q))
+        .slice(0, 30)
+        .map((item) => ({ id: item.id, label: item.fullName }));
+    },
+    [professionals],
+  );
+
+  const searchRoomsLocal = useCallback(
+    async (query: string): Promise<EntitySearchOption[]> => {
+      const q = query.trim().toLocaleLowerCase("pt-BR");
+      return rooms
+        .filter((item) => {
+          if (!q) return true;
+          const hay = `${item.name} ${item.code}`.toLocaleLowerCase("pt-BR");
+          return hay.includes(q);
+        })
+        .slice(0, 30)
+        .map((item) => ({
+          id: item.id,
+          label: item.code ? `${item.name} (${item.code})` : item.name,
+        }));
+    },
+    [rooms],
+  );
 
   async function onConfirm() {
     if (!startsAt || !endsAt) {
@@ -141,34 +174,40 @@ export function AgendaBlockForm({
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">
           <span className="font-medium text-lotus-700">Profissional</span>
-          <select
-            className="mt-1 w-full rounded-md border border-lotus-200 px-3 py-2"
-            value={professionalId}
-            onChange={(event) => setProfessionalId(event.target.value)}
-          >
-            <option value="">— opcional se houver sala —</option>
-            {professionals.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.fullName}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1">
+            <EntityCombobox
+              value={professionalId}
+              selectedLabel={professionalLabel}
+              onChange={(id, option) => {
+                setProfessionalId(id);
+                setProfessionalLabel(option?.label ?? "");
+              }}
+              onSearch={searchProfessionalsLocal}
+              minChars={0}
+              placeholder="Nome do profissional…"
+              emptyLabel="Nenhum profissional encontrado."
+            />
+          </div>
+          <span className="mt-1 block text-xs text-lotus-500">Opcional se houver sala.</span>
         </label>
 
         <label className="block text-sm">
           <span className="font-medium text-lotus-700">Sala</span>
-          <select
-            className="mt-1 w-full rounded-md border border-lotus-200 px-3 py-2"
-            value={roomId}
-            onChange={(event) => setRoomId(event.target.value)}
-          >
-            <option value="">— opcional se houver profissional —</option>
-            {rooms.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1">
+            <EntityCombobox
+              value={roomId}
+              selectedLabel={roomLabel}
+              onChange={(id, option) => {
+                setRoomId(id);
+                setRoomLabel(option?.label ?? "");
+              }}
+              onSearch={searchRoomsLocal}
+              minChars={0}
+              placeholder="Nome ou código da sala…"
+              emptyLabel="Nenhuma sala encontrada."
+            />
+          </div>
+          <span className="mt-1 block text-xs text-lotus-500">Opcional se houver profissional.</span>
         </label>
 
         <label className="block text-sm">
@@ -229,30 +268,23 @@ export function AgendaBlockForm({
 
       {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" className={buttonClass} disabled={busy} onClick={onCancel}>
-          Cancelar
-        </button>
-        <button
-          type="button"
-          className={buttonClass}
-          disabled={busy}
-          onClick={() => {
-            setError(null);
-            if (!professionalId && !roomId) {
-              setError("Informe profissional e/ou sala.");
-              return;
-            }
-            if (!startsAt || !endsAt || endsAt <= startsAt) {
-              setError("O fim estimado deve ser após o início.");
-              return;
-            }
-            setStep("confirm");
-          }}
-        >
-          Bloquear agenda
-        </button>
-      </div>
+      <FormActions
+        primaryLabel="Bloquear agenda"
+        primaryBusy={busy}
+        onPrimary={() => {
+          setError(null);
+          if (!professionalId && !roomId) {
+            setError("Informe profissional e/ou sala.");
+            return;
+          }
+          if (!startsAt || !endsAt || endsAt <= startsAt) {
+            setError("O fim estimado deve ser após o início.");
+            return;
+          }
+          setStep("confirm");
+        }}
+        onCancel={onCancel}
+      />
     </section>
   );
 }

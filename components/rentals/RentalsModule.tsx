@@ -38,6 +38,8 @@ import {
 } from "@/lib/rentals/types";
 import { LocacoesSubnav } from "@/components/clinic/LocacoesSubnav";
 import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { createClient } from "@/lib/supabase/client";
@@ -432,17 +434,12 @@ export function RentalsModule({
 
   return (
     <div className="min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Gestão Clínica · Salas e locações
-      </p>
-      <h1 className="page-title mt-1">
-        {tab === "contracts" ? "Contratos de locação" : "Aluguéis"}
-      </h1>
-      <p className="page-sub mt-2 max-w-3xl">
-        Relação administrativa/comercial de locação de consultórios. Contratos clínicos
-        (paciente/procedimento) ficam em menu separado. A agenda clínica permanece independente —
-        o contrato não bloqueia agendamentos automaticamente.
-      </p>
+      <PageHeader
+        eyebrow="Gestão · Salas e Locações"
+        title={tab === "contracts" ? "Contratos" : "Locações"}
+        description="Relação administrativa de locação de consultórios. Contratos clínicos ficam em menu separado. A agenda permanece independente."
+        actions={<PrimaryCreateButton label="Novo contrato" onClick={openCreate} />}
+      />
       <LocacoesSubnav active={tab === "contracts" ? "contratos" : "alugueis"} />
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -459,9 +456,6 @@ export function RentalsModule({
           onClick={() => setTab("contracts")}
         >
           Lista de contratos
-        </button>
-        <button type="button" className={buttonClass} onClick={openCreate}>
-          Novo contrato
         </button>
       </div>
 

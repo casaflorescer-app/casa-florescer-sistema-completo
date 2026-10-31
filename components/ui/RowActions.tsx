@@ -6,7 +6,11 @@ import {
   buttonVariantClass,
   type ButtonVariant,
 } from "@/components/ui/buttonStyles";
-import { OverflowMenu, type OverflowItem } from "@/components/ui/OverflowMenu";
+import {
+  OverflowMenu,
+  type OverflowItem,
+  type OverflowTriggerVariant,
+} from "@/components/ui/OverflowMenu";
 
 export type RowAction = {
   id: string;
@@ -18,29 +22,33 @@ export type RowAction = {
 };
 
 /**
- * Padrão obrigatório C064: uma ação principal visível + menu ⋯ para secundárias.
- * Sempre em linha (flex-nowrap) — nunca empilha o botão principal sobre o ⋯.
+ * Padrão C070-C7: ação principal + menu "+ Ações" na mesma linha (desktop).
+ * No mobile estreito pode quebrar; nunca empilha por padrão no desktop.
  */
 export function RowActions({
   primary,
   secondary = [],
   className = "",
   compact = true,
+  overflowVariant = "labeled",
 }: {
   primary?: RowAction | null;
   secondary?: OverflowItem[];
   className?: string;
   compact?: boolean;
+  overflowVariant?: OverflowTriggerVariant;
 }) {
   const size = compact ? buttonCompactClass : "";
 
   return (
     <div
-      className={`inline-flex flex-row flex-nowrap items-center justify-end gap-1.5 ${className}`}
+      className={`inline-flex flex-row flex-nowrap items-center justify-end gap-1.5 max-sm:flex-wrap ${className}`}
       data-row-actions="true"
     >
       {primary ? <ActionControl action={primary} sizeClass={size} /> : null}
-      {secondary.length > 0 ? <OverflowMenu items={secondary} /> : null}
+      {secondary.length > 0 ? (
+        <OverflowMenu items={secondary} variant={overflowVariant} />
+      ) : null}
     </div>
   );
 }

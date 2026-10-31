@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
+import { StatusMessage, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import {
   ENGAGEMENT_LABEL,
   WORKFORCE_STATUS_LABEL,
@@ -11,6 +11,9 @@ import {
   type WorkforceStatus,
 } from "@/lib/clinic-mgmt/types";
 import { listClinicWorkforce, upsertClinicWorkforce, workforceDashboard } from "@/lib/clinic-mgmt/workforce";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
+import { FormActions } from "@/components/ui/FormActions";
 
 const EMPTY = {
   fullName: "",
@@ -103,14 +106,23 @@ export function WorkforceModule() {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Pessoas / Funcionários
-      </p>
-      <h1 className="page-title mt-1">Funcionários e prestadores</h1>
-      <p className="page-sub mt-2">
-        Pessoas que trabalham ou prestam serviço à clínica. Médicos locatários permanecem em{" "}
-        <strong>Profissionais</strong> + contrato de locação — não são funcionários.
-      </p>
+      <PageHeader
+        eyebrow="Pessoas"
+        title="Funcionários"
+        description="Pessoas que trabalham ou prestam serviço à clínica. Médicos locatários ficam em Profissionais + contrato de locação."
+        actions={
+          <PrimaryCreateButton
+            label="Novo funcionário"
+            onClick={() => {
+              startCreate();
+              document.getElementById("workforce-create-form")?.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest",
+              });
+            }}
+          />
+        }
+      />
       <StatusMessage error={error} notice={notice} />
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -166,9 +178,9 @@ export function WorkforceModule() {
           </ul>
         </section>
 
-        <aside className="card h-fit">
+        <aside className="card h-fit" id="workforce-create-form">
           <h2 className="text-base font-semibold text-lotus-900">
-            {editingId ? "Editar cadastro" : "Novo cadastro"}
+            {editingId ? "Editar cadastro" : "Novo funcionário"}
           </h2>
           <label className="mt-3 block text-sm">
             Nome
@@ -237,21 +249,13 @@ export function WorkforceModule() {
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             />
           </label>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={buttonClass}
-              disabled={busy || !form.fullName.trim() || !form.roleTitle.trim()}
-              onClick={() => void onSave()}
-            >
-              {busy ? "Salvando…" : "Salvar"}
-            </button>
-            {editingId ? (
-              <button type="button" className={ghostButtonClass} onClick={startCreate}>
-                Cancelar
-              </button>
-            ) : null}
-          </div>
+          <FormActions
+            primaryLabel="Salvar"
+            primaryBusy={busy}
+            primaryDisabled={!form.fullName.trim() || !form.roleTitle.trim()}
+            onPrimary={() => void onSave()}
+            onCancel={editingId ? startCreate : undefined}
+          />
         </aside>
       </div>
     </div>

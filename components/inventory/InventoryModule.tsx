@@ -9,6 +9,8 @@ import {
   ghostButtonClass,
 } from "@/components/platform/Ui";
 import { EquipmentPanel } from "@/components/inventory/EquipmentPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { RowActions } from "@/components/ui/RowActions";
 import { EntityCombobox } from "@/components/ui/EntityCombobox";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -429,15 +431,45 @@ export function InventoryModule({
 
   return (
     <div className="min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Gestão Clínica
-      </p>
-      <h1 className="page-title mt-1">Estoque e Materiais</h1>
-      <p className="page-sub mt-2 max-w-3xl">
-        Materiais consumíveis (medicamentos, alimentos, cirúrgicos, procedimento e gerais) e,
-        em aba separada, equipamentos patrimoniais. Não substitui prescrição, prontuário nem
-        dispensação clínica ao paciente.
-      </p>
+      <PageHeader
+        eyebrow="Gestão"
+        title="Estoques"
+        description="Materiais consumíveis e equipamentos patrimoniais. Não substitui prescrição, prontuário nem dispensação clínica."
+        actions={
+          tab !== "equipment" ? (
+            <>
+              <button
+                type="button"
+                className={ghostButtonClass}
+                onClick={() => {
+                  setShowWhForm(true);
+                  setTab("items");
+                }}
+              >
+                + Novo local
+              </button>
+              <PrimaryCreateButton
+                label="Novo material"
+                onClick={() => {
+                  setItemForm({
+                    id: "",
+                    sku: "",
+                    name: "",
+                    itemClass: "procedure_consumable",
+                    unit: "un",
+                    minQty: "10",
+                    idealQty: "30",
+                    description: "",
+                    notes: "",
+                  });
+                  setShowItemForm(true);
+                  setTab("items");
+                }}
+              />
+            </>
+          ) : undefined
+        }
+      />
 
       <div className="mt-4 flex flex-wrap gap-2">
         {(
@@ -458,41 +490,6 @@ export function InventoryModule({
             {label}
           </button>
         ))}
-        {tab !== "equipment" ? (
-          <>
-            <button
-              type="button"
-              className={buttonClass}
-              onClick={() => {
-                setItemForm({
-                  id: "",
-                  sku: "",
-                  name: "",
-                  itemClass: "procedure_consumable",
-                  unit: "un",
-                  minQty: "10",
-                  idealQty: "30",
-                  description: "",
-                  notes: "",
-                });
-                setShowItemForm(true);
-                setTab("items");
-              }}
-            >
-              Novo material
-            </button>
-            <button
-              type="button"
-              className={ghostButtonClass}
-              onClick={() => {
-                setShowWhForm(true);
-                setTab("items");
-              }}
-            >
-              Novo local
-            </button>
-          </>
-        ) : null}
       </div>
 
       <div className="mt-4">

@@ -23,6 +23,8 @@ import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import { PatientSearchPanel } from "@/components/attendance/PatientSearchPanel";
 import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { RowActions } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
 import { PatientQuickView } from "@/components/patients/PatientQuickView";
@@ -162,14 +164,12 @@ export function PrescriptionsModule() {
 
   return (
     <div className="overflow-x-hidden">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Médico</p>
-        <h1 className="page-title mt-1">Receitas</h1>
-        <p className="page-sub mt-2">
-          Pesquise a paciente, consulte o histórico e emita receitas. A emissão permanece com a
-          médica; a secretaria visualiza documentos já assinados conforme a regra existente.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Clínico"
+        title="Receitas"
+        description="Pesquise a paciente, consulte o histórico e emita receitas. A emissão permanece com a médica."
+        actions={<PrimaryCreateButton label="Nova receita" href="/app/agenda" />}
+      />
 
       {physicianMemberships.length > 1 ? (
         <label className="mt-4 block text-sm text-lotus-800">

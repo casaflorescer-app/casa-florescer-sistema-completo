@@ -6,9 +6,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { hasStaffRole } from "@/lib/auth/access";
 import { usePracticeUi } from "@/components/layout/PracticeUi";
-import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
-import { Plus } from "lucide-react";
+import { StatusMessage, ghostButtonClass } from "@/components/platform/Ui";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import {
   appointmentRecordArrival,
   appointmentSetStatus,
@@ -461,12 +462,36 @@ export function AgendaPage() {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Clínica</p>
-      <h1 className="page-title mt-1">Agenda</h1>
-      <p className="page-sub mt-2">
-        Agendamento, confirmação e check-in do dia. O prontuário abre quando a médica inicia o
-        atendimento.
-      </p>
+      <PageHeader
+        eyebrow="Clínico"
+        title="Agenda"
+        description="Agendamento, confirmação e check-in do dia. O prontuário abre quando a médica inicia o atendimento."
+        actions={
+          <>
+            <button
+              type="button"
+              className={ghostButtonClass}
+              disabled={!canCreate || formBusy || Boolean(editingId) || showForm}
+              onClick={() => {
+                setEditingId(null);
+                setShowForm(false);
+                setShowBlockForm((open) => !open);
+              }}
+            >
+              Bloquear agenda
+            </button>
+            <PrimaryCreateButton
+              label="Novo atendimento"
+              disabled={!canCreate || formBusy || Boolean(editingId) || showBlockForm}
+              onClick={() => {
+                setEditingId(null);
+                setShowBlockForm(false);
+                setShowForm((open) => !open);
+              }}
+            />
+          </>
+        }
+      />
 
       <StatusMessage error={error} notice={notice} />
 
@@ -513,40 +538,11 @@ export function AgendaPage() {
         />
       ) : null}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-lotus-600">
-          {loading
-            ? "Carregando…"
-            : `${labeledRows.length} ${labeledRows.length === 1 ? "atendimento" : "atendimentos"}`}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={ghostButtonClass}
-            disabled={!canCreate || formBusy || Boolean(editingId) || showForm}
-            onClick={() => {
-              setEditingId(null);
-              setShowForm(false);
-              setShowBlockForm((open) => !open);
-            }}
-          >
-            Bloquear agenda
-          </button>
-          <button
-            type="button"
-            className={buttonClass}
-            disabled={!canCreate || formBusy || Boolean(editingId) || showBlockForm}
-            onClick={() => {
-              setEditingId(null);
-              setShowBlockForm(false);
-              setShowForm((open) => !open);
-            }}
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            Novo atendimento
-          </button>
-        </div>
-      </div>
+      <p className="mt-6 text-sm text-lotus-600">
+        {loading
+          ? "Carregando…"
+          : `${labeledRows.length} ${labeledRows.length === 1 ? "atendimento" : "atendimentos"}`}
+      </p>
 
       {supabase && organizationId && selectedPracticeId ? (
         <AgendaFilters

@@ -7,12 +7,13 @@ import { ROOM_NATURE_LABEL, roomNature, type RoomNature } from "@/lib/clinic/roo
 import { listRoomsAdmin, roomsDashboard, upsertRoom } from "@/lib/clinic-mgmt/rooms";
 import type { RoomAdminRow } from "@/lib/clinic-mgmt/types";
 import { LocacoesSubnav } from "@/components/clinic/LocacoesSubnav";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchField } from "@/components/ui/SearchField";
 import { FormActions } from "@/components/ui/FormActions";
 import { friendlyError } from "@/lib/ui/friendly-error";
-import { Plus } from "lucide-react";
 
 const NATURE_CLASS: Record<RoomNature, string> = {
   propria: "border-lotus-200 bg-white text-lotus-800",
@@ -122,14 +123,20 @@ export function RoomsBoard() {
 
   return (
     <div className="min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Gestão Clínica · Salas e Locações
-      </p>
-      <h1 className="page-title mt-1">Salas e Locações</h1>
-      <p className="page-sub mt-2">
-        Cadastro e disponibilidade das salas. Use as abas para aluguéis e contratos de locação.
-        Locatário ≠ funcionário. Contratos clínicos ficam em menu separado.
-      </p>
+      <PageHeader
+        eyebrow="Gestão · Salas e Locações"
+        title="Salas e Locações"
+        description="Cadastro e disponibilidade das salas. Use as abas para locações e contratos. Locatário ≠ funcionário. Contratos clínicos ficam em menu separado."
+        actions={
+          <PrimaryCreateButton
+            label="Nova sala"
+            onClick={() => {
+              startCreate();
+              document.getElementById("room-create-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }}
+          />
+        }
+      />
       <LocacoesSubnav active="salas" />
       <StatusMessage error={error} notice={notice} />
 
@@ -222,14 +229,9 @@ export function RoomsBoard() {
           </ul>
         </section>
 
-        <aside className="card h-fit">
+        <aside className="card h-fit" id="room-create-form">
           <h2 className="text-base font-semibold text-lotus-900">
-            {editing ? "Editar sala" : (
-              <span className="inline-flex items-center gap-1.5">
-                <Plus className="h-4 w-4" aria-hidden />
-                Nova sala
-              </span>
-            )}
+            {editing ? "Editar sala" : "Nova sala"}
           </h2>
           <label className="mt-3 block text-sm">
             Código

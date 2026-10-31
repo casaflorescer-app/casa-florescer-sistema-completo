@@ -9,6 +9,7 @@ import {
   ghostButtonClass,
 } from "@/components/platform/Ui";
 import { EquipmentPanel } from "@/components/inventory/EquipmentPanel";
+import { RowActions } from "@/components/ui/RowActions";
 import {
   getItem,
   listBalancesForItem,
@@ -639,13 +640,13 @@ export function InventoryModule({
                       {fmtQty(item.minQty)} / {fmtQty(item.idealQty)}
                     </td>
                     <td className="px-2 py-3">
-                      <button
-                        type="button"
-                        className="underline"
-                        onClick={() => setSelected(item)}
-                      >
-                        Detalhes
-                      </button>
+                      <RowActions
+                        primary={{
+                          id: `detail-${item.id}`,
+                          label: "Detalhes",
+                          onClick: () => setSelected(item),
+                        }}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -667,11 +668,11 @@ export function InventoryModule({
                     {selected.requiresLot ? " · controla lote" : ""}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => {
+                <RowActions
+                  primary={{
+                    id: "edit-item",
+                    label: "Editar",
+                    onClick: () => {
                       setItemForm({
                         id: selected.id,
                         sku: selected.sku,
@@ -684,28 +685,24 @@ export function InventoryModule({
                         notes: selected.notes ?? "",
                       });
                       setShowItemForm(true);
-                    }}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => {
-                      setMoveForm((f) => ({ ...f, itemId: selected.id, type: "receipt" }));
-                      setTab("move");
-                    }}
-                  >
-                    Movimentar
-                  </button>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => setSelected(null)}
-                  >
-                    Fechar
-                  </button>
-                </div>
+                    },
+                  }}
+                  secondary={[
+                    {
+                      id: "move-item",
+                      label: "Movimentar",
+                      onClick: () => {
+                        setMoveForm((f) => ({ ...f, itemId: selected.id, type: "receipt" }));
+                        setTab("move");
+                      },
+                    },
+                    {
+                      id: "close-item",
+                      label: "Fechar",
+                      onClick: () => setSelected(null),
+                    },
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

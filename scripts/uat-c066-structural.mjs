@@ -38,6 +38,7 @@ const waUrl = read("lib/whatsapp/url.ts");
 const professionals = read("components/clinic/ProfessionalsBoard.tsx");
 const rooms = read("components/clinic/RoomsBoard.tsx");
 const rentals = read("components/rentals/RentalsModule.tsx");
+const locacoesSubnav = read("components/clinic/LocacoesSubnav.tsx");
 const c063 = read("docs/c063-final-homologation.md");
 
 // Landing
@@ -53,13 +54,27 @@ ok("System home sem link Configurações", !systemHome.includes("/app/system/set
 ok("Admin settings redireciona", adminSettings.includes('redirect("/app/admin")'));
 ok("System settings redireciona", systemSettings.includes('redirect("/app/system")'));
 
-// Menu salas/locações
+// Menu salas/locações (C070: um item no nav + LocacoesSubnav nas páginas)
 ok("Nav Salas e locações", nav.includes("Salas e locações") && nav.includes('href: "/app/rooms"'));
-ok("Nav Aluguéis e contratos", nav.includes("Aluguéis e contratos") && nav.includes('href: "/app/rentals"'));
-ok("Nav sem item duplicado Contratos de locação", !nav.includes("Contratos de locação") && !nav.includes("rental-contracts"));
+ok(
+  "Nav Aluguéis unificado via subnav (C070)",
+  !/id:\s*"rentals"/.test(nav) &&
+    locacoesSubnav.includes("/app/rentals") &&
+    locacoesSubnav.includes("Aluguéis"),
+);
+ok(
+  "Nav sem item flat Contratos de locação",
+  !/id:\s*"rental-contracts"/.test(nav) && !/label:\s*"Contratos de locação"/.test(nav),
+);
 ok("Contratos clínicos preservados", nav.includes("Contratos clínicos") && nav.includes("/app/clinical-contracts"));
-ok("Rooms cross-link aluguéis", rooms.includes("/app/rentals") && rooms.includes("Salas e locações"));
-ok("Rentals cross-link salas", rentals.includes("/app/rooms") && rentals.includes("Salas e locações"));
+ok(
+  "Rooms cross-link aluguéis via LocacoesSubnav",
+  rooms.includes("LocacoesSubnav") && rooms.includes("Salas e locações"),
+);
+ok(
+  "Rentals cross-link salas via LocacoesSubnav",
+  rentals.includes("LocacoesSubnav") && locacoesSubnav.includes("/app/rooms"),
+);
 
 // Profissionais somente leitura explícito
 ok("Profissionais declara somente leitura", /somente leitura/i.test(professionals));

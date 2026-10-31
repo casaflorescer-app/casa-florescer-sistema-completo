@@ -29,7 +29,7 @@ import { parseReturnOfNote } from "@/lib/attendance/return-link";
 import { listPatients, type PatientListRow } from "@/lib/patients/directory";
 import { listProfessionalLabels, type ProfessionalLabel } from "@/lib/pregnancies/directory";
 import type { AppointmentStatus } from "@/lib/types/database";
-import { dayBoundsIso, todayInputDate } from "@/components/attendance/agenda-display";
+import { dateRangeBoundsIso, todayInputDate } from "@/components/attendance/agenda-display";
 import { AgendaDayBoard } from "@/components/attendance/AgendaDayBoard";
 import { AgendaFilters } from "@/components/attendance/AgendaFilters";
 import { AppointmentForm, type AgendaProcedureOption, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
@@ -61,7 +61,9 @@ export function AgendaPage() {
   const patientIdFromQuery = searchParams.get("patientId");
   const { authorization, authorizationLoading } = useAuth();
   const { selectedPracticeId } = usePracticeUi();
-  const [date, setDate] = useState(todayInputDate);
+  const today = todayInputDate();
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
   const [professionalId, setProfessionalId] = useState("");
   const [status, setStatus] = useState<AppointmentStatus | "">("");
   const [rows, setRows] = useState<AppointmentRow[]>([]);
@@ -148,9 +150,9 @@ export function AgendaPage() {
       setError(authorization ? "Nenhuma prática selecionada." : null);
       return;
     }
-    const bounds = dayBoundsIso(date);
+    const bounds = dateRangeBoundsIso(dateFrom, dateTo);
     if (!bounds) {
-      setError("Data inválida.");
+      setError("Período inválido. Informe datas De/Até coerentes.");
       setLoading(false);
       return;
     }
@@ -294,7 +296,8 @@ export function AgendaPage() {
   }, [
     authorization,
     authorizationLoading,
-    date,
+    dateFrom,
+    dateTo,
     supabase,
     organizationId,
     professionalId,
@@ -357,7 +360,7 @@ export function AgendaPage() {
       }
       // Recalcula cadeia com início clínico efetivo antes de sair da agenda.
       if (organizationId && selectedPracticeId) {
-        const bounds = dayBoundsIso(date);
+        const bounds = dateRangeBoundsIso(dateFrom, dateTo);
         if (bounds) {
           const latest = await listAppointments(supabase, {
             practiceId: selectedPracticeId,
@@ -523,11 +526,20 @@ export function AgendaPage() {
       </div>
 
       <AgendaFilters
-        date={date}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
         professionalId={professionalId}
         status={status}
         professionals={professionals}
-        onDateChange={setDate}
+        onDateFromChange={(value) => {
+          setDateFrom(value);
+          if (dateTo < value) setDateTo(value);
+        }}
+        onDateToChange={setDateTo}
+        onRangeChange={(from, to) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
         onProfessionalChange={setProfessionalId}
         onStatusChange={setStatus}
       />
@@ -537,7 +549,7 @@ export function AgendaPage() {
           supabase={supabase}
           organizationId={organizationId}
           practiceId={selectedPracticeId}
-          defaultDate={date}
+          defaultDate={dateFrom}
           professionals={professionals}
           rooms={rooms}
           affectedPreviewCount={null}
@@ -558,7 +570,7 @@ export function AgendaPage() {
           organizationId={organizationId}
           practiceId={selectedPracticeId}
           createdBy={userId}
-          defaultDate={date}
+          defaultDate={dateFrom}
           patients={patients}
           professionals={professionals}
           rooms={rooms}
@@ -574,7 +586,8 @@ export function AgendaPage() {
             setNotice(
               returnOfFromQuery ? "Retorno agendado. Abra pela agenda no dia marcado." : message,
             );
-            setDate(bookedDate);
+            setDateFrom(bookedDate);
+            setDateTo(bookedDate);
             setProfessionalId("");
             setStatus("");
             setReloadKey((value) => value + 1);
@@ -601,7 +614,8 @@ export function AgendaPage() {
           onSaved={(message, bookedDate) => {
             setEditingId(null);
             setNotice(message);
-            setDate(bookedDate);
+            setDateFrom(bookedDate);
+            setDateTo(bookedDate);
             setProfessionalId("");
             setStatus("");
             setReloadKey((value) => value + 1);
@@ -610,7 +624,8 @@ export function AgendaPage() {
       ) : null}
 
       <AgendaDayBoard
-        date={date}
+        date={dateFrom}
+        dateTo={dateTo}
         rows={labeledRows}
         blocks={blocks}
         blockAffectedCounts={blockAffectedCounts}

@@ -124,6 +124,8 @@ export type PregnancyContext = {
   risk: PregnancyRisk | null;
   primaryProfessionalId: string;
   backupProfessionalId: string | null;
+  /** C070-C2 — pode conter marcador C070_CONV de conversão gin→obs. */
+  notes?: string | null;
 };
 
 export type EncounterRow = {
@@ -179,7 +181,8 @@ export type UpdateAppointmentInput = {
   patientId: string;
   professionalId: string;
   roomId: string;
-  procedureId: string;
+  /** Null permitido em consulta (coluna nullable; RPC 0022 exige uuid — directory desvia). */
+  procedureId: string | null;
   kind: AppointmentKind;
   startsAt: string;
   endsAt: string;

@@ -104,6 +104,17 @@ import {
   type PregnancyLinkChoice,
 } from "@/components/attendance/PregnancyLinkDialog";
 import {
+  ObstetricConversionDialog,
+  type ConversionDialogStep,
+} from "@/components/attendance/ObstetricConversionDialog";
+import {
+  createPregnancyAndConvert,
+  linkChosenPregnancyForConversion,
+  notesHasConversionForEncounter,
+  resolveObstetricConversion,
+  type ConversionPregnancyChoice,
+} from "@/lib/attendance/obstetric-conversion";
+import {
   EMPTY_SOAP,
   sameSoap,
   soapFromBody,
@@ -209,6 +220,10 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [conversionStep, setConversionStep] = useState<ConversionDialogStep | null>(null);
+  const [conversionChoices, setConversionChoices] = useState<ConversionPregnancyChoice[]>([]);
+  const [conversionAllowCreate, setConversionAllowCreate] = useState(false);
+  const [conversionError, setConversionError] = useState<string | null>(null);
   const [obstetricHistory, setObstetricHistory] = useState<ObstetricHistoryItem[]>([]);
   const [obstetricHistoryError, setObstetricHistoryError] = useState<string | null>(null);
   const [attendanceEnded, setAttendanceEnded] = useState(false);
@@ -463,6 +478,133 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     setLinkBusy(false);
   }
 
+  function closeConversion() {
+    if (linkBusy) return;
+    setConversionStep(null);
+    setConversionChoices([]);
+    setConversionAllowCreate(false);
+    setConversionError(null);
+  }
+
+  /** C070-C2 — abre confirmação amigável (sem window.confirm). */
+  function openObstetricConversion() {
+    if (!supabase || !encounter || !canOfferPregnancyLink || busy || linkBusy) return;
+    if (pregnancyLinked) {
+      setNotice("Este atendimento já está no contexto obstétrico.");
+      return;
+    }
+    setConversionError(null);
+    setConversionStep("confirm");
+  }
+
+  async function continueObstetricConversion() {
+    if (!supabase || !encounter || !canOfferPregnancyLink || linkBusy) return;
+    setLinkBusy(true);
+    setConversionError(null);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await resolveObstetricConversion(supabase, {
+        encounterId: encounter.id,
+        patientId: encounter.patientId,
+        practiceId: encounter.practiceId,
+        alreadyLinked: pregnancyLinked,
+      });
+      if (result.ok) {
+        setNotice(result.notice);
+        closeConversion();
+        await refreshPregnancy();
+        return;
+      }
+      if (result.needCreate && !result.needPick) {
+        setConversionStep("create");
+        setConversionChoices([]);
+        setConversionAllowCreate(true);
+        setConversionError(null);
+        setNotice(result.notice);
+        return;
+      }
+      if (result.needPick) {
+        setConversionStep("pick");
+        setConversionChoices(result.choices);
+        setConversionAllowCreate(result.needCreate);
+        setConversionError(null);
+        setNotice(result.notice);
+        return;
+      }
+      setConversionError(result.error);
+    } catch (caught) {
+      setConversionError(
+        caught instanceof Error
+          ? caught.message
+          : "Não foi possível alterar para atendimento obstétrico.",
+      );
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
+  async function onConversionLink(pregnancyId: string) {
+    if (!supabase || !encounter || linkBusy) return;
+    setLinkBusy(true);
+    setConversionError(null);
+    try {
+      const result = await linkChosenPregnancyForConversion(supabase, {
+        encounterId: encounter.id,
+        patientId: encounter.patientId,
+        pregnancyId,
+      });
+      if (!result.ok) {
+        setConversionError(result.error);
+        return;
+      }
+      setNotice(result.notice);
+      closeConversion();
+      await refreshPregnancy();
+    } catch (caught) {
+      setConversionError(
+        caught instanceof Error ? caught.message : "Não foi possível vincular a gestação.",
+      );
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
+  async function onConversionCreate(input: {
+    lmpDate: string;
+    clinicalEdd: string;
+    careStartedOn: string;
+  }) {
+    if (!supabase || !encounter || linkBusy) return;
+    setLinkBusy(true);
+    setConversionError(null);
+    try {
+      const result = await createPregnancyAndConvert(supabase, {
+        encounterId: encounter.id,
+        patientId: encounter.patientId,
+        organizationId: encounter.organizationId,
+        practiceId: encounter.practiceId,
+        primaryProfessionalId: encounter.professionalId,
+        lmpDate: input.lmpDate,
+        clinicalEdd: input.clinicalEdd,
+        careStartedOn: input.careStartedOn,
+      });
+      if (!result.ok) {
+        setConversionError(result.error);
+        return;
+      }
+      setNotice(result.notice);
+      closeConversion();
+      await refreshPregnancy();
+    } catch (caught) {
+      setConversionError(
+        caught instanceof Error ? caught.message : "Não foi possível criar a gestação.",
+      );
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
   async function onUnlink() {
     if (!supabase || !encounter || !canOfferPregnancyLink || linkBusy) return;
     setLinkBusy(true);
@@ -674,36 +816,71 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             pregnancyLinked={pregnancyLinked}
             encounterAt={encounter.createdAt}
             primaryProfessionalName={primaryProfessionalName}
+            convertedFromGynecology={
+              Boolean(pregnancy?.notes) &&
+              notesHasConversionForEncounter(pregnancy?.notes, encounter.id)
+            }
             actions={
               canOfferPregnancyLink ? (
-                pregnancyLinked ? (
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    disabled={busy || linkBusy}
-                    onClick={() => {
-                      setLinkError(null);
-                      setLinkMode("unlink");
-                    }}
-                  >
-                    Desvincular gestação
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    disabled={busy || linkBusy}
-                    onClick={() => void openLink()}
-                  >
-                    Vincular gestação
-                  </button>
-                )
+                <div className="flex flex-wrap gap-2">
+                  {!pregnancyLinked ? (
+                    <button
+                      type="button"
+                      className={buttonClass}
+                      disabled={busy || linkBusy || Boolean(conversionStep)}
+                      title="Converte este atendimento para o contexto obstétrico sem novo agendamento"
+                      onClick={() => openObstetricConversion()}
+                    >
+                      Alterar para atendimento obstétrico
+                    </button>
+                  ) : null}
+                  {pregnancyLinked ? (
+                    <button
+                      type="button"
+                      className={ghostButtonClass}
+                      disabled={busy || linkBusy}
+                      onClick={() => {
+                        setLinkError(null);
+                        setLinkMode("unlink");
+                      }}
+                    >
+                      Desvincular gestação
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={ghostButtonClass}
+                      disabled={busy || linkBusy || Boolean(conversionStep)}
+                      onClick={() => void openLink()}
+                    >
+                      Vincular gestação
+                    </button>
+                  )}
+                </div>
               ) : null
             }
           />
         }
       />
       <WorkspaceSectionNav />
+      {conversionStep ? (
+        <ObstetricConversionDialog
+          step={conversionStep}
+          choices={conversionChoices}
+          allowCreateFromPick={conversionAllowCreate}
+          busy={linkBusy}
+          error={conversionError}
+          defaultProfessionalId={encounter.professionalId}
+          onCancel={closeConversion}
+          onConfirmContinue={() => void continueObstetricConversion()}
+          onLink={(pregnancyId) => void onConversionLink(pregnancyId)}
+          onOpenCreate={() => {
+            setConversionStep("create");
+            setConversionError(null);
+          }}
+          onCreate={(input) => void onConversionCreate(input)}
+        />
+      ) : null}
       {linkMode ? (
         <PregnancyLinkDialog
           mode={linkMode}

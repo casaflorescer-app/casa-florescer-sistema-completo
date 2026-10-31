@@ -55,6 +55,12 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
       { id: "agenda", label: "Agenda", href: "/app/agenda", visible: clinicStaff },
       { id: "patients", label: "Pacientes", href: "/app/patients", visible: clinicStaff },
       { id: "records", label: "Prontuário", href: "/app/records", visible: physician },
+      {
+        id: "obstetrics",
+        label: "Programação obstétrica",
+        href: "/app/obstetrics",
+        visible: physician,
+      },
       { id: "exams", label: "Exames", href: "/app/exams", visible: clinicStaff },
       {
         id: "prescriptions",
@@ -69,11 +75,20 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     title: "Relacionamentos",
     items: [
       {
-        id: "relationship",
-        label: "Relacionamentos",
+        id: "relationship-central",
+        label: "Central de Relacionamentos",
         href: "/app/relationship",
-        // C041: grupo visível também à médica. Operação de fila permanece
-        // secretaria/owner/admin via canManage na página + RPCs (C037).
+        visible: (auth) =>
+          hasStaffRole(auth, "secretary") ||
+          hasStaffRole(auth, "owner") ||
+          hasStaffRole(auth, "admin") ||
+          hasStaffRole(auth, "physician"),
+      },
+      {
+        id: "relationship-contact",
+        label: "Relacionamentos",
+        href: "/app/relationship?tab=contact",
+        // Mesmo módulo; atalho para a fila operacional.
         visible: (auth) =>
           hasStaffRole(auth, "secretary") ||
           hasStaffRole(auth, "owner") ||
@@ -86,17 +101,11 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     id: "gestao_clinica",
     title: "Gestão Clínica",
     items: [
-      // C066 — Salas + aluguéis/contratos de locação (ecossistema; sem misturar contratos clínicos)
+      // C070 — um item de menu; subnav Salas | Aluguéis | Contratos de locação nas páginas.
       {
         id: "rooms",
         label: "Salas e locações",
         href: "/app/rooms",
-        visible: clinicManagement,
-      },
-      {
-        id: "rentals",
-        label: "Aluguéis e contratos",
-        href: "/app/rentals",
         visible: clinicManagement,
       },
       {
@@ -138,42 +147,15 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         visible: clinicManagement,
       },
       {
-        id: "care-policies",
-        label: "Política de atendimento",
-        href: "/app/care-policies",
-        // Menu de gestão: só gestão clínica / secretária com flag — evita abrir o grupo
-        // para médica comum (path /app/care-policies permanece nas PATH_RULES).
+        id: "clinic-admin",
+        label: "Administração",
+        href: "/app/admin",
         visible: (auth) =>
           clinicManagement(auth) ||
           auth.memberships.some(
             (item) => item.role === "secretary" && item.canViewCarePolicies,
           ),
       },
-      {
-        id: "clinic-users",
-        label: "Usuários",
-        href: "/app/admin/users",
-        visible: clinicManagement,
-      },
-      {
-        id: "clinic-org",
-        label: "Organização",
-        href: "/app/admin/organization",
-        visible: clinicManagement,
-      },
-      {
-        id: "clinic-permissions",
-        label: "Permissões",
-        href: "/app/admin/permissions",
-        visible: clinicManagement,
-      },
-      {
-        id: "clinic-audit",
-        label: "Auditoria",
-        href: "/app/admin/audit",
-        visible: clinicManagement,
-      },
-      // C066: Configurações (placeholder D) removidas do menu — rotas redirecionam.
     ],
   },
   {

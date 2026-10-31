@@ -1,12 +1,36 @@
 # System State — Casa Florescer
 
-Fotografia oficial. Atualizar após ciclos grandes de infra ou produto.
+Fotografia oficial. Premissas de arquitetura **confirmadas pelo operador** (2026-10-30) têm prioridade sobre docs históricas.
 
-**Ciclo infra:** Hosped.1c (2026-10-30) — **C — BLOCKED** (sem terminal/SSH/psql)  
-**Ciclo produto local:** C066 polish V1 (working tree; sem commit/deploy) — landing/menu/settings/legado UX  
-**Motivo infra:** sem terminal EasyPanel autenticado, sem SSH, sem psql/Studio → impossível confirmar `bancoflorescer`, compose interno de `florescerapi`, migrations e backup operacional.
+**Ciclo infra:** Hosped.1d lacunas — **C — BLOCKED** nas lacunas internas (sem EasyPanel terminal/SSH)
+**Ciclo produto:** C068 (`3937787`) em `florescerweb` (deploy manual EasyPanel)
+**Gate V1:** não declarar concluída até Hosped.1d PASS + UAT autenticado produção
 
-Legenda: **COMPROVADO** · **DOCUMENTADO** · **UI OPERADOR** · **OBSERVADO** · **INCONCLUSIVO** · **BLOCKED**
+Legenda: **CONFIRMADO (operador)** · **COMPROVADO** · **DOCUMENTADO** · **UI OPERADOR** · **OBSERVADO** · **INCONCLUSIVO** · **BLOCKED**
+
+---
+
+## Arquitetura atual (confirmada)
+
+```text
+INTERNET
+   ↓
+HOSTINGER VPS + EASYPANEL
+   ↓
+florescerweb          ← frontend + API/backend (CONFIRMADO operador)
+   ↓
+bancoflorescer        ← PostgreSQL da Casa Florescer (CONFIRMADO operador)
+   ↓
+volumes / backup      ← ainda BLOCKED comprovar
+```
+
+| Item | Valor | Confiança |
+|---|---|---|
+| App oficial | https://sistema.thvp.cloud | CONFIRMADO / COMPROVADO |
+| Deploy | Manual EasyPanel `florescerweb` | CONFIRMADO |
+| Git push = deploy? | **Não** | CONFIRMADO |
+| Supabase Cloud | **Não** é infra atual | CONFIRMADO |
+| `florescerapi` | Serviço EasyPanel presente; papel **não** assumido como API CF | UI OPERADOR / BLOCKED inspect |
 
 ---
 
@@ -15,10 +39,9 @@ Legenda: **COMPROVADO** · **DOCUMENTADO** · **UI OPERADOR** · **OBSERVADO** �
 | Item | Valor | Confiança |
 |---|---|---|
 | Branch | `main` | COMPROVADO |
-| HEAD | `a9aadff` | COMPROVADO |
-| origin/main | `a9aadff` | COMPROVADO |
-| Working tree | docs Hosped.1–1c + SQL multi-papel (sem commit) | COMPROVADO |
-| Migrations Git | `0001` … `0055` (55) | COMPROVADO |
+| HEAD | `3937787` | COMPROVADO |
+| Migrations no Git | `0001` … `0055` (55) | COMPROVADO |
+| Processo de apply no `bancoflorescer` | **DESCONHECIDO** (não presumir `supabase db push`) | BLOCKED |
 
 ---
 
@@ -26,198 +49,70 @@ Legenda: **COMPROVADO** · **DOCUMENTADO** · **UI OPERADOR** · **OBSERVADO** �
 
 | Item | Valor | Confiança |
 |---|---|---|
-| App | https://sistema.thvp.cloud | COMPROVADO |
-| API | https://api.thvp.cloud | COMPROVADO |
-| DNS | ambos A → `2.25.151.136` | COMPROVADO |
-| SSL | Let's Encrypt | COMPROVADO |
-| Bundle | `api.thvp.cloud` (sem `*.supabase.co`) | COMPROVADO |
-| Storage API version | `1.81.0` (`/storage/v1/version` → 200) | COMPROVADO |
-| Auth/REST | `/auth/v1/health`, `/rest/v1/` → 401 | COMPROVADO |
+| App | HTTP 200 | COMPROVADO |
+| Cliente → `api.thvp.cloud` | Embebido no bundle Next | COMPROVADO |
+| Auth `/auth/v1` | 401; Caddy+Envoy | COMPROVADO |
+| REST `/rest/v1` | 401 | COMPROVADO |
+| Storage version | `1.81.0` | COMPROVADO |
+| Realtime | 401 | COMPROVADO |
+| `X-Casa-Rev` | `3` (fixo; ≠ SHA) | COMPROVADO |
+
+### Classificação protocolo `SUPABASE_*` no código
+
+| Peça | Classificação |
+|---|---|
+| `@supabase/ssr` / `NEXT_PUBLIC_SUPABASE_*` | **Legado de protocolo/cliente** — app fala Auth/REST/Storage via esses nomes |
+| Supabase Cloud (`*.supabase.co`) | **Não** é produção thvp (CONFIRMADO operador; `.env.local` local ≠ prod) |
+| Onde Auth/REST/Storage rodam na VPS | **BLOCKED** (pode ser parte de `florescerweb`, `florescerapi`, ou outro) |
 
 ---
 
-## Acesso técnico (Hosped.1c)
-
-| Via | Resultado |
-|---|---|
-| Terminal EasyPanel | **BLOCKED** (UI login exige sessão humana; sem API aberta) |
-| Container shell | **BLOCKED** |
-| SSH `deploy`/`root` | **FAIL** — Permission denied; sem chave em `~/.ssh` (só `known_hosts`) |
-| psql / Studio | **BLOCKED** |
-| `deploy/.env` local | **AUSENTE** |
-| `.env.local` | existe; aponta Supabase **Cloud** (dev ≠ prod) |
+## Acesso técnico (Hosped.1d)
 
 ```text
-Terminal EasyPanel: FAIL / BLOCKED
 SSH: FAIL
-Container shell: FAIL / BLOCKED
-DATABASE ACCESS: BLOCKED
+Terminal EasyPanel: BLOCKED
+DATABASE INSPECT: BLOCKED
+MIGRATION PARITY: INCONCLUSIVO
+BACKUP OPERACIONAL: NÃO COMPROVADO (C)
+RESTORE: NÃO TESTADO
 ```
 
 ---
 
-## EasyPanel
+## Lacunas abertas (não reinventar o que já é fato)
 
-| Item | Valor | Confiança |
-|---|---|---|
-| Projeto | `cap-romao` | UI OPERADOR |
-| Painel | `http://2.25.151.136:3000/` HTTP 200, título Easypanel | COMPROVADO |
-| Autenticação do painel | login HTML em `/login` | OBSERVADO |
-| Versão EasyPanel | | BLOCKED |
-| Compose interno `florescerapi` | | BLOCKED |
-
-### Serviços (UI operador)
-
-| Serviço | Tipo UI | Relação Casa Florescer |
-|---|---|---|
-| `florescerweb` | App | **DIRETA** — app produção (nome container histórico `cap-romao_florescerweb` em Memoria) |
-| `florescerapi` | Compose | **DIRETA** — API/gateway |
-| `bancoflorescer` | PostgreSQL | **CANDIDATO** — vínculo Auth/REST/Storage **INCONCLUSIVO** |
-| n8n / n8n-db / n8n-runner | | **NÃO INTEGRADO** no código app |
-| chatwoot (+ db/redis/sidekiq) | | **NÃO INTEGRADO** no código app |
-| evolution-api (+ db/redis) | | **NÃO INTEGRADO** no código app |
-
----
-
-## Topologia (evidência mista)
-
-```text
-INTERNET
-  │
-  ├─ :443/:80  sistema.thvp.cloud / api.thvp.cloud
-  │     │
-  │     ├─ [DOCUMENTADO Memoria] EasyPanel Traefik encaminha
-  │     │     api.thvp.cloud → serviço Compose `porta-api`:80
-  │     │
-  │     └─ [COMPROVADO headers] resposta API: Server=Caddy,envoy
-  │           Caddy encaminha /auth|/rest|/storage|/realtime|/graphql
-  │           → gateway Envoy (alias kong no pin Git)
-  │
-  ├─ :3000 EasyPanel UI (exposta, HTTP)
-  ├─ :22   SSH (aberto; auth falha)
-  └─ :5432/:8000 TIMEOUT (não públicos)
-
-sistema.thvp.cloud → florescerweb (Next) → https://api.thvp.cloud
-
-bancoflorescer ──?── Auth / REST / Storage   ← INCONCLUSIVO sem inspect
-```
-
-**Proxy classificado:** **TRAEFIK (borda EasyPanel, DOCUMENTADO) + CADDY + ENVOY (COMPROVADO nos headers)**.  
-Cadeia interna completa: **não inspecionada nesta sessão**.
-
----
-
-## Banco
-
-```text
-BANCO CASA FLORESCER: INCONCLUSIVO
-```
-
-| Check | Resultado |
+| Lacuna | Status |
 |---|---|
-| Serviço EasyPanel `bancoflorescer` | UI OPERADOR |
-| Imagem / versão PG / volume / hostname | BLOCKED |
-| Auth→DB / REST→DB / Storage→DB | BLOCKED |
-| Exposição pública 5432 | COMPROVADO fechado (TIMEOUT) |
+| Env/network `florescerweb`→`bancoflorescer` | BLOCKED (fato da ligação: CONFIRMADO; evidência técnica: BLOCKED) |
+| Inventário Compose / quem serve `api.thvp.cloud` | BLOCKED |
+| Histórico migrations no PG vs Git | INCONCLUSIVO |
+| Volumes persistentes | BLOCKED |
+| Backup real vs `deploy/backup.sh` (`supabase-db`) | Script **desatualizado ou não usado** até prova; backup **NÃO COMPROVADO** |
+| Buckets storage | BLOCKED |
+
+Detalhe: [`docs/c069-hosped-1d.md`](./c069-hosped-1d.md).
 
 ---
 
-## Supabase Self-Hosted
+## Co-hospedados EasyPanel (não integrados no app)
 
-**PARCIAL**
-
-| Componente | Evidência |
-|---|---|
-| Storage API | COMPROVADO version `1.81.0` |
-| Auth path `/auth/v1` | COMPROVADO (serviço presente) |
-| REST `/rest/v1` | COMPROVADO |
-| Realtime path | COMPROVADO (401) |
-| Gateway Envoy | COMPROVADO header |
-| GoTrue container | BLOCKED |
-| PostgREST container | BLOCKED |
-| Studio | público 404; interno BLOCKED |
-| Postgres `db` vs `bancoflorescer` | INCONCLUSIVO |
+n8n · Chatwoot · Evolution — **NÃO INTEGRADOS** no TypeScript da Casa Florescer (WhatsApp app = `wa.me`).
 
 ---
 
-## Migrations / Schema / RLS / RPCs
+## Segurança (resumo)
 
 | Item | Status |
 |---|---|
-| Git 0001–0055 | COMPROVADO |
-| History VPS | **UNKNOWN** (todas) |
-| Schema parity | BLOCKED |
-| RLS runtime | BLOCKED |
-| RPCs runtime | BLOCKED |
-| db push / repair | **não executados** |
+| Deploy manual | CONFIRMADO |
+| EasyPanel `:3000` HTTP | COMPROVADO — P1 superfície |
+| Postgres público | Não observado aberto (ciclos anteriores) |
 
 ---
 
-## Auth / Storage / RBAC (resumo)
+## Próximo
 
-| Área | Status |
-|---|---|
-| Auth endpoint | COMPROVADO vivo |
-| Auth E2E | BLOCKED (sem credencial teste) |
-| Storage endpoint | COMPROVADO vivo (1.81.0) |
-| Buckets runtime | BLOCKED |
-| PATH_RULES / multi-role modelo | COMPROVADO no Git |
-| SQL god-mode | **NÃO APLICADO** |
-| UAT autenticado | BLOCKED |
-
----
-
-## Backup
-
-| Item | Status |
-|---|---|
-| Script `deploy/backup.sh` | DOCUMENTADO — `docker exec supabase-db` |
-| Container EasyPanel | `bancoflorescer` (nome ≠ `supabase-db`) |
-| Existência de `supabase-db` | BLOCKED |
-| Execução / arquivo / cron | **BACKUP OPERACIONAL = NÃO COMPROVADO** |
-| Classificação | **C** |
-| Restore | NÃO TESTADO |
-
----
-
-## Integrações
-
-| Stack | Código Casa Florescer | Classificação |
-|---|---|---|
-| Evolution | zero matches em `.ts/.tsx/.js` | **NÃO INTEGRADO** |
-| Chatwoot | zero matches | **NÃO INTEGRADO** |
-| n8n | zero matches | **NÃO INTEGRADO** |
-| WhatsApp app | `wa.me` only (C065) | INTEGRADO (Web only) |
-
-Isolamento de networks/volumes entre stacks: **BLOCKED** (sem `docker network ls`).
-
----
-
-## Segurança
-
-| Item | Status |
-|---|---|
-| Postgres não público | PASS |
-| Studio não público | PASS |
-| EasyPanel `:3000` HTTP público | **P1** (superfície admin) |
-| Credencial VPS exposta (histórica) | **P0 — ROTATION REQUIRED** (status atual da credencial: BLOCKED verificar) |
-
----
-
-## Pendências para desbloquear (operador)
-
-Abrir no EasyPanel (copiar **nomes**, não senhas):
-
-1. `bancoflorescer` → imagem, porta interna, volume, network, hostname  
-2. `florescerapi` → lista de serviços do Compose (`porta-api`, auth, rest, storage, db?)  
-3. Terminal em `bancoflorescer` ou `florescerapi` → `psql` read-only / `\dt` / migration history  
-4. Confirmar se existe container/nome `supabase-db`  
-5. Listar backups em disco / cron  
-
-Ou: instalar chave SSH pública desta máquina no usuário `deploy`.
-
----
-
-## Próximo ciclo
-
-**Hosped.1d** — somente após terminal EasyPanel ou SSH: inventário compose + migrations + backup comprovado.
+1. Operador: Terminal EasyPanel ou SSH → fechar lacunas 1–6.
+2. Atualizar este arquivo só com evidência.
+3. UAT autenticado produção (C069) **após** Hosped.1d PASS.

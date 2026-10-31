@@ -21,6 +21,32 @@ export function dayBoundsIso(date: string): { from: string; to: string } | null 
   return { from: start.toISOString(), to: end.toISOString() };
 }
 
+/** Inclusive calendar range → [from, toExclusive) ISO bounds. */
+export function dateRangeBoundsIso(
+  fromDate: string,
+  toDate: string,
+): { from: string; to: string } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+    return null;
+  }
+  if (toDate < fromDate) return null;
+  const start = new Date(`${fromDate}T00:00:00`);
+  const endInclusive = new Date(`${toDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(endInclusive.getTime())) return null;
+  const end = new Date(endInclusive);
+  end.setDate(end.getDate() + 1);
+  return { from: start.toISOString(), to: end.toISOString() };
+}
+
+export function addDaysInputDate(date: string, days: number): string {
+  const value = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(value.getTime())) return date;
+  value.setDate(value.getDate() + days);
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${value.getFullYear()}-${month}-${day}`;
+}
+
 export function localDateTimeIso(date: string, time: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
   const value = new Date(`${date}T${time}:00`);

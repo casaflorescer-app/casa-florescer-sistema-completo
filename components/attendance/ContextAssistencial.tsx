@@ -44,6 +44,7 @@ export function ContextAssistencial({
   encounterAt,
   primaryProfessionalName,
   actions,
+  convertedFromGynecology = false,
 }: {
   pregnancy: PregnancyContext | null;
   /** true quando encounters.pregnancy_id está preenchido. */
@@ -51,10 +52,16 @@ export function ContextAssistencial({
   encounterAt: string | null;
   primaryProfessionalName: string | null;
   actions?: ReactNode;
+  /** C070-C2 — atendimento iniciado como ginecológico e convertido. */
+  convertedFromGynecology?: boolean;
 }) {
   const prenatal = pregnancy != null;
   const restricted = !prenatal && pregnancyLinked;
-  const badge = prenatal ? "Pré-natal" : restricted ? "Contexto restrito" : "Ginecologia";
+  const badge = prenatal
+    ? "Atendimento obstétrico"
+    : restricted
+      ? "Contexto restrito"
+      : "Ginecologia";
 
   return (
     <section className="mt-4 rounded-xl border border-lotus-100 bg-lotus-50/70 p-3 sm:p-4">
@@ -64,6 +71,12 @@ export function ContextAssistencial({
           {badge}
         </span>
       </div>
+      {prenatal && convertedFromGynecology ? (
+        <p className="mt-2 rounded-lg border border-lotus-200 bg-white px-3 py-2 text-xs text-lotus-700">
+          Inicialmente: Ginecologia · Posteriormente: Obstetrícia · Gestação vinculada: sim. O
+          agendamento original permanece.
+        </p>
+      ) : null}
       {prenatal ? (
         <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <Field label="DUM" value={formatClinicalDate(pregnancy.lmpDate)} />

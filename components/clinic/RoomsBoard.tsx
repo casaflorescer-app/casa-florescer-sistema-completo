@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import { ROOM_NATURE_LABEL, roomNature, type RoomNature } from "@/lib/clinic/room-presentation";
 import { listRoomsAdmin, roomsDashboard, upsertRoom } from "@/lib/clinic-mgmt/rooms";
 import type { RoomAdminRow } from "@/lib/clinic-mgmt/types";
+import { LocacoesSubnav } from "@/components/clinic/LocacoesSubnav";
+import { RowActions } from "@/components/ui/RowActions";
 
 const NATURE_CLASS: Record<RoomNature, string> = {
   propria: "border-lotus-200 bg-white text-lotus-800",
@@ -108,14 +109,12 @@ export function RoomsBoard() {
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
         Gestão Clínica · Salas e locações
       </p>
-      <h1 className="page-title mt-1">Salas</h1>
+      <h1 className="page-title mt-1">Salas e locações</h1>
       <p className="page-sub mt-2">
-        Cadastro e disponibilidade das salas. Contratos de locação ficam em{" "}
-        <Link className="font-medium text-lotus-800 underline underline-offset-2" href="/app/rentals">
-          Aluguéis e contratos
-        </Link>
-        . Locatário ≠ funcionário.
+        Cadastro e disponibilidade das salas. Use as abas para aluguéis e contratos de locação.
+        Locatário ≠ funcionário. Contratos clínicos ficam em menu separado.
       </p>
+      <LocacoesSubnav active="salas" />
       <StatusMessage error={error} notice={notice} />
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -166,9 +165,13 @@ export function RoomsBoard() {
                       </span>
                       <span className="mt-1 block">{room.holderName ?? "—"}</span>
                     </p>
-                    <button type="button" className={ghostButtonClass} onClick={() => startEdit(room)}>
-                      Editar
-                    </button>
+                    <RowActions
+                      primary={{
+                        id: "edit-room",
+                        label: "Editar",
+                        onClick: () => startEdit(room),
+                      }}
+                    />
                   </article>
                 </li>
               );

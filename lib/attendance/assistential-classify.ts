@@ -15,6 +15,7 @@ export const ASSISTENTIAL_BUCKET_LABEL: Record<AssistentialBucket, string> = {
  * - appointments.kind = procedure → Procedimento
  * - care_specialties do paciente (gynecology / obstetrics) → consulta
  * - consulta sem especialidade → Ginecológico (padrão Casa Florescer)
+ * - C070: obstétrica prevalece quando marcada (migração gin→obs)
  */
 export function classifyAppointmentAssistential(
   kind: AppointmentKind,
@@ -23,7 +24,7 @@ export function classifyAppointmentAssistential(
   if (kind === "procedure") return "procedure";
   const hasObs = careSpecialties.includes("obstetrics");
   const hasGyn = careSpecialties.includes("gynecology");
-  if (hasObs && !hasGyn) return "obstetrics";
-  // gynecology only, both, or vazio → ginecológico (padrão consultório CF)
+  if (hasObs) return "obstetrics";
+  if (hasGyn) return "gynecology";
   return "gynecology";
 }

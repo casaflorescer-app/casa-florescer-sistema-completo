@@ -14,7 +14,6 @@ import {
   isoToInputTime,
   localDateTimeIso,
 } from "@/components/attendance/agenda-display";
-import { procedureNameMatchesQuery } from "@/components/attendance/procedure-search";
 import {
   singleOccupancyForProfessional,
   type RoomOccupancy,
@@ -23,6 +22,7 @@ import type {
   AgendaProcedureOption,
   AgendaRoomOption,
 } from "@/components/attendance/AppointmentForm";
+import { EntityCombobox } from "@/components/ui/EntityCombobox";
 
 const labelClass = "text-sm font-medium text-lotus-800";
 
@@ -59,7 +59,6 @@ export function EditAppointmentForm({
   const [endsAt, setEndsAt] = useState(isoToInputTime(appointment.endsAt));
   const [kind, setKind] = useState<AppointmentKind>(appointment.kind);
   const [procedureId, setProcedureId] = useState(appointment.procedureId ?? "");
-  const [procedureQuery, setProcedureQuery] = useState("");
   const [urgencyNote, setUrgencyNote] = useState(appointment.urgencyNote ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -81,12 +80,19 @@ export function EditAppointmentForm({
   function chooseKind(nextKind: AppointmentKind) {
     setKind(nextKind);
     setRoomId(roomFor(nextKind, professionalId));
+    if (nextKind === "consultation") {
+      setProcedureId("");
+    }
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!patientId || !professionalId || !procedureId || !roomId) {
-      setError("Informe paciente, profissional, procedimento e sala.");
+    if (!patientId || !professionalId || !roomId) {
+      setError("Informe paciente, profissional e sala.");
+      return;
+    }
+    if (kind === "procedure" && !procedureId) {
+      setError("Informe o procedimento para este tipo de agendamento.");
       return;
     }
     const startIso = localDateTimeIso(date, startsAt);
@@ -105,7 +111,9 @@ export function EditAppointmentForm({
     const professionalName =
       professionals.find((item) => item.id === professionalId)?.fullName ?? "Profissional";
     const procedureName =
-      procedures.find((item) => item.id === procedureId)?.name ?? "Procedimento";
+      kind === "procedure"
+        ? procedures.find((item) => item.id === procedureId)?.name ?? "Procedimento"
+        : "— (consulta)";
     const roomName = rooms.find((item) => item.id === roomId)?.name ?? "Sala";
     const summary = [
       "Salvar alterações?",
@@ -126,7 +134,7 @@ export function EditAppointmentForm({
       patientId,
       professionalId,
       roomId,
-      procedureId,
+      procedureId: kind === "procedure" ? procedureId : null,
       kind,
       startsAt: startIso,
       endsAt: endIso,
@@ -140,17 +148,13 @@ export function EditAppointmentForm({
     onSaved("Agendamento atualizado.", date);
   }
 
-  const matchedProcedures = procedures.filter((item) =>
-    procedureNameMatchesQuery(item.name, procedureQuery),
-  );
-  const visibleProcedures = [...procedures]
-    .filter((item) => item.id === procedureId || procedureNameMatchesQuery(item.name, procedureQuery))
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  const noProcedureMatch = Boolean(procedureQuery.trim()) && matchedProcedures.length === 0;
   const suggested = singleOccupancyForProfessional(occupancy, professionalId);
   const suggestedRoom = suggested ? rooms.find((room) => room.id === suggested.roomId) : undefined;
   const blocked =
-    patients.length === 0 || professionals.length === 0 || rooms.length === 0 || procedures.length === 0;
+    patients.length === 0 ||
+    professionals.length === 0 ||
+    rooms.length === 0 ||
+    (kind === "procedure" && procedures.length === 0);
 
   return (
     <form className="card mt-6" onSubmit={(event) => void onSubmit(event)}>
@@ -168,35 +172,30 @@ export function EditAppointmentForm({
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className={labelClass}>
           Paciente
-          <select
-            className={fieldClass}
+          <EntityCombobox
             value={patientId}
-            onChange={(event) => setPatientId(event.target.value)}
+            onChange={setPatientId}
             required
-          >
-            <option value="">Selecione</option>
-            {patients.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.fullName}
-              </option>
-            ))}
-          </select>
+            placeholder="Buscar paciente"
+            options={patients.map((item) => ({
+              id: item.id,
+              label: item.fullName,
+              keywords: item.cpf ?? undefined,
+            }))}
+          />
         </label>
         <label className={labelClass}>
           Profissional
-          <select
-            className={fieldClass}
+          <EntityCombobox
             value={professionalId}
-            onChange={(event) => chooseProfessional(event.target.value)}
+            onChange={chooseProfessional}
             required
-          >
-            <option value="">Selecione</option>
-            {professionals.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.fullName}
-              </option>
-            ))}
-          </select>
+            placeholder="Buscar profissional"
+            options={professionals.map((item) => ({
+              id: item.id,
+              label: item.fullName,
+            }))}
+          />
         </label>
         <label className={labelClass}>
           Tipo
@@ -209,34 +208,26 @@ export function EditAppointmentForm({
             <option value="procedure">{APPOINTMENT_KIND_LABEL.procedure}</option>
           </select>
         </label>
-        <label className={labelClass}>
-          Procedimento
-          <input
-            className={fieldClass}
-            value={procedureQuery}
-            onChange={(event) => setProcedureQuery(event.target.value)}
-            placeholder="Digite para pesquisar"
-            aria-label="Pesquisar procedimento"
-          />
-          <select
-            className={`${fieldClass} mt-2`}
-            value={procedureId}
-            onChange={(event) => setProcedureId(event.target.value)}
-            required
-          >
-            <option value="">Selecione</option>
-            {visibleProcedures.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          {noProcedureMatch ? (
-            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
-              Nenhum procedimento encontrado.
-            </span>
-          ) : null}
-        </label>
+        {kind === "procedure" ? (
+          <label className={labelClass}>
+            Procedimento
+            <EntityCombobox
+              value={procedureId}
+              onChange={setProcedureId}
+              required
+              placeholder="Buscar procedimento"
+              emptyLabel="Nenhum procedimento encontrado."
+              options={procedures.map((item) => ({
+                id: item.id,
+                label: item.name,
+              }))}
+            />
+          </label>
+        ) : (
+          <p className="text-sm text-lotus-600 sm:col-span-1">
+            Consulta não exige procedimento cadastrado.
+          </p>
+        )}
         <label className={labelClass}>
           Data
           <input
@@ -269,19 +260,17 @@ export function EditAppointmentForm({
         </label>
         <label className={labelClass}>
           Sala
-          <select
-            className={fieldClass}
+          <EntityCombobox
             value={roomId}
-            onChange={(event) => setRoomId(event.target.value)}
+            onChange={setRoomId}
             required
-          >
-            <option value="">Selecione</option>
-            {rooms.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
+            placeholder="Buscar sala"
+            options={rooms.map((item) => ({
+              id: item.id,
+              label: item.name,
+              keywords: item.code,
+            }))}
+          />
           {kind === "procedure" && sharedProcedureRoom && roomId === sharedProcedureRoom.id ? (
             <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
               Sala de procedimentos sugerida. O uso é compartilhado.

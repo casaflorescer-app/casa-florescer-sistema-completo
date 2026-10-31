@@ -10,6 +10,7 @@ import { AgendaBlockCard } from "@/components/attendance/AgendaBlockCard";
 
 export function AgendaDayBoard({
   date,
+  dateTo,
   rows,
   blocks,
   blockAffectedCounts,
@@ -28,6 +29,8 @@ export function AgendaDayBoard({
   onRecordArrival,
 }: {
   date: string;
+  /** C070 — fim do período (inclusive). Se omitido ou igual a date, título de um dia. */
+  dateTo?: string;
   rows: AppointmentRow[];
   blocks?: AgendaBlockRow[];
   blockAffectedCounts?: Map<string, number>;
@@ -47,14 +50,18 @@ export function AgendaDayBoard({
 }) {
   const dayBlocks = blocks ?? [];
   const empty = !loading && rows.length === 0 && dayBlocks.length === 0;
+  const rangeLabel =
+    dateTo && dateTo !== date
+      ? `${formatDayLabel(date)} — ${formatDayLabel(dateTo)}`
+      : formatDayLabel(date);
 
   return (
     <section className="mt-6">
-      <h2 className="text-sm font-semibold capitalize text-lotus-800">{formatDayLabel(date)}</h2>
+      <h2 className="text-sm font-semibold capitalize text-lotus-800">{rangeLabel}</h2>
       {loading ? <p className="mt-4 text-sm text-lotus-600">Carregando agenda…</p> : null}
       {empty ? (
         <section className="card mt-4 text-sm text-lotus-700">
-          Nenhum atendimento neste dia com os filtros atuais.
+          Nenhum atendimento neste período com os filtros atuais.
         </section>
       ) : null}
       {!loading && (rows.length > 0 || dayBlocks.length > 0) ? (

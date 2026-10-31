@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -61,13 +61,16 @@ export function RelationshipCenter({
   organizationId,
   practiceId,
   canManage,
+  initialTab = "dashboard",
 }: {
   organizationId: string;
   practiceId: string;
   canManage: boolean;
+  /** C070 — deep-link via ?tab=contact (item Relacionamentos no menu). */
+  initialTab?: Tab;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [tab, setTab] = useState<Tab>("dashboard");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [templates, setTemplates] = useState<CampaignTemplate[]>([]);

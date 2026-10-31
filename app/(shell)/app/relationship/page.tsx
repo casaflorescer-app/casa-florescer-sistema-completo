@@ -1,12 +1,37 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { RelationshipCenter } from "@/components/relationship/RelationshipCenter";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { usePracticeUi } from "@/components/layout/PracticeUi";
 
-export default function RelationshipPage() {
+const VALID_TABS = new Set([
+  "dashboard",
+  "contact",
+  "opportunities",
+  "campaigns",
+  "templates",
+  "history",
+  "preferences",
+]);
+
+function RelationshipPageInner() {
   const { authorization, authorizationLoading } = useAuth();
   const { selectedPracticeId } = usePracticeUi();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab =
+    tabParam && VALID_TABS.has(tabParam)
+      ? (tabParam as
+          | "dashboard"
+          | "contact"
+          | "opportunities"
+          | "campaigns"
+          | "templates"
+          | "history"
+          | "preferences")
+      : "dashboard";
 
   const membership = authorization?.memberships.find(
     (item) => item.practiceId === selectedPracticeId,
@@ -42,6 +67,15 @@ export default function RelationshipPage() {
       organizationId={organizationId}
       practiceId={selectedPracticeId}
       canManage={canManage}
+      initialTab={initialTab}
     />
+  );
+}
+
+export default function RelationshipPage() {
+  return (
+    <Suspense fallback={<p className="page-sub">Carregando Central de Relacionamentos…</p>}>
+      <RelationshipPageInner />
+    </Suspense>
   );
 }

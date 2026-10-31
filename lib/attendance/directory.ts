@@ -107,7 +107,7 @@ const PREGNANCY_STATUS_SET = new Set<string>(["in_care", "closed", "transferred"
 const PREGNANCY_RISK_SET = new Set<string>(["habitual", "high"]);
 
 const PREGNANCY_CONTEXT_COLUMNS =
-  "id, status, lmp_date, calculated_edd, clinical_edd, risk, primary_professional_id, backup_professional_id" as const;
+  "id, status, lmp_date, calculated_edd, clinical_edd, risk, primary_professional_id, backup_professional_id, notes" as const;
 
 function asAppointmentStatus(value: unknown): AppointmentStatus | null {
   return typeof value === "string" && APPOINTMENT_STATUS_SET.has(value)
@@ -153,6 +153,7 @@ function toPregnancyContext(value: Record<string, unknown>): PregnancyContext | 
     risk: asPregnancyRisk(value.risk),
     primaryProfessionalId,
     backupProfessionalId: asString(value.backup_professional_id),
+    notes: asString(value.notes),
   };
 }
 
@@ -571,6 +572,61 @@ export async function updateAppointment(
   if (input.endsAt <= input.startsAt) {
     return { row: null, error: "O horário de término deve ser após o início." };
   }
+  if (input.kind === "procedure" && !input.procedureId) {
+    return { row: null, error: "Informe o procedimento para agendamentos deste tipo." };
+  }
+
+  // C070: RPC appointment_update (0022) rejeita p_procedure_id null; a coluna é nullable.
+  // Consulta sem procedimento usa update direto com as mesmas guardas operacionais.
+  if (input.procedureId == null) {
+    const { data: existing, error: fetchError } = await supabase
+      .from("appointments")
+      .select("id, status")
+      .eq("id", input.appointmentId)
+      .maybeSingle();
+    if (fetchError || !existing) {
+      return { row: null, error: fetchError?.message ?? "Agendamento não encontrado." };
+    }
+    const status = String((existing as { status?: unknown }).status ?? "");
+    if (status !== "scheduled" && status !== "confirmed") {
+      return { row: null, error: "Este agendamento não pode mais ser editado." };
+    }
+    const { count, error: encError } = await supabase
+      .from("encounters")
+      .select("id", { count: "exact", head: true })
+      .eq("appointment_id", input.appointmentId);
+    if (encError) return { row: null, error: encError.message };
+    if ((count ?? 0) > 0) {
+      return { row: null, error: "Agendamento com atendimento aberto não pode ser editado." };
+    }
+    const { data, error } = await supabase
+      .from("appointments")
+      .update({
+        patient_id: input.patientId,
+        professional_id: input.professionalId,
+        room_id: input.roomId,
+        procedure_id: null,
+        kind: input.kind,
+        starts_at: input.startsAt,
+        ends_at: input.endsAt,
+        urgency_note: input.urgencyNote?.trim() ? input.urgencyNote.trim() : null,
+      })
+      .eq("id", input.appointmentId)
+      .select(APPOINTMENT_COLUMNS)
+      .single();
+    if (error) {
+      return {
+        row: null,
+        error: error.message.includes("appointments_professional_no_overlap")
+          ? "A profissional já possui agendamento neste horário."
+          : error.message.includes("appointments_room_no_overlap")
+            ? "Já existe agendamento nesta sala no mesmo horário."
+            : error.message || "Não foi possível salvar o agendamento.",
+      };
+    }
+    return { row: toAppointmentRow(data as Record<string, unknown>), error: null };
+  }
+
   const { data, error } = await supabase.rpc("appointment_update", {
     p_appointment_id: input.appointmentId,
     p_patient_id: input.patientId,

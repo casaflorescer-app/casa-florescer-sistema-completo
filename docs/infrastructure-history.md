@@ -49,6 +49,31 @@ Preserva o histórico. Não substitui `docs/system-state.md` (estado atual).
 - Credencial SSH exposta: **P0 — ROTATION REQUIRED**.
 - Evolution/Chatwoot/n8n: **NÃO INTEGRADOS** no código TypeScript da Casa Florescer; WhatsApp app = `wa.me`.
 
+### 5) Hosped.1d + C069 (2026-10-30)
+
+- Tentativa Hosped.1d: SSH batch novamente **FAIL**; terminal EasyPanel ainda **BLOCKED**.
+- Produto C068 (`3937787`) em `florescerweb` (deploy manual EasyPanel — OBSERVADO).
+- Auth produção responde; contas UAT Cloud **não** validam em `api.thvp.cloud`.
+- Docs: `docs/c069-hosped-1d.md`, `docs/c069-v1-status.md`; script `scripts/uat-c069-auth-smoke.mjs`.
+- Declaração “V1 concluída”: **AINDA NÃO** (gates infra + UAT prod).
+
+### 6) Arquitetura confirmada pelo operador (Hosped.1d lacunas — 2026-10-30)
+
+**Prioridade sobre documentação histórica** (inclui trechos que ainda citam Supabase Cloud / self-hosted como “produção” sem inspect).
+
+Confirmado pelo operador:
+
+- `florescerweb` = frontend **e** API/backend da Casa Florescer.
+- `bancoflorescer` = PostgreSQL da Casa Florescer (não reabrir como “candidato”).
+- Deploy manual EasyPanel; `push ≠ deploy`.
+- Supabase Cloud **não** é a infraestrutura atual.
+
+Ainda lacunas (sem EasyPanel/SSH): evidência env da ligação app→PG; quem serve `api.thvp.cloud` (Auth/REST/Storage); paridade migrations Git↔PG; volumes; backup/restore.
+
+Código `@supabase/*` / `NEXT_PUBLIC_SUPABASE_*`: classificado como **legado de protocolo/cliente** até inspect posicionar os processos na VPS — **não** prova uso de Supabase Cloud.
+
+Diagrama-base e checklist: `docs/c069-hosped-1d.md`. Estado: `docs/system-state.md`.
+
 ---
 
 ## O que NÃO foi comprovado como “substituído”

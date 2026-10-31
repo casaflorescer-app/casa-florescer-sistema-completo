@@ -2,6 +2,11 @@
 
 ## Histórico
 
+- 2026-10-31 — C086: imagem `casa-hml-web:c086` subiu em `127.0.0.1:3017` contra `casa_hml` e foi removida. Login, sessão, recusa de criação de usuário, fatura, despesa compartilhada, arquivo e ficha responderam como as regras já confirmadas. Criar, atualizar e apagar agendamento, e apagar a ficha, não têm ação HTTP e não rodaram. Navegador ausente no host. Linhas fictícias apagadas. Florescer Web sem as variáveis da casa. Porta 5432 fechada. Status bloqueada. A C089 não começou.
+- 2026-10-31 — C086: homologação HTTP não executada. O código foi clonado na VPS, fora do Florescer Web, e a sessão fechou antes da imagem isolada. Status bloqueada. A C089 não começou.
+- 2026-10-31 — C086: backup do BancoFlorescerPP restaurado com sucesso e cópia `casa_hml` criada. Organizações da origem continuaram 0. Homologação HTTP não executada: sem encaminhamento SSH neste processo. Status bloqueada. A C089 não começou.
+- 2026-10-31 — C088: organizações em 0, prova SQL repetida no BancoFlorescerPP, `ROLLBACK` e organizações de novo em 0. Sem backup confirmado e sem gravação HTTP. Login, CRUD, arquivos e varredura de tablet e celular não executados. Status bloqueada. A C089 não começou.
+- 2026-10-31 — C088: o agente deste processo continuou sem chave. SSH não aberto. Papel `casa_login`, contagens e a prova com `ROLLBACK` não executados. Sem gravação HTTP. Status bloqueada. A C089 não começou.
 - 2026-10-31 — C088, nova tentativa de SSH: recusada de novo neste processo. Papel `casa_login`, contagens e a prova com `ROLLBACK` não executados. Sem gravação HTTP. Status bloqueada. A C089 não começou.
 - 2026-10-31 — C088: linha do tempo, vínculo de gestação, vínculo de prática e organizações no ramo do servidor. Onze testes locais passaram. TypeScript e build sem `CASA_DATABASE_URL`. SSH recusado; a prova SQL desta etapa não rodou. Sem backup confirmado e sem gravação HTTP. Login, CRUD, arquivos e varredura de tablet e celular não executados. Status bloqueada. A C089 não começou.
 - 2026-10-31 — C087.1: fluxos clínicos e administrativos que já tinham função ou policy no ramo do servidor. Onze testes locais passaram. Build sem `CASA_DATABASE_URL`. Sem migration e sem deploy. CRUD integrado, login real e varredura de tablet e celular não executados. Status bloqueada.

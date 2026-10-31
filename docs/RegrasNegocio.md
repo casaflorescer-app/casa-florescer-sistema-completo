@@ -112,6 +112,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 ## Histórico
 
+- 2026-10-31 — C088: a prova de isolamento foi repetida no BancoFlorescerPP, terminou em `ROLLBACK` e deixou organizações em 0. RN-CASA-013 segue inferida. A aplicação publicada não foi ligada.
 - 2026-10-31 — C088: RN-CASA-013 segue inferida e passou a citar linha do tempo, vínculo de gestação na tela, vínculo de prática e organização. A aplicação publicada não foi ligada. Não houve gravação HTTP.
 - 2026-10-31 — C087.1: RN-CASA-013 segue inferida e passou a citar queixa, anamnese, exame físico, retorno, feedback, IA, contratos, salas, especialidades, políticas e auditoria no modo da casa. A aplicação publicada não foi ligada.
 - 2026-10-31 — a prova C084 rodou no BancoFlorescerPP, terminou em `ROLLBACK` e deixou organizações em 0. RN-CASA-003, RN-CASA-004, RN-CASA-005 e RN-CASA-009 ganharam esse rastreio. RN-CASA-013 e RN-CASA-014 seguem inferidas. A aplicação publicada não foi ligada.

@@ -1,9 +1,25 @@
 # Memória
 
+## 2026-10-31 — C086 imagem isolada e homologação incompleta
+
+- A imagem é `casa-hml-web:c086`, só na VPS. O build precisou de `python3`, `make` e `g++` no estágio de dependências de `/root/casa-hml-src/Dockerfile.hml`: o pacote `argon2` compila código nativo e a imagem `node:20.19.5-alpine` não traz Python. O `Dockerfile` do Git não ganhou esses pacotes.
+- O contêiner escutou em `127.0.0.1:3017`, com 1 GB, na rede do projeto, sem rótulo de proxy, e usou `casa_hml`. Foi parado e removido. A porta 3017 fechou. A 5432 continuou fechada. O Florescer Web seguiu sem `CASA_DATABASE_URL` e sem `NEXT_PUBLIC_CASA_AUTH`.
+- O backup permanece em `/root/casa-backups/`, 1343810 bytes. O BancoFlorescerPP não foi alterado nesta etapa. `casa_hml` ficou sem as linhas fictícias. O volume de arquivos foi apagado.
+- A C086 permanece bloqueada. Não há ação HTTP no modo da casa para criar ou apagar agendamento, nem para apagar a ficha. A atualização da agenda não rodou porque a criação não existe. A leitura da agenda devolveu lista vazia. A ficha foi criada, lida pela médica da prática e alterada; a outra médica recebeu paciente vazio. O host não tem navegador. A C089 não começa.
+- Inserir em `professionals` depois da C074 exige `display_name`, `category` e `is_active`. O insert antigo, só com conselho, falha.
+
+## 2026-10-31 — C086 backup restaurado
+
+- O arquivo está em `/root/casa-backups/` no host, modo 600, diretório 700. Tamanho 1343810. SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`. PostgreSQL 18.6. Fora do Git.
+- `casa_restore_proof` repetiu 0 organizações, 0 profissionais, 103 tabelas e 1580 constraints, e foi apagado. `casa_hml` ficou com 0 organizações, 0 profissionais e 103 tabelas. O BancoFlorescerPP continuou com 0 organizações. A porta 5432 do host seguiu fechada.
+- A homologação HTTP não rodou. O host não tem Node. A imagem `casa-florescer-app:local` não traz `NEXT_PUBLIC_CASA_AUTH`. O Florescer Web não tem `CASA_DATABASE_URL` nem essa variável. `main` foi clonado em `/root/casa-hml-src`. A sessão fechou antes do `docker build`. A C086 permanece bloqueada. A C089 não começa.
+
 ## 2026-10-31 — C088 sem gravação HTTP
 
 - O SSH desta máquina para `root@2.25.151.136` voltou `Permission denied (publickey,password)` com `BatchMode`. A prova SQL e as contagens desta etapa não rodaram. Não repetir por outro caminho.
-- Depois da reconexão, o agente local não tinha chave carregada e uma nova sessão deste processo recebeu a mesma recusa. Uma sessão interativa para o mesmo host já estava aberta e não foi usada. A prova continua não executada.
+- Depois da reconexão, o agente local não tinha chave carregada e uma nova sessão deste processo recebeu a mesma recusa. A prova desta etapa rodou depois, no prompt da VPS, não por este processo.
+- `eval "$(ssh-agent -s)"` sobe um agente só naquela janela. Este processo não o vê. `ssh-add -l` aqui devolveu agente vazio. Sem chave nesse agente, o SSH não abre. A frase da chave não entra no chat nem no documento.
+- No prompt da VPS, as organizações estavam em 0. A prova `c084_module_isolation.sql` rodou como `postgre`, terminou em `ROLLBACK` e a contagem voltou a 0. Este processo não autenticou no SSH; a confirmação veio desse prompt.
 - Não há backup restaurável confirmado. Login, CRUD pela aplicação, upload e um processo Next apontado ao banco gravariam sessão, linha ou arquivo que outra conexão não desfaz. Essas ações ficam fora.
 - A linha do tempo, o vínculo de gestação na tela, o vínculo de prática e as organizações passam ao servidor só com a policy já existente. A gravação de organização depende de `organizations_system_admin`. A conversão que cria gestação nova continua no cliente.
 - `CASA_DATABASE_URL`, `NEXT_PUBLIC_CASA_AUTH`, `CASA_SESSION_SECRET` e `CASA_FILES_ROOT` estavam ausentes neste processo. Onze testes locais passaram. O build passou sem a URL da casa. A etapa segue bloqueada.
@@ -101,6 +117,11 @@ A tentativa de SSH para `2.25.151.136` não abriu sessão. Não repetir esse ace
 
 ## Histórico
 
+- 2026-10-31 — C086: clone em `/root/casa-hml-src`. A sessão caiu antes do build da imagem isolada. Homologação HTTP não executada.
+- 2026-10-31 — C086: o dump de 1343810 bytes restaurou. `casa_hml` substituiu o database temporário. Sem túnel, a homologação HTTP não rodou. A etapa segue bloqueada.
+- 2026-10-31 — C086: a sessão da VPS caiu antes do backup. Sem arquivo, sem restauração e sem homologação HTTP. A etapa segue bloqueada.
+- 2026-10-31 — C088: a prova SQL foi confirmada no prompt da VPS, com `ROLLBACK` e organizações em 0. Sem gravação HTTP. A etapa segue bloqueada.
+- 2026-10-31 — C088: o agente deste processo continuou vazio. O agente novo da janela do terminal não serve. SSH não aberto. Prova e contagens continuam não executadas. A etapa segue bloqueada.
 - 2026-10-31 — C088, nova tentativa: SSH deste processo recusado de novo, sem chave no agente. A sessão interativa já aberta não foi usada. Prova e contagens continuam não executadas. A etapa segue bloqueada.
 - 2026-10-31 — C088: SSH recusado e sem backup confirmado. Linha do tempo, vínculo de gestação, vínculo de prática e organizações passaram ao servidor. Sem gravação HTTP. A etapa segue bloqueada.
 - 2026-10-31 — C087.1 ligou ao servidor o que já tinha função ou policy. A linha do tempo, o vínculo de gestação na tela, a edição de vínculo de prática e as organizações ficaram no cliente. O CRUD no BancoFlorescerPP não rodou. A etapa segue bloqueada.

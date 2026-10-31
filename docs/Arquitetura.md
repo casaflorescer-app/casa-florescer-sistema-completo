@@ -43,7 +43,7 @@ A tela `/app/finance` lista fatura, pagamento, rateio e despesa pelo que a polic
 
 Com o modo da casa ligado, estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames chamam as funções SQL já existentes. A gravação lê o áudio no volume privado e só segue se o caminho pedido for o caminho gravado. O PDF do documento segue o mesmo volume. Pedidos de exame, itens de modelo de receita, busca de paciente para audiência e o painel de resultados também leem pelo servidor. O anexo do resultado entra por `POST /api/casa/files` e a abertura usa o identificador gravado.
 
-A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação terminou em `ROLLBACK` e a contagem de organizações ficou 0. A repetição pedida na C088, depois da reconexão, voltou a ser recusada neste processo (`Permission denied (publickey,password)`). Papel, contagens e `ROLLBACK` desta etapa não foram obtidos. Não houve login, CRUD pela aplicação, upload nem processo apontando para o banco. A aplicação publicada continua na API antiga. O corte não foi executado.
+A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação terminou em `ROLLBACK` e a contagem de organizações ficou 0. Na mesma data, a repetição da C088 foi confirmada no prompt da VPS: organizações em 0 antes da prova, `ROLLBACK` ao fim e organizações de novo em 0. Em 2026-10-31 o BancoFlorescerPP ganhou um `pg_dump` em formato customizado, de 1343810 bytes, SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`, PostgreSQL 18.6. O arquivo está no host, fora do Git, modo 600. A restauração de prova repetiu 0 organizações, 0 profissionais, 103 tabelas e 1580 constraints, e esse database temporário foi apagado. A cópia `casa_hml` ficou com os mesmos números. O BancoFlorescerPP continuou com 0 organizações. Em 2026-10-31 a imagem `casa-hml-web:c086` foi construída só na VPS, a partir do clone em `/root/casa-hml-src`, com `NEXT_PUBLIC_CASA_AUTH=1` e endereços públicos de exemplo. O `Dockerfile` do Git não mudou. O contêiner `casa-hml-web` escutou em `127.0.0.1:3017` e falou com `casa_hml` como `casa_login`. O Florescer Web não recebeu `CASA_DATABASE_URL` nem `NEXT_PUBLIC_CASA_AUTH`. Depois dos testes o contêiner foi removido, as linhas fictícias saíram de `casa_hml` e o volume de arquivos foi apagado. A aplicação publicada continua na API antiga. O corte não foi executado. A C086 permanece bloqueada: no modo da casa não há ação HTTP para criar, atualizar ou apagar um agendamento, nem para apagar a ficha. A leitura da agenda devolveu lista vazia. A ficha foi criada, lida e alterada; a outra médica não a viu.
 
 Dependências do Supabase:
 
@@ -54,6 +54,10 @@ Dependências do Supabase:
 
 ## Histórico
 
+- 2026-10-31 — C086: imagem `casa-hml-web:c086` falou com `casa_hml` em `127.0.0.1:3017` e foi removida. O Florescer Web não a recebeu. A etapa segue bloqueada. Sem corte.
+- 2026-10-31 — C086: backup restaurado e cópia `casa_hml` criada. Sem processo Next e sem corte. A aplicação publicada não aponta para a cópia.
+- 2026-10-31 — C088: a prova SQL foi repetida no BancoFlorescerPP, terminou em `ROLLBACK` e deixou organizações em 0. Sem gravação HTTP e sem corte.
+- 2026-10-31 — C088: o agente deste processo continuou sem chave. O SSH não foi aberto. A prova SQL não rodou. Sem gravação HTTP e sem corte.
 - 2026-10-31 — C088, nova tentativa: o SSH deste processo foi recusado de novo. A prova SQL não rodou. Sem gravação HTTP e sem corte.
 - 2026-10-31 — C088: linha do tempo, vínculo de gestação na tela, vínculo de prática e organizações no ramo do servidor. A conferência por SSH foi recusada. Sem gravação HTTP e sem corte.
 - 2026-10-31 — C087.1: queixa, anamnese, exame físico, retorno, feedback, gravação, auxílio de IA, contratos, salas, especialidades, políticas e auditoria no ramo do servidor. Sem migration e sem corte.

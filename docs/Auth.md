@@ -68,8 +68,13 @@ Sem a variável pública, a produção segue no Auth. A variável não foi ligad
 
 O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -L 8000:127.0.0.1:8000 usuario@2.25.151.136` e, na sua máquina, `http://127.0.0.1:8000`. O gateway pede o usuário e a senha `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD`.
 
+## C086 — login isolado, produção no Auth
+
+No contêiner `casa-hml-web`, já removido, o login válido respondeu 200, a senha errada 401, a sessão 200 com o identificador do administrador principal, o logout 200 e o pedido sem cookie 401. O administrador principal criou os outros perfis. A administradora da clínica recebeu 403 ao tentar criar usuário. O Florescer Web publicado continua no Auth. `sistema.thvp.cloud` não recebeu esse modo.
+
 ## Histórico
 
+- 2026-10-31 — C086: login, sessão, logout e recusa de criação de usuário rodaram só no contêiner isolado, depois removido. A produção continua no Auth.
 - 2026-10-31 — a senha de `casa_login` foi definida no BancoFlorescerPP. A prova devolveu `casa_login|false|false`. `CASA_DATABASE_URL` continua ausente na produção.
 - 2026-10-31 — complemento da C083: a senha de `casa_login` continua sem definição. O prompt visto era o do Mac.
 - 2026-10-31 — o cookie da casa passou a carregar o identificador da linha. Logout e troca de senha revogam essa linha. A produção continua no Auth.

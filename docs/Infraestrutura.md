@@ -325,14 +325,28 @@ O ambiente de homologação ainda não existe. Quando for autorizado, ele fica s
 5. Dados sintéticos, com reversão ao fim. Nenhum dado clínico real.
 6. `NEXT_PUBLIC_CASA_AUTH=1` só no build dessa homologação, nunca no site publicado nesta etapa.
 
-Nada disso foi criado nem usado.
+Esse texto é anterior à prova da C086. A seção da C086, mais abaixo, registra o processo isolado que foi criado e depois removido.
 
-## C088 — conferência recusada, sem gravação HTTP
+## C088 — prova repetida, sem gravação HTTP
 
-Em 2026-10-31 a sessão SSH para o BancoFlorescerPP foi recusada (`Permission denied (publickey,password)`). Depois da reconexão, uma nova sessão deste processo recebeu a mesma recusa. A conferência de `casa_login`, a contagem de organizações e a repetição da prova que termina em `ROLLBACK` ficaram não executadas. Não houve tentativa por outro caminho. Não há backup restaurável confirmado. Por isso não houve login, CRUD pela aplicação, upload, download nem processo Next apontando para o banco. A porta 5432 não foi publicada. O Florescer Web e `NEXT_PUBLIC_CASA_AUTH` não mudaram. A API `api.thvp.cloud` permanece.
+Em 2026-10-31 a sessão SSH deste processo foi recusada. A conferência seguiu no prompt já aberto na VPS. As organizações estavam em 0. A prova `supabase/tests/c084_module_isolation.sql` rodou como `postgre` no BancoFlorescerPP, terminou em `ROLLBACK` e a contagem de organizações voltou a 0. Não há backup restaurável confirmado. Por isso não houve login, CRUD pela aplicação, upload, download nem processo Next apontando para o banco. A porta 5432 não foi publicada. O Florescer Web e `NEXT_PUBLIC_CASA_AUTH` não mudaram. A API `api.thvp.cloud` permanece.
+
+## C086 — backup restaurado, homologação HTTP ainda bloqueada
+
+Em 2026-10-31, no host, fora do Git: `pg_dump -Fc` do BancoFlorescerPP, PostgreSQL 18.6, 1343810 bytes, SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`, diretório modo 700 e arquivo modo 600. `deploy/backup.sh` não foi usado.
+
+A prova de restauração, num database temporário depois apagado, repetiu a origem: 0 organizações, 0 profissionais, 103 tabelas em `public` e 1580 constraints. A segunda restauração ficou em `casa_hml`, com 0 organizações, 0 profissionais e 103 tabelas. O BancoFlorescerPP continuou com 0 organizações. A porta 5432 seguiu fechada no host.
+
+O processo Next neste computador não subiu. Na VPS, o código de `main` foi clonado em diretório modo 700, fora do serviço publicado. A imagem `casa-hml-web:c086` foi construída ali, com `NEXT_PUBLIC_CASA_AUTH=1` gravado no build. O `Dockerfile` do Git não mudou. O pacote `argon2` exigiu `python3`, `make` e `g++` só no `Dockerfile.hml` desse clone, porque a imagem Alpine não traz Python. O contêiner escutou em `127.0.0.1:3017`, com 1 GB de memória, na rede do projeto, sem rótulo de proxy, e usou `casa_hml`. O Florescer Web não recebeu `CASA_DATABASE_URL` nem `NEXT_PUBLIC_CASA_AUTH`.
+
+Os testes HTTP em `127.0.0.1:3017` cobriram login válido e inválido, sessão, logout, pedido sem sessão, criação de usuário pelo administrador principal, recusa da administradora da clínica, fatura visível só para a médica dona e para a administradora, despesa compartilhada visível para as duas médicas e para a administradora, upload e download autorizado, e recusa do download pela outra médica. A ficha foi criada, lida pela médica da prática e alterada; a outra médica recebeu a ficha vazia. A leitura da agenda devolveu lista vazia. Criar, atualizar e apagar agendamento, e apagar a ficha, não têm ação HTTP no modo da casa e não rodaram. O host não tem navegador. Ao fim, o contêiner foi removido, as linhas fictícias saíram de `casa_hml`, o volume de arquivos foi apagado e a porta 3017 fechou. O backup e o BancoFlorescerPP permaneceram. A porta 5432 continuou fechada. A C086 fica bloqueada. A C089 não começa.
 
 ## Histórico
 
+- 2026-10-31 — C086: imagem `casa-hml-web:c086` em `127.0.0.1:3017`, depois removida. Porta 5432 fechada. Florescer Web sem as variáveis da casa. Homologação incompleta e etapa bloqueada.
+- 2026-10-31 — C086: backup de 1343810 bytes restaurado. Cópia `casa_hml` no lugar do database temporário. Porta 5432 fechada. Sem variável da casa no Florescer Web. Homologação HTTP não executada.
+- 2026-10-31 — C088: prova SQL repetida no BancoFlorescerPP, com `ROLLBACK` e organizações em 0. Sem gravação HTTP, sem porta 5432 e sem variável da casa no Florescer Web.
+- 2026-10-31 — C088: chave ainda fora do agente deste processo. SSH não aberto. Prova SQL não executada. Sem gravação HTTP, sem porta 5432 e sem variável da casa no Florescer Web.
 - 2026-10-31 — C088, nova tentativa: SSH deste processo recusado de novo. Prova SQL não executada. Sem gravação HTTP, sem porta 5432 e sem variável da casa no Florescer Web.
 - 2026-10-31 — C088: SSH recusado. Prova SQL desta etapa não executada. Sem gravação HTTP, sem porta 5432 e sem variável da casa no Florescer Web.
 - 2026-10-31 — C087.1: homologação descrita e não criada. Sem variável da casa no Florescer Web.

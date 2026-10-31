@@ -1,17 +1,28 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listRoomsCasa } from "@/lib/casa/reads";
+import { upsertRoomCasa } from "@/lib/casa/writes";
 import type { RoomAdminRow } from "@/lib/clinic-mgmt/types";
 import { parseRoomOccupancy, singleOccupancyForRoom } from "@/lib/clinic/room-occupancy";
 
 function requireClient() {
   const supabase = createClient();
-  if (!supabase) throw new Error("Autenticação não configurada neste ambiente.");
+  if (!supabase && !isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
   return supabase;
 }
 
 export async function listRoomsAdmin(organizationId: string): Promise<RoomAdminRow[]> {
   const supabase = requireClient();
+  if (!supabase) {
+    const data = await listRoomsCasa(organizationId);
+    const occupancy = data.occupancy.flatMap((item) => {
+      const row = parseRoomOccupancy(item);
+      return row ? [row] : [];
+    });
+    return data.rooms.flatMap((item) => mapRoom(item, occupancy));
+  }
   const [roomsResult, occupancyResult] = await Promise.all([
     supabase
       .from("rooms")
@@ -26,8 +37,13 @@ export async function listRoomsAdmin(organizationId: string): Promise<RoomAdminR
     const row = parseRoomOccupancy(item);
     return row ? [row] : [];
   });
-  return (roomsResult.data ?? []).flatMap((item) => {
-    const r = item as Record<string, unknown>;
+  return (roomsResult.data ?? []).flatMap((item) => mapRoom(item as Record<string, unknown>, occupancy));
+}
+
+function mapRoom(
+  r: Record<string, unknown>,
+  occupancy: Array<NonNullable<ReturnType<typeof parseRoomOccupancy>>>,
+): RoomAdminRow[] {
     const id = typeof r.id === "string" ? r.id : null;
     const name = typeof r.name === "string" ? r.name.trim() : "";
     if (!id || !name) return [];
@@ -46,7 +62,6 @@ export async function listRoomsAdmin(organizationId: string): Promise<RoomAdminR
         holderName: assigned?.professionalName ?? null,
       },
     ];
-  });
 }
 
 export async function upsertRoom(input: {
@@ -61,6 +76,21 @@ export async function upsertRoom(input: {
   occupantProfessionalId?: string | null;
 }) {
   const supabase = requireClient();
+  const occupant =
+    input.roomKind === "house_consultorio" ? input.occupantProfessionalId || null : null;
+  if (!supabase) {
+    return upsertRoomCasa({
+      organizationId: input.organizationId,
+      id: input.id,
+      code: input.code.trim(),
+      name: input.name.trim(),
+      roomKind: input.roomKind,
+      isHouse: input.isHouse,
+      status: input.status,
+      sortOrder: input.sortOrder ?? 0,
+      occupantProfessionalId: occupant,
+    });
+  }
   const payload = {
     organization_id: input.organizationId,
     code: input.code.trim(),

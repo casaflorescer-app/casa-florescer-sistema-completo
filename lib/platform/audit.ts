@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listAuditEventsCasa } from "@/lib/casa/reads";
 import { mapDbError } from "@/lib/platform/format";
 import type { AuditAction, AuditEventRecord } from "@/lib/platform/types";
 
@@ -26,9 +28,39 @@ export type AuditFilters = {
 };
 
 export async function listAuditEvents(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   filters: AuditFilters,
 ): Promise<AuditEventRecord[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const data = await listAuditEventsCasa({
+      from: filters.from,
+      to: filters.to,
+      action: filters.action || undefined,
+      actorId: filters.actorId,
+      entity: filters.entity,
+    });
+    return data.flatMap((row) => {
+      const id = asNumber(row.id);
+      const occurredAt = asString(row.occurred_at);
+      const action = asString(row.action);
+      const entityTable = asString(row.entity_table);
+      if (id == null || !occurredAt || !action || !entityTable) return [];
+      const actorId = asString(row.actor_id);
+      return [
+        {
+          id,
+          occurredAt,
+          actorId,
+          actorName: actorId,
+          action,
+          entityTable,
+          entityId: asString(row.entity_id),
+          metadata: asMetadata(row.metadata),
+        },
+      ];
+    });
+  }
   let query = supabase
     .from("audit_events")
     .select("id, occurred_at, actor_id, action, entity_table, entity_id, metadata")

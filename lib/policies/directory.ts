@@ -1,4 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { listCarePolicyVersionsCasa, listCurrentCarePoliciesCasa, listPracticeNamesCasa } from "@/lib/casa/reads";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
 import { canManageProfessionalPolicy } from "@/lib/auth/access";
 import { parseReaisToCents } from "@/lib/policies/money";
@@ -209,14 +212,16 @@ export function formatPolicyVigencia(row: Pick<CarePolicyVersionRow, "effectiveF
 }
 
 async function attachNames(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   rows: CarePolicyVersionRow[],
 ): Promise<CarePolicyVersionRow[]> {
   if (rows.length === 0) return rows;
   const labels = await listProfessionalLabels(supabase);
   const byId = new Map(labels.map((item) => [item.id, item]));
   const practiceIds = [...new Set(rows.map((item) => item.practiceId))];
-  const practices = await supabase.from("practice_units").select("id, name").in("id", practiceIds);
+  const practices = supabase
+    ? await supabase.from("practice_units").select("id, name").in("id", practiceIds)
+    : { data: await listPracticeNamesCasa(practiceIds), error: null };
   const practiceNames = new Map<string, string>();
   for (const item of practices.data ?? []) {
     const id = asString((item as { id?: unknown }).id);
@@ -231,8 +236,16 @@ async function attachNames(
 }
 
 export async function listCurrentCarePolicies(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
 ): Promise<CarePolicyVersionRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const rows = (await listCurrentCarePoliciesCasa()).flatMap((raw) => {
+      const mapped = toVersionRow({ ...raw, id: raw.version_id });
+      return mapped ? [mapped] : [];
+    });
+    return attachNames(null, rows);
+  }
   const result = await supabase
     .from("professional_care_policy_current")
     .select(
@@ -251,9 +264,17 @@ export async function listCurrentCarePolicies(
 }
 
 export async function listCarePolicyVersions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   policyId: string,
 ): Promise<CarePolicyVersionRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const rows = (await listCarePolicyVersionsCasa(policyId)).flatMap((item) => {
+      const mapped = toVersionRow(item);
+      return mapped ? [mapped] : [];
+    });
+    return attachNames(null, rows);
+  }
   const result = await supabase
     .from("professional_care_policy_versions")
     .select(
@@ -272,7 +293,7 @@ export async function listCarePolicyVersions(
 }
 
 export async function getCarePolicyById(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   policyId: string,
 ): Promise<{ current: CarePolicyVersionRow | null; versions: CarePolicyVersionRow[] }> {
   const versions = await listCarePolicyVersions(supabase, policyId);
@@ -281,10 +302,25 @@ export async function getCarePolicyById(
 }
 
 export async function publishCarePolicyVersion(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: CarePolicyFormInput,
 ): Promise<string> {
   const payload = formToPublishInput(input);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const data = await callCasaRpc("publish_professional_care_policy_version", [
+      payload.professionalId,
+      payload.practiceId,
+      payload.normalBirthCents,
+      payload.cesareanCents,
+      payload.requiresAvailabilityForPrenatal,
+      payload.allowsPrenatalException,
+      payload.effectiveFrom,
+    ]);
+    const id = asString(data);
+    if (!id) throw new Error("A publicação não retornou a versão.");
+    return id;
+  }
   const result = await supabase.rpc("publish_professional_care_policy_version", {
     p_professional_id: payload.professionalId,
     p_practice_id: payload.practiceId,

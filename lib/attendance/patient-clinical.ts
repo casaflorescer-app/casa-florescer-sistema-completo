@@ -1,6 +1,9 @@
 /** Cadastro clínico histórico (patient_clinical_data) — C040.2. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { readPatientClinicalCasa } from "@/lib/casa/reads";
+import { upsertPatientClinicalCasa } from "@/lib/casa/writes";
 
 export type PatientClinicalCadastro = {
   patientId: string;
@@ -53,9 +56,15 @@ export function toPatientClinicalCadastro(
 }
 
 export async function getPatientClinicalCadastro(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
+  practiceId?: string,
 ): Promise<PatientClinicalCadastro | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth() || !practiceId) return null;
+    const raw = await readPatientClinicalCasa(patientId, practiceId);
+    return raw ? toPatientClinicalCadastro(raw) : null;
+  }
   const { data, error } = await supabase
     .from("patient_clinical_data")
     .select(
@@ -69,16 +78,35 @@ export async function getPatientClinicalCadastro(
 
 /** Atualiza campos de segurança/antecedentes do cadastro (não é anamnese do encounter). */
 export async function upsertPatientClinicalCadastro(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     patientId: string;
     organizationId: string;
+    practiceId?: string;
     allergies: string | null;
     continuousMedications: string | null;
     comorbidities: string | null;
     updatedBy: string;
   },
 ): Promise<{ ok: boolean; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { ok: false, error: "Autenticação não configurada neste ambiente." };
+    if (!input.practiceId) return { ok: false, error: "A ficha desta prática não foi informada." };
+    try {
+      await upsertPatientClinicalCasa({
+        patientId: input.patientId,
+        organizationId: input.organizationId,
+        practiceId: input.practiceId,
+        allergies: input.allergies,
+        continuousMedications: input.continuousMedications,
+        comorbidities: input.comorbidities,
+        updatedBy: input.updatedBy,
+      });
+      return { ok: true, error: null };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Não foi possível atualizar a ficha." };
+    }
+  }
   const existing = await getPatientClinicalCadastro(supabase, input.patientId);
   if (existing) {
     const { error } = await supabase

@@ -81,6 +81,49 @@ const ALLOWED: Record<string, number> = {
   clinical_orientation_mark_audio_played: 1,
   clinical_orientation_link_exams: 2,
   orientation_feedback_submit: 1,
+  encounter_recording_start: 1,
+  encounter_recording_set_status: 2,
+  encounter_recording_register_segment: 5,
+  encounter_recording_mark_segment_uploaded: 3,
+  encounter_recording_request_transcription: 1,
+  encounter_recording_review_transcription: 2,
+  encounter_recording_prepare_share: 5,
+  encounter_recording_confirm_share: 2,
+  encounter_recording_list: 1,
+  encounter_recording_mark_viewed: 2,
+  ai_assistance_list: 1,
+  ai_assistance_request_create: 3,
+  ai_assistance_save_result: 7,
+  ai_assistance_review: 3,
+  encounter_patient_feedback_get: 1,
+  encounter_patient_feedback_upsert: 4,
+  patient_portal_feedback_targets: 0,
+  encounter_audit_event: 2,
+  obstetric_availability_contract_create: 1,
+  obstetric_availability_contract_update: 1,
+  obstetric_availability_contract_end: 1,
+  procedure_agreement_create: 1,
+  procedure_agreement_acknowledge: 1,
+  procedure_agreement_cancel: 1,
+  clinic_specialty_upsert: 1,
+  professional_specialty_set: 1,
+  publish_professional_care_policy_version: 7,
+  set_secretary_care_policy_view: 2,
+  grant_system_admin: 2,
+  revoke_system_admin: 2,
+};
+
+const JSONB_AT: Record<string, number[]> = {
+  ai_assistance_save_result: [4],
+  ai_assistance_review: [2],
+  obstetric_availability_contract_create: [0],
+  obstetric_availability_contract_update: [0],
+  obstetric_availability_contract_end: [0],
+  procedure_agreement_create: [0],
+  procedure_agreement_acknowledge: [0],
+  procedure_agreement_cancel: [0],
+  clinic_specialty_upsert: [0],
+  professional_specialty_set: [0],
 };
 
 function assertName(name: string, args: unknown[]) {
@@ -97,7 +140,10 @@ export async function callCasaRpc(name: string, args: unknown[]): Promise<unknow
   }
   const user = await getAuthUser();
   if (!user) throw new Error("Sem sessão.");
-  const placeholders = args.map((_, index) => `$${index + 1}`).join(", ");
+  const jsonbAt = new Set(JSONB_AT[fn] ?? []);
+  const placeholders = args
+    .map((_, index) => (jsonbAt.has(index) ? `$${index + 1}::jsonb` : `$${index + 1}`))
+    .join(", ");
   try {
     return await withCasaUser(user.userId, async (client) => {
       const result = await client.query<{ data: unknown }>(

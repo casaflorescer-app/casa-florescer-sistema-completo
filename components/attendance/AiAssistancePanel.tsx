@@ -33,7 +33,7 @@ export function AiAssistancePanel({
   context,
   onApplySoap,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   organizationId: string;
   practiceId: string;
   patientId: string;

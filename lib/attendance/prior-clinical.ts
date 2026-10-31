@@ -1,6 +1,8 @@
 /** Carrega anamnese de encounters anteriores da mesma prática — C040.2. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { readClinicalNotesForEncountersCasa } from "@/lib/casa/reads";
 import {
   listEncountersForPatient,
   toClinicalNoteRow,
@@ -21,7 +23,7 @@ export type PriorAnamnesisRef = {
 
 /** Uma consulta agregada de notas + mapa de encounters — evita N+1. */
 export async function loadPriorAnamnesis(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     practiceId: string;
     patientId: string;
@@ -37,6 +39,15 @@ export async function loadPriorAnamnesis(
   if (!others.length) return null;
 
   const encounterIds = others.map((item) => item.id);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const data = await readClinicalNotesForEncountersCasa(
+      encounterIds,
+      input.practiceId,
+      TEMPLATE_ANAMNESIS_ENCOUNTER,
+    );
+    return pickPrior(others, data);
+  }
   const { data, error } = await supabase
     .from("clinical_notes")
     .select(
@@ -47,7 +58,10 @@ export async function loadPriorAnamnesis(
     .eq("practice_id", input.practiceId);
 
   if (error || !data?.length) return null;
+  return pickPrior(others, data as Record<string, unknown>[]);
+}
 
+function pickPrior(others: EncounterRow[], data: Record<string, unknown>[]): PriorAnamnesisRef | null {
   const byEncounter = new Map<string, ClinicalNoteRow>();
   for (const raw of data) {
     const note = toClinicalNoteRow(raw as Record<string, unknown>);

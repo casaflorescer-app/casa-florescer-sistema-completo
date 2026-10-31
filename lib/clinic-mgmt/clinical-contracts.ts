@@ -1,6 +1,9 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { listObstetricContractsCasa, listProcedureAgreementsCasa } from "@/lib/casa/reads";
 import type {
   ObstetricAvailabilityContract,
   ObstetricContractStatus,
@@ -11,7 +14,7 @@ import type {
 
 function requireClient() {
   const supabase = createClient();
-  if (!supabase) throw new Error("Autenticação não configurada neste ambiente.");
+  if (!supabase && !isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
   return supabase;
 }
 
@@ -78,6 +81,10 @@ export async function listObstetricContracts(
   opts?: { patientId?: string; status?: ObstetricContractStatus; q?: string },
 ) {
   const supabase = requireClient();
+  if (!supabase) {
+    const data = await listObstetricContractsCasa(organizationId, opts?.patientId, opts?.status);
+    return filterContracts(data.map((row) => mapObs(row)), opts?.q);
+  }
   let query = supabase
     .from("obstetric_availability_contracts")
     .select(
@@ -90,16 +97,18 @@ export async function listObstetricContracts(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   let rows = (data ?? []).map((row) => mapObs(row as Record<string, unknown>));
-  if (opts?.q?.trim()) {
-    const q = opts.q.trim().toLowerCase();
-    rows = rows.filter(
-      (r) =>
-        (r.patientName ?? "").toLowerCase().includes(q) ||
-        (r.professionalName ?? "").toLowerCase().includes(q) ||
-        (r.contractCode ?? "").toLowerCase().includes(q),
-    );
-  }
-  return rows;
+  return filterContracts(rows, opts?.q);
+}
+
+function filterContracts(rows: ObstetricAvailabilityContract[], q?: string) {
+  const needle = q?.trim().toLowerCase();
+  if (!needle) return rows;
+  return rows.filter(
+    (r) =>
+      (r.patientName ?? "").toLowerCase().includes(needle) ||
+      (r.professionalName ?? "").toLowerCase().includes(needle) ||
+      (r.contractCode ?? "").toLowerCase().includes(needle),
+  );
 }
 
 export async function createObstetricContract(input: {
@@ -115,19 +124,21 @@ export async function createObstetricContract(input: {
   status?: ObstetricContractStatus;
 }) {
   const supabase = requireClient();
+  const payload = {
+    organization_id: input.organizationId,
+    patient_id: input.patientId,
+    professional_id: input.professionalId,
+    includes_normal_birth: input.includesNormalBirth,
+    includes_cesarean: input.includesCesarean,
+    contracted_on: input.contractedOn ?? null,
+    starts_on: input.startsOn ?? null,
+    ends_on: input.endsOn ?? null,
+    notes: input.notes ?? null,
+    status: input.status ?? "active",
+  };
+  if (!supabase) return String(await callCasaRpc("obstetric_availability_contract_create", [payload]));
   const { data, error } = await supabase.rpc("obstetric_availability_contract_create", {
-    p_payload: {
-      organization_id: input.organizationId,
-      patient_id: input.patientId,
-      professional_id: input.professionalId,
-      includes_normal_birth: input.includesNormalBirth,
-      includes_cesarean: input.includesCesarean,
-      contracted_on: input.contractedOn ?? null,
-      starts_on: input.startsOn ?? null,
-      ends_on: input.endsOn ?? null,
-      notes: input.notes ?? null,
-      status: input.status ?? "active",
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(friendlyObsError(error.message));
   return String(data);
@@ -140,13 +151,18 @@ export async function endObstetricContract(input: {
   reason?: string;
 }) {
   const supabase = requireClient();
+  const payload = {
+    organization_id: input.organizationId,
+    id: input.id,
+    op: input.op,
+    reason: input.reason ?? null,
+  };
+  if (!supabase) {
+    await callCasaRpc("obstetric_availability_contract_end", [payload]);
+    return;
+  }
   const { error } = await supabase.rpc("obstetric_availability_contract_end", {
-    p_payload: {
-      organization_id: input.organizationId,
-      id: input.id,
-      op: input.op,
-      reason: input.reason ?? null,
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(friendlyObsError(error.message));
 }
@@ -156,6 +172,10 @@ export async function listProcedureAgreements(
   opts?: { patientId?: string; status?: ProcedureAgreementStatus; q?: string },
 ) {
   const supabase = requireClient();
+  if (!supabase) {
+    const data = await listProcedureAgreementsCasa(organizationId, opts?.patientId, opts?.status);
+    return filterProcedures(data.map((row) => mapProc(row)), opts?.q);
+  }
   let query = supabase
     .from("procedure_agreements")
     .select(
@@ -168,16 +188,18 @@ export async function listProcedureAgreements(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   let rows = (data ?? []).map((row) => mapProc(row as Record<string, unknown>));
-  if (opts?.q?.trim()) {
-    const q = opts.q.trim().toLowerCase();
-    rows = rows.filter(
-      (r) =>
-        (r.patientName ?? "").toLowerCase().includes(q) ||
-        r.procedureName.toLowerCase().includes(q) ||
-        r.title.toLowerCase().includes(q),
-    );
-  }
-  return rows;
+  return filterProcedures(rows, opts?.q);
+}
+
+function filterProcedures(rows: ProcedureAgreement[], q?: string) {
+  const needle = q?.trim().toLowerCase();
+  if (!needle) return rows;
+  return rows.filter(
+    (r) =>
+      (r.patientName ?? "").toLowerCase().includes(needle) ||
+      r.procedureName.toLowerCase().includes(needle) ||
+      r.title.toLowerCase().includes(needle),
+  );
 }
 
 export async function createProcedureAgreement(input: {
@@ -191,18 +213,20 @@ export async function createProcedureAgreement(input: {
   notes?: string;
 }) {
   const supabase = requireClient();
+  const payload = {
+    organization_id: input.organizationId,
+    patient_id: input.patientId,
+    procedure_name: input.procedureName,
+    title: input.title,
+    agreement_kind: input.agreementKind,
+    term_body: input.termBody ?? null,
+    professional_id: input.professionalId ?? null,
+    notes: input.notes ?? null,
+    status: "draft",
+  };
+  if (!supabase) return String(await callCasaRpc("procedure_agreement_create", [payload]));
   const { data, error } = await supabase.rpc("procedure_agreement_create", {
-    p_payload: {
-      organization_id: input.organizationId,
-      patient_id: input.patientId,
-      procedure_name: input.procedureName,
-      title: input.title,
-      agreement_kind: input.agreementKind,
-      term_body: input.termBody ?? null,
-      professional_id: input.professionalId ?? null,
-      notes: input.notes ?? null,
-      status: "draft",
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(friendlyProcError(error.message));
   return String(data);
@@ -214,12 +238,17 @@ export async function acknowledgeProcedureAgreement(input: {
   acknowledgedByName: string;
 }) {
   const supabase = requireClient();
+  const payload = {
+    organization_id: input.organizationId,
+    id: input.id,
+    acknowledged_by_name: input.acknowledgedByName,
+  };
+  if (!supabase) {
+    await callCasaRpc("procedure_agreement_acknowledge", [payload]);
+    return;
+  }
   const { error } = await supabase.rpc("procedure_agreement_acknowledge", {
-    p_payload: {
-      organization_id: input.organizationId,
-      id: input.id,
-      acknowledged_by_name: input.acknowledgedByName,
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(friendlyProcError(error.message));
 }
@@ -230,12 +259,17 @@ export async function cancelProcedureAgreement(input: {
   reason?: string;
 }) {
   const supabase = requireClient();
+  const payload = {
+    organization_id: input.organizationId,
+    id: input.id,
+    reason: input.reason ?? null,
+  };
+  if (!supabase) {
+    await callCasaRpc("procedure_agreement_cancel", [payload]);
+    return;
+  }
   const { error } = await supabase.rpc("procedure_agreement_cancel", {
-    p_payload: {
-      organization_id: input.organizationId,
-      id: input.id,
-      reason: input.reason ?? null,
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(friendlyProcError(error.message));
 }

@@ -690,16 +690,29 @@ export async function applyPrescriptionTemplate(
 }
 
 export async function listAiAssistance(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<{ requests: AiAssistanceRequestRow[]; results: AiAssistanceResultRow[]; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { requests: [], results: [], error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("ai_assistance_list", [encounterId]);
+      return mapAiList(data);
+    } catch (error) {
+      return { requests: [], results: [], error: error instanceof Error ? error.message : "Não foi possível listar o auxílio." };
+    }
+  }
   const { data, error } = await supabase.rpc("ai_assistance_list", {
     p_encounter_id: encounterId,
   });
   if (error || !data) {
     return { requests: [], results: [], error: mapRpcError(error) };
   }
-  const payload = data as { requests?: unknown[]; results?: unknown[] };
+  return mapAiList(data);
+}
+
+function mapAiList(data: unknown): { requests: AiAssistanceRequestRow[]; results: AiAssistanceResultRow[]; error: string | null } {
+  const payload = (data && typeof data === "object" ? data : {}) as { requests?: unknown[]; results?: unknown[] };
   const requests = (payload.requests ?? [])
     .map((row) => {
       const r = row as Record<string, unknown>;
@@ -748,11 +761,20 @@ export async function listAiAssistance(
 }
 
 export async function reviewAiAssistance(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   resultId: string,
   action: "accept" | "reject" | "edit_accept",
   reviewedPayload?: ClinicalAiPayload,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("ai_assistance_review", [resultId, action, reviewedPayload ?? null]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível revisar a sugestão." };
+    }
+  }
   const { error } = await supabase.rpc("ai_assistance_review", {
     p_result_id: resultId,
     p_action: action,

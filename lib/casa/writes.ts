@@ -313,3 +313,113 @@ export async function createPrescriptionDraftCasa(input: {
     return plain(row);
   });
 }
+
+export async function setProfileActiveCasa(profileId: string, isActive: boolean): Promise<void> {
+  const userId = await actorId();
+  const updated = await withCasaUser(userId, (client) =>
+    client.query("update public.profiles set is_active = $2 where id = $1", [profileId, isActive]),
+  );
+  if ((updated.rowCount ?? 0) === 0) throw new Error("A política de acesso do banco recusou esta operação.");
+}
+
+export async function upsertPatientClinicalCasa(input: {
+  patientId: string;
+  organizationId: string;
+  practiceId: string;
+  allergies: string | null;
+  continuousMedications: string | null;
+  comorbidities: string | null;
+  updatedBy: string;
+}): Promise<void> {
+  const userId = await actorId();
+  await withCasaUser(userId, async (client) => {
+    const updated = await client.query(
+      `update public.patient_clinical_data
+          set allergies = $3,
+              continuous_medications = $4,
+              comorbidities = $5,
+              updated_by = $6,
+              updated_at = now()
+        where patient_id = $1 and practice_id = $2`,
+      [
+        input.patientId,
+        input.practiceId,
+        input.allergies,
+        input.continuousMedications,
+        input.comorbidities,
+        input.updatedBy,
+      ],
+    );
+    if ((updated.rowCount ?? 0) > 0) return;
+    await client.query(
+      `insert into public.patient_clinical_data (
+         patient_id, organization_id, practice_id, allergies, continuous_medications, comorbidities, updated_by
+       ) values ($1,$2,$3,$4,$5,$6,$7)`,
+      [
+        input.patientId,
+        input.organizationId,
+        input.practiceId,
+        input.allergies,
+        input.continuousMedications,
+        input.comorbidities,
+        input.updatedBy,
+      ],
+    );
+  });
+}
+
+export async function upsertRoomCasa(input: {
+  organizationId: string;
+  id?: string;
+  code: string;
+  name: string;
+  roomKind: string;
+  isHouse: boolean;
+  status: string;
+  sortOrder: number;
+  occupantProfessionalId: string | null;
+}): Promise<string> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    if (input.id) {
+      const updated = await client.query(
+        `update public.rooms
+            set code = $3, name = $4, room_kind = $5, is_house = $6, status = $7,
+                sort_order = $8, occupant_professional_id = $9
+          where id = $1 and organization_id = $2`,
+        [
+          input.id,
+          input.organizationId,
+          input.code,
+          input.name,
+          input.roomKind,
+          input.isHouse,
+          input.status,
+          input.sortOrder,
+          input.occupantProfessionalId,
+        ],
+      );
+      if ((updated.rowCount ?? 0) === 0) throw new Error("A política de acesso do banco recusou esta operação.");
+      return input.id;
+    }
+    const inserted = await client.query<{ id: string }>(
+      `insert into public.rooms (
+         organization_id, code, name, room_kind, is_house, status, sort_order, occupant_professional_id
+       ) values ($1,$2,$3,$4,$5,$6,$7,$8)
+       returning id`,
+      [
+        input.organizationId,
+        input.code,
+        input.name,
+        input.roomKind,
+        input.isHouse,
+        input.status,
+        input.sortOrder,
+        input.occupantProfessionalId,
+      ],
+    );
+    const id = inserted.rows[0]?.id;
+    if (!id) throw new Error("A política de acesso do banco recusou esta operação.");
+    return id;
+  });
+}

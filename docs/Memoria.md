@@ -93,6 +93,7 @@ A tentativa de SSH para `2.25.151.136` não abriu sessão. Não repetir esse ace
 
 ## Histórico
 
+- 2026-10-31 — C087.1 ligou ao servidor o que já tinha função ou policy. A linha do tempo, o vínculo de gestação na tela, a edição de vínculo de prática e as organizações ficaram no cliente. O CRUD no BancoFlorescerPP não rodou. A etapa segue bloqueada.
 - 2026-10-31 — a prova C084 passou no BancoFlorescerPP com `ROLLBACK` e organizações em 0. A C087 não liga a aplicação publicada. Contratos, salas, especialidades, políticas e plataforma seguem no cliente.
 - 2026-10-31 — a autenticação própria foi conferida só no processo local; sem a saída do console a C086 permanece bloqueada e o SSH não se repete.
 - 2026-10-31 — a saída do console da C084 de novo não chegou; o status permanece bloqueado e o SSH desta máquina não se repete.

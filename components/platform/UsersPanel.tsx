@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import {
   grantSystemAdmin,
   listPlatformUsers,
@@ -37,7 +38,7 @@ export function UsersPanel() {
 
   async function reload() {
     const supabase = createClient();
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -79,7 +80,7 @@ export function UsersPanel() {
       return;
     }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -97,7 +98,7 @@ export function UsersPanel() {
 
   async function grant(userId: string) {
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -122,7 +123,7 @@ export function UsersPanel() {
       return;
     }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {

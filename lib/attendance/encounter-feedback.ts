@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
 
 export type EncounterPatientFeedback = {
   id: string;
@@ -58,9 +60,19 @@ function toFeedback(raw: Record<string, unknown>): EncounterPatientFeedback | nu
 }
 
 export async function getEncounterPatientFeedback(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<{ feedback: EncounterPatientFeedback | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { feedback: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("encounter_patient_feedback_get", [encounterId]);
+      if (!data || typeof data !== "object") return { feedback: null, error: null };
+      return { feedback: toFeedback(data as Record<string, unknown>), error: null };
+    } catch (error) {
+      return { feedback: null, error: mapError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_patient_feedback_get", {
     p_encounter_id: encounterId,
   });
@@ -79,7 +91,7 @@ export async function getEncounterPatientFeedback(
 }
 
 export async function upsertEncounterPatientFeedback(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     satisfactionScore?: number | null;
@@ -87,6 +99,21 @@ export async function upsertEncounterPatientFeedback(
     source?: "portal" | "clinical" | "staff";
   },
 ): Promise<{ feedback: EncounterPatientFeedback | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { feedback: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("encounter_patient_feedback_upsert", [
+        input.encounterId,
+        input.satisfactionScore ?? null,
+        input.experienceComment ?? null,
+        input.source ?? "portal",
+      ]);
+      if (!data || typeof data !== "object") return { feedback: null, error: "Não foi possível registrar o feedback." };
+      return { feedback: toFeedback(data as Record<string, unknown>), error: null };
+    } catch (error) {
+      return { feedback: null, error: mapError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_patient_feedback_upsert", {
     p_encounter_id: input.encounterId,
     p_satisfaction_score: input.satisfactionScore ?? null,
@@ -98,11 +125,33 @@ export async function upsertEncounterPatientFeedback(
 }
 
 export async function listPortalFeedbackTargets(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
 ): Promise<{ targets: PortalFeedbackTarget[]; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { targets: [], error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("patient_portal_feedback_targets", []);
+      return { targets: mapTargets(data), error: null };
+    } catch (error) {
+      return { targets: [], error: mapError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("patient_portal_feedback_targets");
   if (error) return { targets: [], error: mapError(error) };
-  const list = Array.isArray(data) ? data : [];
+  return { targets: mapTargets(data), error: null };
+}
+
+function mapTargets(data: unknown): PortalFeedbackTarget[] {
+  let list: unknown[] = [];
+  if (Array.isArray(data)) list = data;
+  else if (typeof data === "string") {
+    try {
+      const parsed = JSON.parse(data) as unknown;
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {
+      list = [];
+    }
+  }
   const targets = list.flatMap((item) => {
     const row = item as Record<string, unknown>;
     const encounterId = asString(row.encounter_id);
@@ -119,11 +168,11 @@ export async function listPortalFeedbackTargets(
       },
     ];
   });
-  return { targets, error: null };
+  return targets;
 }
 
 export async function markEncounterAuditEvent(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
   event:
     | "encounter_review_started"
@@ -132,6 +181,15 @@ export async function markEncounterAuditEvent(
     | "clinical_document_finalized"
     | "patient_feedback_viewed",
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("encounter_audit_event", [encounterId, event]);
+      return { error: null };
+    } catch (error) {
+      return { error: mapError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { error } = await supabase.rpc("encounter_audit_event", {
     p_encounter_id: encounterId,
     p_event: event,

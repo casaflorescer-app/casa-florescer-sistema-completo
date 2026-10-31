@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { canManageProfessionalPolicy } from "@/lib/auth/access";
 import {
@@ -70,7 +71,7 @@ export function CarePolicyDetail({
 
   useEffect(() => {
     const client = createClient();
-    if (!client) {
+    if (!client && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;

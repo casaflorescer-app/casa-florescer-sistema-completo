@@ -409,9 +409,17 @@ function toPersistPayload(input: PregnancyFormInput, context: PregnancyWriteCont
 }
 
 export async function listProfessionalLabels(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId?: string,
 ): Promise<ProfessionalLabel[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listProfessionalLabelsCasa } = await import("@/lib/casa/reads");
+    return (await listProfessionalLabelsCasa(practiceId)).flatMap((item) => {
+      const row = toProfessionalLabel(item);
+      return row ? [row] : [];
+    });
+  }
   let query = supabase
     .from("professional_labels")
     .select("id, practice_id, organization_id, council_type, council_number, full_name")

@@ -43,7 +43,7 @@ export function EncounterRecordingPanel({
   locked,
   canEdit,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounterId: string;
   locked: boolean;
   canEdit: boolean;

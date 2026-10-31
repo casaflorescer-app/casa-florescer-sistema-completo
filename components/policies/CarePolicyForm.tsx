@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { listProfessionalLabels, type ProfessionalLabel } from "@/lib/pregnancies/directory";
 import {
   emptyCarePolicyForm,
@@ -42,7 +43,7 @@ export function CarePolicyForm({
 
   useEffect(() => {
     const client = createClient();
-    if (!client) {
+    if (!client && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -87,7 +88,7 @@ export function CarePolicyForm({
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const client = createClient();
-    if (!client) return;
+    if (!client && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {

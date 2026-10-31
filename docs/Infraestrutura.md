@@ -314,8 +314,22 @@ A ordem continua bloqueada até autorização expressa:
 
 O procedimento de arquivos não foi executado. O bucket de origem permanece.
 
+## C087.1 — homologação escrita, sem executar
+
+O ambiente de homologação ainda não existe. Quando for autorizado, ele fica separado da aplicação publicada:
+
+1. Processo próprio, sem alterar o Florescer Web.
+2. Conexão com `casa_login`, sem superusuário e sem `BYPASSRLS`.
+3. `CASA_DATABASE_URL`, `CASA_SESSION_SECRET` e `CASA_FILES_ROOT` só nesse processo. O volume fica fora de `public/`.
+4. Postgres sem porta pública.
+5. Dados sintéticos, com reversão ao fim. Nenhum dado clínico real.
+6. `NEXT_PUBLIC_CASA_AUTH=1` só no build dessa homologação, nunca no site publicado nesta etapa.
+
+Nada disso foi criado nem usado.
+
 ## Histórico
 
+- 2026-10-31 — C087.1: homologação descrita e não criada. Sem variável da casa no Florescer Web.
 - 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP, com `ROLLBACK` e organizações em 0. O corte e a cópia de arquivos ficaram escritos e não foram executados.
 - 2026-10-31 — C086: conferência local da autenticação, sem valores de variável. A saída do console da prova C084 não chegou. Organizações residuais sem prova. Deploy não feito.
 - 2026-10-31 — C086: a saída do console da prova C084 de novo não chegou. Variáveis da casa ausentes, porta 5432 fechada, deploy não feito.

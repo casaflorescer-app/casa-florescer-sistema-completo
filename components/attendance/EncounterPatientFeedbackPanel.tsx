@@ -16,7 +16,7 @@ export function EncounterPatientFeedbackPanel({
   locked,
   canEditClinical,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounterId: string;
   locked: boolean;
   canEditClinical: boolean;

@@ -1,6 +1,8 @@
 /** Persistência C040.3 — sessões/segmentos/transcrições do encounter. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
 import {
   ENCOUNTER_RECORDING_BUCKET,
   type RecordingBundle,
@@ -185,10 +187,29 @@ function mapRpcError(error: { message?: string } | null): string {
   return raw;
 }
 
+function casaRecord(data: unknown): Record<string, unknown> | null {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  return data as Record<string, unknown>;
+}
+
 export async function listEncounterRecordings(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<{ bundle: RecordingBundle; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) {
+      return { bundle: { sessions: [], segments: [], transcriptions: [] }, error: "Autenticação não configurada neste ambiente." };
+    }
+    try {
+      const data = await callCasaRpc("encounter_recording_list", [encounterId]);
+      return mapRecordingList(casaRecord(data) ?? {});
+    } catch (error) {
+      return {
+        bundle: { sessions: [], segments: [], transcriptions: [] },
+        error: mapRpcError({ message: error instanceof Error ? error.message : "" }),
+      };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_list", {
     p_encounter_id: encounterId,
   });
@@ -198,7 +219,10 @@ export async function listEncounterRecordings(
       error: mapRpcError(error),
     };
   }
-  const payload = (data ?? {}) as Record<string, unknown>;
+  return mapRecordingList((data ?? {}) as Record<string, unknown>);
+}
+
+function mapRecordingList(payload: Record<string, unknown>): { bundle: RecordingBundle; error: string | null } {
   const sessions = Array.isArray(payload.sessions)
     ? payload.sessions
         .map((item) => mapSession(item as Record<string, unknown>))
@@ -218,9 +242,18 @@ export async function listEncounterRecordings(
 }
 
 export async function startRecordingSession(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<{ session: RecordingSessionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { session: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = casaRecord(await callCasaRpc("encounter_recording_start", [encounterId]));
+      return { session: data ? mapSession(data) : null, error: data ? null : "Não foi possível iniciar a gravação." };
+    } catch (error) {
+      return { session: null, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_start", {
     p_encounter_id: encounterId,
   });
@@ -229,10 +262,19 @@ export async function startRecordingSession(
 }
 
 export async function setRecordingSessionStatus(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   sessionId: string,
   status: "paused" | "recording" | "completed",
 ): Promise<{ session: RecordingSessionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { session: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = casaRecord(await callCasaRpc("encounter_recording_set_status", [sessionId, status]));
+      return { session: data ? mapSession(data) : null, error: data ? null : "Não foi possível alterar a gravação." };
+    } catch (error) {
+      return { session: null, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_set_status", {
     p_session_id: sessionId,
     p_status: status,
@@ -242,7 +284,7 @@ export async function setRecordingSessionStatus(
 }
 
 export async function registerRecordingSegment(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     sessionId: string;
     durationSeconds: number;
@@ -251,6 +293,23 @@ export async function registerRecordingSegment(
     mimeType?: string;
   },
 ): Promise<{ segment: RecordingSegmentRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { segment: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = casaRecord(
+        await callCasaRpc("encounter_recording_register_segment", [
+          input.sessionId,
+          input.durationSeconds,
+          input.cursorStartMs,
+          input.cursorEndMs,
+          input.mimeType ?? null,
+        ]),
+      );
+      return { segment: data ? mapSegment(data) : null, error: data ? null : "Não foi possível registrar o trecho." };
+    } catch (error) {
+      return { segment: null, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_register_segment", {
     p_session_id: input.sessionId,
     p_duration_seconds: input.durationSeconds,
@@ -263,13 +322,28 @@ export async function registerRecordingSegment(
 }
 
 export async function uploadRecordingSegmentAudio(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     segment: RecordingSegmentRow;
     blob: Blob;
     mimeType: string;
   },
 ): Promise<{ segment: RecordingSegmentRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { segment: null, error: "Autenticação não configurada neste ambiente." };
+    const path = input.segment.audioStoragePath;
+    if (!path) return { segment: null, error: "Caminho de áudio ausente." };
+    const body = new FormData();
+    body.set("kind", "recording");
+    body.set("segmentId", input.segment.id);
+    body.set("file", input.blob, "audio");
+    const response = await fetch("/api/casa/files", { method: "POST", body });
+    const payload = (await response.json().catch(() => null)) as { segment?: Record<string, unknown>; error?: string } | null;
+    if (!response.ok || !payload?.segment) {
+      return { segment: null, error: payload?.error || "Falha no upload do áudio." };
+    }
+    return { segment: mapSegment(payload.segment), error: null };
+  }
   const path = input.segment.audioStoragePath;
   if (!path) return { segment: null, error: "Caminho de áudio ausente." };
 
@@ -293,9 +367,18 @@ export async function uploadRecordingSegmentAudio(
 }
 
 export async function requestSegmentTranscription(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   segmentId: string,
 ): Promise<{ transcription: RecordingTranscriptionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { transcription: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = casaRecord(await callCasaRpc("encounter_recording_request_transcription", [segmentId]));
+      return { transcription: data ? mapTranscription(data) : null, error: data ? null : "Não foi possível pedir a transcrição." };
+    } catch (error) {
+      return { transcription: null, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_request_transcription", {
     p_segment_id: segmentId,
   });
@@ -304,10 +387,19 @@ export async function requestSegmentTranscription(
 }
 
 export async function reviewTranscription(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   transcriptionId: string,
   reviewedText: string,
 ): Promise<{ transcription: RecordingTranscriptionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { transcription: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = casaRecord(await callCasaRpc("encounter_recording_review_transcription", [transcriptionId, reviewedText]));
+      return { transcription: data ? mapTranscription(data) : null, error: data ? null : "Não foi possível revisar a transcrição." };
+    } catch (error) {
+      return { transcription: null, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_review_transcription", {
     p_transcription_id: transcriptionId,
     p_reviewed_text: reviewedText,
@@ -317,7 +409,7 @@ export async function reviewTranscription(
 }
 
 export async function prepareRecordingShare(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     sessionId?: string | null;
@@ -326,6 +418,24 @@ export async function prepareRecordingShare(
     includeTranscription: boolean;
   },
 ): Promise<{ shareId: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { shareId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = casaRecord(
+        await callCasaRpc("encounter_recording_prepare_share", [
+          input.encounterId,
+          input.sessionId ?? null,
+          input.transcriptionId ?? null,
+          input.includeAudio,
+          input.includeTranscription,
+        ]),
+      );
+      const id = data ? asString(data.id) : null;
+      return { shareId: id, error: id ? null : "Falha ao preparar compartilhamento." };
+    } catch (error) {
+      return { shareId: null, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_prepare_share", {
     p_encounter_id: input.encounterId,
     p_session_id: input.sessionId ?? null,
@@ -339,10 +449,19 @@ export async function prepareRecordingShare(
 }
 
 export async function confirmRecordingShare(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   shareId: string,
   confirm: boolean,
 ): Promise<{ ok: boolean; error: string | null; status?: string }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { ok: false, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = casaRecord(await callCasaRpc("encounter_recording_confirm_share", [shareId, confirm]));
+      return { ok: Boolean(data), error: data ? null : "Não foi possível confirmar o compartilhamento.", status: data ? asString(data.status) ?? undefined : undefined };
+    } catch (error) {
+      return { ok: false, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_recording_confirm_share", {
     p_share_id: shareId,
     p_confirm: confirm,
@@ -356,10 +475,16 @@ export async function confirmRecordingShare(
 }
 
 export async function createSignedRecordingAudioUrl(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   path: string,
   expiresIn = 120,
 ): Promise<{ url: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { url: null, error: "Autenticação não configurada neste ambiente." };
+    const segmentId = path.split("/")[4] ?? "";
+    if (!segmentId) return { url: null, error: "Não foi possível gerar o link do áudio." };
+    return { url: `/api/casa/files?kind=recording&id=${segmentId}`, error: null };
+  }
   const { data, error } = await supabase.storage
     .from(ENCOUNTER_RECORDING_BUCKET)
     .createSignedUrl(path, expiresIn);
@@ -371,9 +496,18 @@ export async function createSignedRecordingAudioUrl(
 
 /** Auditoria de reprodução efetiva — sem áudio/texto clínico no metadata. */
 export async function markRecordingViewed(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: { sessionId: string; segmentId?: string | null },
 ): Promise<{ ok: boolean; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { ok: false, error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("encounter_recording_mark_viewed", [input.sessionId, input.segmentId ?? null]);
+      return { ok: true, error: null };
+    } catch (error) {
+      return { ok: false, error: mapRpcError({ message: error instanceof Error ? error.message : "" }) };
+    }
+  }
   const { error } = await supabase.rpc("encounter_recording_mark_viewed", {
     p_session_id: input.sessionId,
     p_segment_id: input.segmentId ?? null,

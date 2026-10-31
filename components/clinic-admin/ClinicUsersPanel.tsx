@@ -117,7 +117,7 @@ export function ClinicUsersPanel() {
       return;
     }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     try {
       await setProfileActive(supabase, user.id, !user.isActive);
       setUsers((current) =>
@@ -132,7 +132,7 @@ export function ClinicUsersPanel() {
 
   async function toggleCarePolicyView(user: PlatformUser, membership: PlatformMembership) {
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     try {
       await setSecretaryCarePolicyView(supabase, membership.id, !membership.canViewCarePolicies);
       setUsers((current) =>

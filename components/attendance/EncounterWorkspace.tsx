@@ -262,13 +262,74 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       }
       const history = await listClinicalNotes(null, encounterId);
       const latest = history.find((note) => note.templateCode === DEFAULT_NOTE_TEMPLATE) ?? null;
+      const complaintNote = history.find((note) => note.templateCode === TEMPLATE_CHIEF_COMPLAINT) ?? null;
+      const anamnesisNote = history.find((note) => note.templateCode === TEMPLATE_ANAMNESIS_ENCOUNTER) ?? null;
+      const examNote = history.find((note) => note.templateCode === TEMPLATE_PHYSICAL_EXAM) ?? null;
+      const appointment = row.appointmentId ? await getAppointment(null, row.appointmentId) : null;
+      setAppointmentRow(appointment);
+      setAttendanceEnded(Boolean(appointment?.actualEndAt));
       setEncounter(row);
       setNotes(history.filter((note) => note.templateCode === DEFAULT_NOTE_TEMPLATE));
       const nextSoap = soapFromBody(latest?.body);
       setSoap(nextSoap);
       setSavedSoap(nextSoap);
+      setChiefComplaint(parseChiefComplaint(complaintNote?.body));
+      setAnamnesis(parseAnamnesis(anamnesisNote?.body));
+      setPhysicalExam(parsePhysicalExam(examNote?.body));
       setError(null);
       setLoading(false);
+      const [timelineRows, prior, examOrders, examRequests, prescriptions, orientations, aiList, recordingBundle] =
+        await Promise.all([
+          listEncountersForPatient(null, row.practiceId, row.patientId).catch(() => []),
+          loadPriorAnamnesis(null, {
+            practiceId: row.practiceId,
+            patientId: row.patientId,
+            currentEncounterId: row.id,
+          }).catch(() => null),
+          listExamOrdersForPatient(null, row.patientId).catch(() => []),
+          listExamRequestsForEncounter(null, row.id).catch(() => []),
+          listPrescriptionsForPatient(null, row.patientId).catch(() => []),
+          listOrientationsForEncounter(null, row.id).catch(() => []),
+          listAiAssistance(null, row.id).catch(() => ({
+            results: [] as Awaited<ReturnType<typeof listAiAssistance>>["results"],
+            requests: [] as Awaited<ReturnType<typeof listAiAssistance>>["requests"],
+            error: null as string | null,
+          })),
+          listEncounterRecordings(null, row.id).catch(() => ({
+            bundle: { sessions: [], segments: [], transcriptions: [] },
+            error: null as string | null,
+          })),
+        ]);
+      setTimeline(timelineRows);
+      setPriorAnamnesis(prior);
+      setTimelineLoading(false);
+      const pendingAi = (aiList.results ?? []).some(
+        (item: { reviewStatus: string }) => item.reviewStatus === "pending",
+      );
+      const sessions = recordingBundle.bundle.sessions;
+      const transcriptions = recordingBundle.bundle.transcriptions;
+      const latestTx = [...transcriptions].sort((a, b) =>
+        (b.createdAt || "").localeCompare(a.createdAt || ""),
+      )[0];
+      const hasUsableTx = transcriptions.some(
+        (item) =>
+          item.status === "available" ||
+          item.status === "reviewed" ||
+          Boolean(item.originalText?.trim() || item.reviewedText?.trim()),
+      );
+      setReviewCounts({
+        examOrders: examOrders.filter((item: { encounterId: string | null }) => item.encounterId === row.id)
+          .length,
+        examRequests: examRequests.length,
+        prescriptions: prescriptions.filter(
+          (item: { encounterId: string | null }) => item.encounterId === row.id,
+        ).length,
+        orientations: orientations.length,
+        aiPending: pendingAi,
+        hasRecording: sessions.length > 0,
+        hasTranscription: hasUsableTx,
+        transcriptionStatus: latestTx?.status ?? null,
+      });
       return;
     }
     if (!quiet) setLoading(true);
@@ -979,7 +1040,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         </section>
       ) : null}
 
-      {supabase ? (
+      {(supabase || isCasaBrowserAuth()) ? (
         <>
           <ChiefComplaintPanel
             supabase={supabase}
@@ -993,6 +1054,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             encounterId={encounter.id}
             patientId={encounter.patientId}
             organizationId={encounter.organizationId}
+            practiceId={encounter.practiceId}
             actorUserId={authorization?.user.id ?? null}
             locked={locked}
             canEdit={viewerIsEncounterProfessional(authorization, encounter)}
@@ -1016,7 +1078,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         </>
       ) : null}
 
-      {supabase ? (
+      {(supabase || isCasaBrowserAuth()) ? (
         <EncounterRecordingPanel
           supabase={supabase}
           encounterId={encounter.id}
@@ -1025,7 +1087,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         />
       ) : null}
 
-      {supabase && authorization ? (
+      {(supabase || isCasaBrowserAuth()) && authorization ? (
         <AiAssistancePanel
           supabase={supabase}
           organizationId={encounter.organizationId}
@@ -1172,7 +1234,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         </>
       ) : null}
 
-      {supabase && authorization ? (
+      {(supabase || isCasaBrowserAuth()) && authorization ? (
         <EncounterPatientFeedbackPanel
           supabase={supabase}
           encounterId={encounter.id}
@@ -1189,7 +1251,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         />
       ) : null}
 
-      {supabase ? (
+      {(supabase || isCasaBrowserAuth()) ? (
         <ClinicalReturnPanel
           supabase={supabase}
           encounter={encounter}

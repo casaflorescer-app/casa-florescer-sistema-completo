@@ -99,8 +99,8 @@ Cria um usuário da casa. Só o administrador principal passa. A rota não devol
 
 Grava e lê foto, exame e PDF no volume privado. Sem `CASA_DATABASE_URL` ou sem `CASA_FILES_ROOT` responde 503. A resposta não traz o diretório raiz.
 
-- `GET` recebe `kind` (`photo`, `exam`, `document` ou `orientation`) e `id`. O caminho lido é o gravado na linha. Exame, documento e áudio de orientação passam por `can_read_exam_file`. Foto passa por `can_access_patient_photo`. Sem permissão ou sem arquivo: 404.
-- `POST` recebe `multipart` com `kind` e `file`. Foto aceita JPEG, PNG ou WebP até 2 MB. Documento e exame aceitam PDF, JPEG, PNG ou WebP até 15 MB. Áudio de orientação aceita WebM, Ogg, MPEG, MP4 ou WAV até 15 MB. Tipo ou tamanho fora disso responde 400 e não grava. Se o banco recusar depois da escrita, o arquivo novo é apagado. No exame, o formulário também leva `organizationId`, `practiceId`, `patientId`, `title`, `source`, e pode levar `observation`, `documentDate` e `encounterId`. Esses campos seguem para `exam_order_submit`. Na orientação, o formulário leva `organizationId`, `patientId`, `orientationId` e `versionId`. O caminho gravado precisa ser o da versão.
+- `GET` recebe `kind` (`photo`, `exam`, `document`, `orientation` ou `recording`) e `id`. O caminho lido é o gravado na linha. Exame, documento e áudio de orientação passam por `can_read_exam_file`. Foto passa por `can_access_patient_photo`. A gravação clínica exige a dona do atendimento, pela função já existente, e o caminho gravado no segmento. Sem permissão ou sem arquivo: 404.
+- `POST` recebe `multipart` com `kind` e `file`. Foto aceita JPEG, PNG ou WebP até 2 MB. Documento e exame aceitam PDF, JPEG, PNG ou WebP até 15 MB. Áudio de orientação e gravação clínica aceitam WebM, Ogg, MPEG, MP4 ou WAV até 15 MB. A gravação envia `segmentId` e só grava o caminho que a função já registrou. Tipo ou tamanho fora disso responde 400 e não grava. Se o banco recusar depois da escrita, o arquivo novo é apagado. No exame, o formulário também leva `organizationId`, `practiceId`, `patientId`, `title`, `source`, e pode levar `observation`, `documentDate` e `encounterId`. Esses campos seguem para `exam_order_submit`. Na orientação, o formulário leva `organizationId`, `patientId`, `orientationId` e `versionId`. O caminho gravado precisa ser o da versão.
 - 200, 400, 403, 404 ou 503.
 
 ### `POST /api/encounters/transcribe` e `POST /api/orientations/transcribe`
@@ -109,6 +109,7 @@ Com `CASA_DATABASE_URL` e sem cliente Supabase, o áudio sai de `CASA_FILES_ROOT
 
 ## Histórico
 
+- 2026-10-31 — C087.1: `/api/casa/files` grava e lê a gravação clínica no volume privado. `/api/encounters/clinical-ai` usa as funções já existentes quando a sessão da casa está ligada.
 - 2026-10-31 — C087: `/api/casa/files` grava e lê o áudio da orientação no volume privado, com o caminho da versão.
 - 2026-10-31 — C086: o `POST` de exame em `/api/casa/files` encaminha origem, observação, data e atendimento para a função já existente.
 - 2026-10-31 — C086: as duas rotas de transcrição leem o volume privado quando a URL da casa está no processo. O caminho precisa ser o gravado.

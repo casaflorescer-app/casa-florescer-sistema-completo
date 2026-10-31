@@ -29,6 +29,7 @@ export function AnamnesisPanel({
   encounterId,
   patientId,
   organizationId,
+  practiceId,
   actorUserId,
   locked,
   canEdit,
@@ -36,10 +37,11 @@ export function AnamnesisPanel({
   prior,
   pregnancyHint,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounterId: string;
   patientId: string;
   organizationId: string;
+  practiceId: string;
   actorUserId: string | null;
   locked: boolean;
   canEdit: boolean;
@@ -65,8 +67,8 @@ export function AnamnesisPanel({
   }, [initial]);
 
   useEffect(() => {
-    void getPatientClinicalCadastro(supabase, patientId).then(setCadastro);
-  }, [patientId, supabase]);
+    void getPatientClinicalCadastro(supabase, patientId, practiceId).then(setCadastro);
+  }, [patientId, practiceId, supabase]);
 
   const dirty = !sameAnamnesis(form, saved) && canEdit && !locked;
   const isFirstVisit = !prior;
@@ -145,6 +147,7 @@ export function AnamnesisPanel({
     const result = await upsertPatientClinicalCadastro(supabase, {
       patientId,
       organizationId,
+      practiceId,
       allergies: form.reviewedAllergies.trim() || null,
       continuousMedications: form.reviewedMedications.trim() || null,
       comorbidities: form.reviewedComorbidities.trim() || null,
@@ -157,7 +160,7 @@ export function AnamnesisPanel({
     setCadastroNotice(
       "Cadastro clínico histórico atualizado (alergias/medicações/comorbidades). A anamnese deste atendimento permanece separada.",
     );
-    const refreshed = await getPatientClinicalCadastro(supabase, patientId);
+    const refreshed = await getPatientClinicalCadastro(supabase, patientId, practiceId);
     setCadastro(refreshed);
     await persist(form);
   }

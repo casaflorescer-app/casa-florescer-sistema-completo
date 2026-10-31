@@ -1,4 +1,8 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { listClinicUsersCasa, listSystemAdminsCasa } from "@/lib/casa/reads";
+import { setProfileActiveCasa } from "@/lib/casa/writes";
 import type { AppRole, PracticeKind } from "@/lib/types/database";
 import { mapDbError } from "@/lib/platform/format";
 import {
@@ -93,7 +97,48 @@ function toMembership(row: Record<string, unknown>): PlatformMembership | null {
   };
 }
 
-export async function listPlatformUsers(supabase: SupabaseClient): Promise<PlatformUser[]> {
+export async function listPlatformUsers(supabase: SupabaseClient | null): Promise<PlatformUser[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const data = await listClinicUsersCasa();
+    const orgNames = new Map(
+      data.organizations.map((row) => [String(row.id), String(row.trade_name || row.legal_name || row.id)]),
+    );
+    const activeAdmins = new Set(
+      data.admins.filter((row) => row.revoked_at == null).map((row) => String(row.user_id)),
+    );
+    const membershipsByUser = new Map<string, PlatformMembership[]>();
+    for (const row of data.roles) {
+      const userId = asString(row.user_id);
+      const membership = toMembership(row);
+      if (!userId || !membership) continue;
+      const list = membershipsByUser.get(userId) ?? [];
+      list.push(membership);
+      membershipsByUser.set(userId, list);
+    }
+    return data.profiles.flatMap((row) => {
+      const id = asString(row.id);
+      const fullName = asString(row.full_name);
+      const email = asString(row.email);
+      const organizationId = asString(row.organization_id);
+      const createdAt = asString(row.created_at);
+      if (!id || !fullName || !email || !organizationId || !createdAt) return [];
+      return [
+        {
+          id,
+          fullName,
+          email,
+          organizationId,
+          organizationName: orgNames.get(organizationId) ?? null,
+          isActive: asBoolean(row.is_active, false),
+          createdAt,
+          lastAccess: null,
+          isSystemAdmin: activeAdmins.has(id),
+          memberships: membershipsByUser.get(id) ?? [],
+        },
+      ];
+    });
+  }
   const rolesPrimary = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS);
   const rolesFallback = rolesPrimary.error
     ? await supabase.from("user_practice_roles").select("id, user_id, role, clinical_access, practice_id")
@@ -169,15 +214,53 @@ export async function countProfiles(supabase: SupabaseClient) {
 }
 
 export async function setProfileActive(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   userId: string,
   isActive: boolean,
 ) {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    await setProfileActiveCasa(userId, isActive);
+    return;
+  }
   const { error } = await supabase.from("profiles").update({ is_active: isActive }).eq("id", userId);
   if (error) throw new Error(mapDbError(error));
 }
 
-export async function listSystemAdmins(supabase: SupabaseClient): Promise<SystemAdminRecord[]> {
+export async function listSystemAdmins(supabase: SupabaseClient | null): Promise<SystemAdminRecord[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const data = await listSystemAdminsCasa();
+    const names = new Map<string, { name: string; email: string }>();
+    for (const row of data.profiles) {
+      const id = asString(row.id);
+      const name = asString(row.full_name);
+      const email = asString(row.email);
+      if (!id || !name || !email) continue;
+      names.set(id, { name, email });
+    }
+    return data.admins.flatMap((row) => {
+      const userId = asString(row.user_id);
+      const grantedAt = asString(row.granted_at);
+      const reason = asString(row.reason);
+      if (!userId || !grantedAt || !reason) return [];
+      const user = names.get(userId);
+      const grantedById = asString(row.granted_by);
+      return [
+        {
+          userId,
+          userName: user?.name ?? userId,
+          userEmail: user?.email ?? "—",
+          grantedAt,
+          grantedById,
+          grantedByName: grantedById ? names.get(grantedById)?.name ?? grantedById : null,
+          reason,
+          revokedAt: asString(row.revoked_at),
+          status: row.revoked_at ? "revogado" : "ativo",
+        },
+      ];
+    });
+  }
   const [adminsResult, profilesResult] = await Promise.all([
     supabase
       .from("system_admins")
@@ -230,12 +313,17 @@ export async function countActiveSystemAdmins(supabase: SupabaseClient) {
 }
 
 export async function grantSystemAdmin(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   userId: string,
   reason: string,
 ) {
   const trimmed = reason.trim();
   if (trimmed.length < 3) throw new Error("Informe um motivo com pelo menos 3 caracteres.");
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    await callCasaRpc("grant_system_admin", [userId, trimmed]);
+    return;
+  }
   const { error } = await supabase.rpc("grant_system_admin", {
     p_user_id: userId,
     p_reason: trimmed,
@@ -244,12 +332,17 @@ export async function grantSystemAdmin(
 }
 
 export async function revokeSystemAdmin(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   userId: string,
   reason: string,
 ) {
   const trimmed = reason.trim();
   if (trimmed.length < 3) throw new Error("Informe um motivo com pelo menos 3 caracteres.");
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    await callCasaRpc("revoke_system_admin", [userId, trimmed]);
+    return;
+  }
   const { error } = await supabase.rpc("revoke_system_admin", {
     p_user_id: userId,
     p_reason: trimmed,
@@ -375,10 +468,15 @@ export async function deleteMembership(supabase: SupabaseClient, membershipId: s
 }
 
 export async function setSecretaryCarePolicyView(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   membershipId: string,
   enabled: boolean,
 ) {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    await callCasaRpc("set_secretary_care_policy_view", [membershipId, enabled]);
+    return;
+  }
   const { error } = await supabase.rpc("set_secretary_care_policy_view", {
     p_membership_id: membershipId,
     p_enabled: enabled,

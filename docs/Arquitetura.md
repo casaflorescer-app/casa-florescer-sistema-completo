@@ -47,13 +47,14 @@ A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação termi
 
 Dependências do Supabase:
 
-- Já migrado, com a variável exatamente `1`: login da casa, agenda, prontuário, gestação, exames, receitas, repasse, relatórios, usuários, estoque, locação, relacionamento, portal, gravação, arquivos privados, financeiro, busca de item de estoque, orientações e a lista de documentos do atendimento.
-- Parcial: anamnese, exame físico, gravação na tela, auxílio de IA, retorno clínico e retorno do paciente ainda exigem o cliente publicado, mesmo quando parte da função já existe no servidor.
-- Pendente: contratos, salas, especialidades, políticas de cuidado e as telas de plataforma que só usam o cliente.
+- Já migrado, com a variável exatamente `1`: login da casa, agenda, prontuário, gestação, exames, receitas, repasse, relatórios, usuários, estoque, locação, relacionamento, portal, gravação, arquivos privados, financeiro, busca de item de estoque, orientações, documentos do atendimento, queixa, anamnese, exame físico, retorno clínico, feedback, auxílio de IA, contratos, salas, especialidades, políticas e auditoria.
+- Parcial: a linha do tempo do atendimento e o vínculo de gestação na mesma tela ainda leem pelo cliente publicado. A edição de vínculo de prática e a tela de organizações da plataforma também.
+- Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
 
 ## Histórico
 
+- 2026-10-31 — C087.1: queixa, anamnese, exame físico, retorno, feedback, gravação, auxílio de IA, contratos, salas, especialidades, políticas e auditoria no ramo do servidor. Sem migration e sem corte.
 - 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP. Busca de estoque, orientações e documentos do atendimento entram no ramo do servidor. O corte não foi executado.
 - 2026-10-31 — C086: pedidos de exame, itens de modelo, busca de audiência e painel de resultados no ramo do servidor. A saída do console da C084 não chegou. Sem corte.
 - 2026-10-31 — C086: estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames no ramo do servidor. A prova SQL da C084 não chegou. Sem corte.

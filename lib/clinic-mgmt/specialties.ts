@@ -1,11 +1,14 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { listClinicSpecialtiesCasa, listProfessionalSpecialtyIdsCasa } from "@/lib/casa/reads";
 import type { ClinicSpecialty } from "@/lib/clinic-mgmt/types";
 
 function requireClient() {
   const supabase = createClient();
-  if (!supabase) throw new Error("Autenticação não configurada neste ambiente.");
+  if (!supabase && !isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
   return supabase;
 }
 
@@ -24,6 +27,15 @@ function mapSpecialty(row: Record<string, unknown>, count?: number): ClinicSpeci
 
 export async function listClinicSpecialties(organizationId: string, opts?: { q?: string; activeOnly?: boolean }) {
   const supabase = requireClient();
+  if (!supabase) {
+    const data = await listClinicSpecialtiesCasa(organizationId, Boolean(opts?.activeOnly), opts?.q?.trim() ?? "");
+    const counts = new Map<string, number>();
+    for (const link of data.links) {
+      const sid = String(link.specialty_id);
+      counts.set(sid, (counts.get(sid) ?? 0) + 1);
+    }
+    return data.specialties.map((row) => mapSpecialty(row, counts.get(String(row.id)) ?? 0));
+  }
   let query = supabase
     .from("clinic_specialties")
     .select("id, organization_id, name, slug, description, is_active, created_at")
@@ -60,14 +72,16 @@ export async function upsertClinicSpecialty(input: {
   isActive?: boolean;
 }) {
   const supabase = requireClient();
+  const payload = {
+    organization_id: input.organizationId,
+    id: input.id ?? null,
+    name: input.name,
+    description: input.description ?? null,
+    is_active: input.isActive ?? true,
+  };
+  if (!supabase) return String(await callCasaRpc("clinic_specialty_upsert", [payload]));
   const { data, error } = await supabase.rpc("clinic_specialty_upsert", {
-    p_payload: {
-      organization_id: input.organizationId,
-      id: input.id ?? null,
-      name: input.name,
-      description: input.description ?? null,
-      is_active: input.isActive ?? true,
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(friendlySpecialtyError(error.message));
   return String(data);
@@ -81,20 +95,32 @@ export async function setProfessionalSpecialty(input: {
   op?: "link" | "unlink";
 }) {
   const supabase = requireClient();
+  const payload = {
+    organization_id: input.organizationId,
+    professional_id: input.professionalId,
+    specialty_id: input.specialtyId,
+    is_primary: input.isPrimary ?? false,
+    op: input.op ?? "link",
+  };
+  if (!supabase) {
+    await callCasaRpc("professional_specialty_set", [payload]);
+    return;
+  }
   const { error } = await supabase.rpc("professional_specialty_set", {
-    p_payload: {
-      organization_id: input.organizationId,
-      professional_id: input.professionalId,
-      specialty_id: input.specialtyId,
-      is_primary: input.isPrimary ?? false,
-      op: input.op ?? "link",
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(friendlySpecialtyError(error.message));
 }
 
 export async function listProfessionalSpecialtyIds(professionalId: string) {
   const supabase = requireClient();
+  if (!supabase) {
+    const rows = await listProfessionalSpecialtyIdsCasa(professionalId);
+    return rows.map((row) => ({
+      specialtyId: String(row.specialty_id),
+      isPrimary: row.is_primary === true,
+    }));
+  }
   const { data, error } = await supabase
     .from("professional_specialties")
     .select("specialty_id, is_primary")

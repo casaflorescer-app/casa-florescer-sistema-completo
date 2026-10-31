@@ -33,7 +33,7 @@ export function ClinicalReturnPanel({
   canManage,
   locked,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounter: EncounterRow;
   canManage: boolean;
   locked: boolean;

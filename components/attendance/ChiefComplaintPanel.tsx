@@ -27,7 +27,7 @@ export function ChiefComplaintPanel({
   initial,
   canEdit,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounterId: string;
   locked: boolean;
   initial: ChiefComplaintForm;

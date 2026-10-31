@@ -36,7 +36,7 @@ export type PriorEncounterContext = {
 };
 
 export async function loadPriorEncounterContext(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   sourceEncounterId: string,
 ): Promise<PriorEncounterContext | null> {
   const encounter = await getEncounter(supabase, sourceEncounterId);
@@ -68,7 +68,7 @@ export async function loadPriorEncounterContext(
 }
 
 export async function findOpenReturnForSource(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   sourceEncounterId: string,
   professionalId: string,
 ): Promise<EncounterRow | null> {

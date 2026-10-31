@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");
   const id = url.searchParams.get("id") ?? "";
-  if (!UUID.test(id) || (kind !== "photo" && kind !== "exam" && kind !== "document" && kind !== "orientation")) {
+  if (!UUID.test(id) || (kind !== "photo" && kind !== "exam" && kind !== "document" && kind !== "orientation" && kind !== "recording")) {
     return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
   }
   const located = await withCasaUser(user.userId, async (client) => {
@@ -91,6 +91,20 @@ export async function GET(request: Request) {
         organizationId: file.organization_id,
       };
     }
+    if (kind === "recording") {
+      const row = await client.query<{ audio_storage_path: string | null; audio_mime_type: string | null; encounter_id: string }>(
+        "select audio_storage_path, audio_mime_type, encounter_id from public.encounter_recording_segments where id = $1",
+        [id],
+      );
+      const file = row.rows[0];
+      if (!file?.audio_storage_path || !safeRelativePath(file.audio_storage_path)) return null;
+      try {
+        await client.query("select public.encounter_recording_assert_owner($1)", [file.encounter_id]);
+      } catch {
+        return null;
+      }
+      return { path: file.audio_storage_path, type: file.audio_mime_type || "audio/webm" };
+    }
     const row = await client.query<{
       pdf_storage_path: string | null;
       practice_id: string;
@@ -141,11 +155,11 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const kind = String(form.get("kind") ?? "");
   const file = form.get("file");
-  if (!(file instanceof File) || (kind !== "photo" && kind !== "exam" && kind !== "document" && kind !== "orientation")) {
+  if (!(file instanceof File) || (kind !== "photo" && kind !== "exam" && kind !== "document" && kind !== "orientation" && kind !== "recording")) {
     return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
   }
-  const type = file.type || (kind === "document" ? "application/pdf" : kind === "orientation" ? "audio/webm" : "");
-  const acceptKind = kind === "photo" ? "photo" : kind === "orientation" ? "audio" : "document";
+  const type = file.type || (kind === "document" ? "application/pdf" : kind === "orientation" || kind === "recording" ? "audio/webm" : "");
+  const acceptKind = kind === "photo" ? "photo" : kind === "orientation" || kind === "recording" ? "audio" : "document";
   if (!acceptCasaUpload({ kind: acceptKind, type, size: file.size })) {
     return NextResponse.json({ error: "Arquivo recusado." }, { status: 400 });
   }
@@ -245,6 +259,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não foi possível guardar o áudio." }, { status: 400 });
     }
     return NextResponse.json({ path: relative });
+  }
+  if (kind === "recording") {
+    const segmentId = String(form.get("segmentId") ?? "");
+    if (!UUID.test(segmentId)) return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
+    const meta = await withCasaUser(user.userId, async (client) => {
+      const result = await client.query<{ audio_storage_path: string | null; encounter_id: string }>(
+        "select audio_storage_path, encounter_id from public.encounter_recording_segments where id = $1",
+        [segmentId],
+      );
+      const fileRow = result.rows[0];
+      if (!fileRow?.audio_storage_path || !safeRelativePath(fileRow.audio_storage_path)) return null;
+      try {
+        await client.query("select public.encounter_recording_assert_owner($1)", [fileRow.encounter_id]);
+      } catch {
+        return null;
+      }
+      return fileRow;
+    });
+    if (!meta?.audio_storage_path) return NextResponse.json({ error: "Pedido recusado." }, { status: 404 });
+    try {
+      await writePrivateFile(meta.audio_storage_path, bytes);
+      const saved = await callCasaRpc("encounter_recording_mark_segment_uploaded", [
+        segmentId,
+        file.size,
+        type.split(";")[0] || "audio/webm",
+      ]);
+      return NextResponse.json({ path: meta.audio_storage_path, segment: saved });
+    } catch {
+      await removePrivateFile(meta.audio_storage_path);
+      return NextResponse.json({ error: "Não foi possível guardar a gravação." }, { status: 400 });
+    }
   }
   const organizationId = String(form.get("organizationId") ?? "");
   const practiceId = String(form.get("practiceId") ?? "");

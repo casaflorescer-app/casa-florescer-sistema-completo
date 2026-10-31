@@ -5,6 +5,8 @@ import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { callCasaRpc } from "@/lib/casa/rpc";
 import { updateAppointmentOpenCasa } from "@/lib/casa/writes";
 import {
+  listEncountersForPatientCasa,
+  listReturnsOfEncounterCasa,
   readAppointmentCasa,
   readClinicalNotesCasa,
   readEncounterByAppointmentCasa,
@@ -854,10 +856,16 @@ export async function getEncounterByAppointment(
 }
 
 export async function listEncountersForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   patientId: string,
 ): Promise<EncounterRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listEncountersForPatientCasa(practiceId, patientId))
+      .map((raw) => toEncounterRow(raw))
+      .filter((item): item is EncounterRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("encounters")
     .select(ENCOUNTER_COLUMNS)
@@ -969,9 +977,15 @@ export async function encounterOpenReturn(
 
 /** Lista retornos que apontam para este encounter de origem. */
 export async function listReturnsOfEncounter(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   sourceEncounterId: string,
 ): Promise<EncounterRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listReturnsOfEncounterCasa(sourceEncounterId))
+      .map((raw) => toEncounterRow(raw))
+      .filter((item): item is EncounterRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("encounters")
     .select(ENCOUNTER_COLUMNS)
@@ -1035,10 +1049,17 @@ export async function listClinicalNotes(
 }
 
 export async function getLatestClinicalNote(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
   templateCode: string = DEFAULT_NOTE_TEMPLATE,
 ): Promise<ClinicalNoteRow | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const rows = (await readClinicalNotesCasa(encounterId))
+      .map((raw) => toClinicalNoteRow(raw))
+      .filter((item): item is ClinicalNoteRow => Boolean(item));
+    return rows.find((note) => note.templateCode === templateCode) ?? null;
+  }
   const { data, error } = await supabase
     .from("clinical_notes")
     .select(CLINICAL_NOTE_COLUMNS)

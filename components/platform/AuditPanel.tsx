@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { listAuditEvents, type AuditFilters } from "@/lib/platform/audit";
 import { AUDIT_ACTIONS, type AuditEventRecord } from "@/lib/platform/types";
 import { formatDateTime } from "@/lib/platform/format";
@@ -30,7 +31,7 @@ export function AuditPanel({ variant = "platform" }: { variant?: "platform" | "c
 
   async function reload(next = filters) {
     const supabase = createClient();
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;

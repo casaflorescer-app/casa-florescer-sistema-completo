@@ -26,7 +26,7 @@ export function PhysicalExamPanel({
   canEdit,
   initial,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounterId: string;
   locked: boolean;
   canEdit: boolean;

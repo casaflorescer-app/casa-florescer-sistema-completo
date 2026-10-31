@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import {
   createOrganization,
@@ -33,7 +34,7 @@ export function OrganizationsPanel() {
 
   async function reload() {
     const supabase = createClient();
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -84,7 +85,7 @@ export function OrganizationsPanel() {
 
   async function save() {
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {

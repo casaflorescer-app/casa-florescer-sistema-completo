@@ -26,7 +26,7 @@ export function EncounterTimeline({
   currentEncounterId,
   loading,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounters: EncounterRow[];
   currentEncounterId: string;
   loading?: boolean;

@@ -1,8 +1,8 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { callCasaRpc } from "@/lib/casa/rpc";
-import { listClinicUsersCasa, listSystemAdminsCasa } from "@/lib/casa/reads";
-import { setProfileActiveCasa } from "@/lib/casa/writes";
+import { listClinicUsersCasa, listMembershipsCasa, listPracticeUnitsCasa, listSystemAdminsCasa } from "@/lib/casa/reads";
+import { createMembershipCasa, deleteMembershipCasa, setProfileActiveCasa } from "@/lib/casa/writes";
 import type { AppRole, PracticeKind } from "@/lib/types/database";
 import { mapDbError } from "@/lib/platform/format";
 import {
@@ -350,7 +350,20 @@ export async function revokeSystemAdmin(
   if (error) throw new Error(mapDbError(error));
 }
 
-export async function listPracticeUnits(supabase: SupabaseClient): Promise<PlatformPractice[]> {
+export async function listPracticeUnits(supabase: SupabaseClient | null): Promise<PlatformPractice[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const data = await listPracticeUnitsCasa();
+    return data.flatMap((row) => {
+      const id = asString(row.id);
+      const organizationId = asString(row.organization_id);
+      const name = asString(row.name) ?? asString(row.code);
+      const code = asString(row.code) ?? "";
+      const kind = parsePracticeKind(row.kind);
+      if (!id || !organizationId || !name || !kind) return [];
+      return [{ id, organizationId, name, code, kind, isActive: asBoolean(row.is_active, true) }];
+    });
+  }
   const { data, error } = await supabase
     .from("practice_units")
     .select("id, organization_id, name, code, kind, is_active")
@@ -380,9 +393,16 @@ export async function listPracticeUnits(supabase: SupabaseClient): Promise<Platf
 }
 
 export async function listUserMemberships(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   userId: string,
 ): Promise<PlatformMembership[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    return (await listMembershipsCasa(userId)).flatMap((row) => {
+      const membership = toMembership(row);
+      return membership ? [membership] : [];
+    });
+  }
   const primary = await supabase.from("user_practice_roles").select(MEMBERSHIP_COLUMNS).eq("user_id", userId);
   const fallback = primary.error
     ? await supabase
@@ -402,12 +422,26 @@ export async function listUserMemberships(
 }
 
 export async function createMembership(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: MembershipCreateInput,
 ): Promise<PlatformMembership> {
   const role = parseRole(input.role);
   if (!role || !input.userId || !input.practiceId) {
     throw new Error("Não foi possível alterar o acesso. Tente novamente.");
+  }
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    try {
+      const membership = toMembership(
+        await createMembershipCasa({ userId: input.userId, practiceId: input.practiceId, role }),
+      );
+      if (!membership) throw new Error("Não foi possível alterar o acesso. Tente novamente.");
+      return membership;
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("A prática")) throw err;
+      const code = typeof err === "object" && err && "code" in err ? String(err.code) : undefined;
+      throw new Error(mapMembershipError({ code, message: err instanceof Error ? err.message : "" }));
+    }
   }
 
   const [profileResult, practiceResult] = await Promise.all([
@@ -459,7 +493,17 @@ export async function createMembership(
   return membership;
 }
 
-export async function deleteMembership(supabase: SupabaseClient, membershipId: string) {
+export async function deleteMembership(supabase: SupabaseClient | null, membershipId: string) {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    try {
+      await deleteMembershipCasa(membershipId);
+    } catch (err) {
+      const code = typeof err === "object" && err && "code" in err ? String(err.code) : undefined;
+      throw new Error(mapMembershipError({ code, message: err instanceof Error ? err.message : "" }));
+    }
+    return;
+  }
   const { error } = await supabase.from("user_practice_roles").delete().eq("id", membershipId);
   if (error) {
     logMembershipError("delete", error);

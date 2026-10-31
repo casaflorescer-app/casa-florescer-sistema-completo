@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-31 — C088: linha do tempo, vínculo de gestação, vínculo de prática e organizações no ramo do servidor. Onze testes locais passaram. TypeScript e build sem `CASA_DATABASE_URL`. SSH recusado; a prova SQL desta etapa não rodou. Sem backup confirmado e sem gravação HTTP. Login, CRUD, arquivos e varredura de tablet e celular não executados. Status bloqueada. A C089 não começou.
 - 2026-10-31 — C087.1: fluxos clínicos e administrativos que já tinham função ou policy no ramo do servidor. Onze testes locais passaram. Build sem `CASA_DATABASE_URL`. Sem migration e sem deploy. CRUD integrado, login real e varredura de tablet e celular não executados. Status bloqueada.
 - 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP, com `ROLLBACK` e organizações em 0. Busca de estoque, orientações e documentos do atendimento no ramo do servidor. Nove testes locais passaram. Build sem `CASA_DATABASE_URL`. Corte escrito e não executado. Deploy não feito. Status bloqueada.
 - 2026-10-31 — C086: conferência local da autenticação. Nove testes passaram. As quatro variáveis da casa estavam ausentes neste processo. A saída do console da prova C084 não chegou. Organizações residuais sem prova. Deploy não feito. Status bloqueada.

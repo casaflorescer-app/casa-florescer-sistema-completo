@@ -278,7 +278,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       setPhysicalExam(parsePhysicalExam(examNote?.body));
       setError(null);
       setLoading(false);
-      const [timelineRows, prior, examOrders, examRequests, prescriptions, orientations, aiList, recordingBundle] =
+      const [timelineRows, prior, examOrders, examRequests, prescriptions, orientations, aiList, recordingBundle, pregnancyContext, professionals] =
         await Promise.all([
           listEncountersForPatient(null, row.practiceId, row.patientId).catch(() => []),
           loadPriorAnamnesis(null, {
@@ -299,7 +299,16 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             bundle: { sessions: [], segments: [], transcriptions: [] },
             error: null as string | null,
           })),
+          getEncounterPregnancy(null, row.id).catch(() => null),
+          listProfessionalLabels(null, row.practiceId).catch(() => []),
         ]);
+      setPregnancy(pregnancyContext);
+      setPregnancyLinked(Boolean(pregnancyContext));
+      setPrimaryProfessionalName(
+        pregnancyContext
+          ? professionals.find((item) => item.id === pregnancyContext.primaryProfessionalId)?.fullName ?? null
+          : null,
+      );
       setTimeline(timelineRows);
       setPriorAnamnesis(prior);
       setTimelineLoading(false);
@@ -476,7 +485,22 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }, [encounterId, supabase]);
 
   const refreshPregnancy = useCallback(async () => {
-    if (!supabase || !encounter) return;
+    if (!encounter || (!supabase && !isCasaBrowserAuth())) return;
+    if (!supabase) {
+      const [pregnancyContext, professionals] = await Promise.all([
+        getEncounterPregnancy(null, encounter.id),
+        listProfessionalLabels(null, encounter.practiceId).catch(() => []),
+      ]);
+      setPregnancy(pregnancyContext);
+      setPregnancyLinked(Boolean(pregnancyContext));
+      setPrimaryProfessionalName(
+        pregnancyContext
+          ? professionals.find((item) => item.id === pregnancyContext.primaryProfessionalId)?.fullName ??
+              null
+          : null,
+      );
+      return;
+    }
     const [pregnancyContext, linkRow, professionals] = await Promise.all([
       getEncounterPregnancy(supabase, encounter.id),
       supabase.from("encounters").select("pregnancy_id").eq("id", encounter.id).maybeSingle(),
@@ -517,7 +541,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function openLink() {
-    if (!supabase || !encounter || !canOfferPregnancyLink || busy || linkBusy) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || !canOfferPregnancyLink || busy || linkBusy) return;
     setLinkMode("link");
     setLinkError(null);
     setLinkChoices([]);
@@ -543,7 +567,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function onLink(pregnancyId: string) {
-    if (!supabase || !encounter || !canOfferPregnancyLink || linkBusy) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || !canOfferPregnancyLink || linkBusy) return;
     setLinkBusy(true);
     setLinkError(null);
     const result = await linkEncounterToPregnancy(supabase, encounter.id, pregnancyId);
@@ -688,7 +712,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function onUnlink() {
-    if (!supabase || !encounter || !canOfferPregnancyLink || linkBusy) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || !canOfferPregnancyLink || linkBusy) return;
     setLinkBusy(true);
     setLinkError(null);
     const result = await unlinkEncounterFromPregnancy(supabase, encounter.id);
@@ -905,7 +929,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             actions={
               canOfferPregnancyLink ? (
                 <div className="flex flex-wrap gap-2">
-                  {!pregnancyLinked ? (
+                  {!pregnancyLinked && supabase ? (
                     <button
                       type="button"
                       className={buttonClass}
@@ -986,7 +1010,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         loading={summaryLoading}
       />
 
-      {supabase ? (
+      {supabase || isCasaBrowserAuth() ? (
         <EncounterTimeline
           supabase={supabase}
           encounters={timeline}

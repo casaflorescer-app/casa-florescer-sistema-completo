@@ -437,9 +437,25 @@ export async function listProfessionalLabels(
 }
 
 export async function listPatientPregnancies(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<PregnancyRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const { listPatientPregnanciesCasa } = await import("@/lib/casa/reads");
+    const raw = await listPatientPregnanciesCasa(patientId);
+    return raw.flatMap((item) => {
+      const names = new Map<string, string>();
+      const primaryId = asString(item.primary_professional_id);
+      const primaryName = asString(item.primary_full_name);
+      if (primaryId && primaryName) names.set(primaryId, primaryName);
+      const backupId = asString(item.backup_professional_id);
+      const backupName = asString(item.backup_full_name);
+      if (backupId && backupName) names.set(backupId, backupName);
+      const row = withNames(item, names);
+      return row ? [row] : [];
+    });
+  }
   const result = await supabase
     .from("pregnancies")
     .select(`${PREGNANCY_COLUMNS}, practice_units ( name )`)

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import {
   createMembership,
@@ -63,7 +64,7 @@ export function UserAccessEditor({
 
   async function loadAccess() {
     const supabase = createClient();
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -101,7 +102,7 @@ export function UserAccessEditor({
       return;
     }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -121,7 +122,7 @@ export function UserAccessEditor({
   async function handleDelete(membership: PlatformMembership) {
     if (busy) return;
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -140,7 +141,7 @@ export function UserAccessEditor({
   async function toggleCarePolicyView(membership: PlatformMembership) {
     if (busy) return;
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {

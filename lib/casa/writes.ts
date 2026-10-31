@@ -423,3 +423,92 @@ export async function upsertRoomCasa(input: {
     return id;
   });
 }
+
+export async function createMembershipCasa(input: {
+  userId: string;
+  practiceId: string;
+  role: string;
+}): Promise<SqlRow> {
+  const actor = await actorId();
+  return withCasaUser(actor, async (client) => {
+    const [profile, practice] = await Promise.all([
+      client.query<{ organization_id: string }>(
+        `select organization_id from public.profiles where id = $1`,
+        [input.userId],
+      ),
+      client.query<{ organization_id: string }>(
+        `select organization_id from public.practice_units where id = $1`,
+        [input.practiceId],
+      ),
+    ]);
+    const profileOrg = profile.rows[0]?.organization_id;
+    const practiceOrg = practice.rows[0]?.organization_id;
+    if (!profileOrg || !practiceOrg || profileOrg !== practiceOrg) {
+      throw new Error("A prática selecionada não pertence à organização deste usuário.");
+    }
+    const inserted = await client.query<SqlRow>(
+      `insert into public.user_practice_roles (user_id, practice_id, role)
+       values ($1, $2, $3)
+       returning id, user_id, role, clinical_access, can_view_care_policies, practice_id`,
+      [input.userId, input.practiceId, input.role],
+    );
+    const row = inserted.rows[0];
+    if (!row) throw new Error("A política de acesso do banco recusou esta operação.");
+    const named = await client.query<SqlRow>(
+      `select r.id, r.user_id, r.role, r.clinical_access, r.can_view_care_policies, r.practice_id,
+              jsonb_build_object('name', p.name, 'code', p.code, 'kind', p.kind, 'organization_id', p.organization_id) as practice_units
+       from public.user_practice_roles r
+       left join public.practice_units p on p.id = r.practice_id
+       where r.id = $1`,
+      [row.id],
+    );
+    const full = named.rows[0];
+    if (!full) throw new Error("Não foi possível alterar o acesso. Tente novamente.");
+    return plain(full);
+  });
+}
+
+export async function deleteMembershipCasa(membershipId: string) {
+  const actor = await actorId();
+  await withCasaUser(actor, async (client) => {
+    await client.query(`delete from public.user_practice_roles where id = $1`, [membershipId]);
+  });
+}
+
+export async function createOrganizationCasa(input: {
+  legalName: string;
+  tradeName: string;
+  cnpj: string;
+}): Promise<SqlRow> {
+  const actor = await actorId();
+  return withCasaUser(actor, async (client) => {
+    const inserted = await client.query<SqlRow>(
+      `insert into public.organizations (legal_name, trade_name, cnpj)
+       values ($1, $2, $3)
+       returning id, legal_name, trade_name, cnpj, created_at`,
+      [input.legalName, input.tradeName, input.cnpj],
+    );
+    const row = inserted.rows[0];
+    if (!row) throw new Error("A política de acesso do banco recusou esta operação.");
+    return plain(row);
+  });
+}
+
+export async function updateOrganizationCasa(
+  id: string,
+  input: { legalName: string; tradeName: string; cnpj: string },
+): Promise<SqlRow> {
+  const actor = await actorId();
+  return withCasaUser(actor, async (client) => {
+    const updated = await client.query<SqlRow>(
+      `update public.organizations
+       set legal_name = $2, trade_name = $3, cnpj = $4
+       where id = $1
+       returning id, legal_name, trade_name, cnpj, created_at`,
+      [id, input.legalName, input.tradeName, input.cnpj],
+    );
+    const row = updated.rows[0];
+    if (!row) throw new Error("A política de acesso do banco recusou esta operação.");
+    return plain(row);
+  });
+}

@@ -11,6 +11,7 @@ import {
   readClinicalNotesCasa,
   readEncounterByAppointmentCasa,
   readEncounterCasa,
+  readEncounterPregnancyCasa,
 } from "@/lib/casa/reads";
 import type {
   AppointmentKind,
@@ -1113,9 +1114,14 @@ export async function clinicalNoteUpsert(
 // ---------------------------------------------------------------------------
 
 export async function getEncounterPregnancy(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<PregnancyContext | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const row = await readEncounterPregnancyCasa(encounterId);
+    return row ? toPregnancyContext(row) : null;
+  }
   const { data: encounter, error: encounterError } = await supabase
     .from("encounters")
     .select("pregnancy_id")

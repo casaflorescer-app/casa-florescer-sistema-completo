@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { cnpjDigits, isCnpjDigits, mapDbError } from "@/lib/platform/format";
 import type { OrganizationRecord } from "@/lib/platform/types";
 
@@ -16,7 +17,15 @@ function toOrganization(row: Record<string, unknown>): OrganizationRecord | null
   return { id, legalName, tradeName, cnpj, createdAt };
 }
 
-export async function listOrganizations(supabase: SupabaseClient) {
+export async function listOrganizations(supabase: SupabaseClient | null) {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listOrganizationsCasa } = await import("@/lib/casa/reads");
+    return (await listOrganizationsCasa()).flatMap((row) => {
+      const item = toOrganization(row);
+      return item ? [item] : [];
+    });
+  }
   const { data, error } = await supabase
     .from("organizations")
     .select("id, legal_name, trade_name, cnpj, created_at")
@@ -52,9 +61,30 @@ export function validateOrganizationInput(input: OrganizationInput) {
   return null;
 }
 
-export async function createOrganization(supabase: SupabaseClient, input: OrganizationInput) {
+export async function createOrganization(supabase: SupabaseClient | null, input: OrganizationInput) {
   const message = validateOrganizationInput(input);
   if (message) throw new Error(message);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const { createOrganizationCasa } = await import("@/lib/casa/writes");
+    try {
+      const item = toOrganization(
+        await createOrganizationCasa({
+          legalName: input.legalName.trim(),
+          tradeName: input.tradeName.trim(),
+          cnpj: cnpjDigits(input.cnpj),
+        }),
+      );
+      if (!item) throw new Error("Não foi possível ler a organização criada.");
+      return item;
+    } catch (err) {
+      if (err instanceof Error && (err.message.startsWith("A política") || err.message.startsWith("Não foi possível"))) {
+        throw err;
+      }
+      const code = typeof err === "object" && err && "code" in err ? String(err.code) : undefined;
+      throw new Error(mapDbError({ code, message: err instanceof Error ? err.message : "" }));
+    }
+  }
   const { data, error } = await supabase
     .from("organizations")
     .insert({
@@ -71,12 +101,33 @@ export async function createOrganization(supabase: SupabaseClient, input: Organi
 }
 
 export async function updateOrganization(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   id: string,
   input: OrganizationInput,
 ) {
   const message = validateOrganizationInput(input);
   if (message) throw new Error(message);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const { updateOrganizationCasa } = await import("@/lib/casa/writes");
+    try {
+      const item = toOrganization(
+        await updateOrganizationCasa(id, {
+          legalName: input.legalName.trim(),
+          tradeName: input.tradeName.trim(),
+          cnpj: cnpjDigits(input.cnpj),
+        }),
+      );
+      if (!item) throw new Error("Não foi possível ler a organização atualizada.");
+      return item;
+    } catch (err) {
+      if (err instanceof Error && (err.message.startsWith("A política") || err.message.startsWith("Não foi possível"))) {
+        throw err;
+      }
+      const code = typeof err === "object" && err && "code" in err ? String(err.code) : undefined;
+      throw new Error(mapDbError({ code, message: err instanceof Error ? err.message : "" }));
+    }
+  }
   const { data, error } = await supabase
     .from("organizations")
     .update({

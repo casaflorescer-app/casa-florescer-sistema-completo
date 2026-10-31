@@ -308,6 +308,83 @@ export async function listProcedureAgreementsCasa(organizationId: string, patien
   });
 }
 
+export async function readEncounterPregnancyCasa(encounterId: string): Promise<SqlRow | null> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select p.id, p.status, p.lmp_date, p.calculated_edd, p.clinical_edd, p.risk,
+              p.primary_professional_id, p.backup_professional_id, p.notes
+       from public.encounters e
+       join public.pregnancies p on p.id = e.pregnancy_id
+       where e.id = $1`,
+      [encounterId],
+    );
+    return result.rows[0] ? plain(result.rows[0]) : null;
+  });
+}
+
+export async function listPatientPregnanciesCasa(patientId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select p.id, p.organization_id, p.practice_id, p.patient_id, p.primary_professional_id,
+              p.backup_professional_id, p.lmp_date, p.calculated_edd, p.clinical_edd, p.pregnancy_number,
+              p.risk, p.care_started_on, p.notes, p.status, p.status_reason, p.status_changed_at,
+              p.status_changed_by, p.created_by, p.created_at, p.updated_at,
+              jsonb_build_object('name', pu.name) as practice_units,
+              prim.full_name as primary_full_name,
+              back.full_name as backup_full_name
+       from public.pregnancies p
+       left join public.practice_units pu on pu.id = p.practice_id
+       left join public.professional_labels prim on prim.id = p.primary_professional_id
+       left join public.professional_labels back on back.id = p.backup_professional_id
+       where p.patient_id = $1
+       order by p.created_at desc`,
+      [patientId],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listMembershipsCasa(userIdFilter: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select r.id, r.user_id, r.role, r.clinical_access, r.can_view_care_policies, r.practice_id,
+              jsonb_build_object('name', p.name, 'code', p.code, 'kind', p.kind, 'organization_id', p.organization_id) as practice_units
+       from public.user_practice_roles r
+       left join public.practice_units p on p.id = r.practice_id
+       where r.user_id = $1`,
+      [userIdFilter],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listPracticeUnitsCasa(): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, organization_id, name, code, kind, is_active
+       from public.practice_units
+       order by name`,
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listOrganizationsCasa(): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, legal_name, trade_name, cnpj, created_at
+       from public.organizations
+       order by trade_name`,
+    );
+    return result.rows.map(plain);
+  });
+}
+
 export async function listSystemAdminsCasa(): Promise<{ admins: SqlRow[]; profiles: SqlRow[] }> {
   const userId = await actorId();
   return withCasaUser(userId, async (client) => {

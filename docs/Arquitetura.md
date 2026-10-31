@@ -43,17 +43,18 @@ A tela `/app/finance` lista fatura, pagamento, rateio e despesa pelo que a polic
 
 Com o modo da casa ligado, estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames chamam as funções SQL já existentes. A gravação lê o áudio no volume privado e só segue se o caminho pedido for o caminho gravado. O PDF do documento segue o mesmo volume. Pedidos de exame, itens de modelo de receita, busca de paciente para audiência e o painel de resultados também leem pelo servidor. O anexo do resultado entra por `POST /api/casa/files` e a abertura usa o identificador gravado.
 
-A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação terminou em `ROLLBACK` e a contagem de organizações ficou 0. A aplicação publicada continua na API antiga. O corte não foi executado.
+A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação terminou em `ROLLBACK` e a contagem de organizações ficou 0. Em 2026-10-31 a C088 tentou repetir essa conferência por SSH e a sessão foi recusada. A prova desta etapa não rodou de novo. Não houve login, CRUD pela aplicação, upload nem processo apontando para o banco. A aplicação publicada continua na API antiga. O corte não foi executado.
 
 Dependências do Supabase:
 
-- Já migrado, com a variável exatamente `1`: login da casa, agenda, prontuário, gestação, exames, receitas, repasse, relatórios, usuários, estoque, locação, relacionamento, portal, gravação, arquivos privados, financeiro, busca de item de estoque, orientações, documentos do atendimento, queixa, anamnese, exame físico, retorno clínico, feedback, auxílio de IA, contratos, salas, especialidades, políticas e auditoria.
-- Parcial: a linha do tempo do atendimento e o vínculo de gestação na mesma tela ainda leem pelo cliente publicado. A edição de vínculo de prática e a tela de organizações da plataforma também.
+- Já migrado, com a variável exatamente `1`: login da casa, agenda, prontuário, gestação, exames, receitas, repasse, relatórios, usuários, estoque, locação, relacionamento, portal, gravação, arquivos privados, financeiro, busca de item de estoque, orientações, documentos do atendimento, queixa, anamnese, exame físico, retorno clínico, feedback, auxílio de IA, contratos, salas, especialidades, políticas, auditoria, linha do tempo, vínculo de gestação na tela do atendimento, vínculo de prática e organizações.
+- Parcial: a conversão que cria uma gestação nova a partir do atendimento continua no cliente publicado.
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
 
 ## Histórico
 
+- 2026-10-31 — C088: linha do tempo, vínculo de gestação na tela, vínculo de prática e organizações no ramo do servidor. A conferência por SSH foi recusada. Sem gravação HTTP e sem corte.
 - 2026-10-31 — C087.1: queixa, anamnese, exame físico, retorno, feedback, gravação, auxílio de IA, contratos, salas, especialidades, políticas e auditoria no ramo do servidor. Sem migration e sem corte.
 - 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP. Busca de estoque, orientações e documentos do atendimento entram no ramo do servidor. O corte não foi executado.
 - 2026-10-31 — C086: pedidos de exame, itens de modelo, busca de audiência e painel de resultados no ramo do servidor. A saída do console da C084 não chegou. Sem corte.

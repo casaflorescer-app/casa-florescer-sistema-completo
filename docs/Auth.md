@@ -70,7 +70,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
-- 2026-10-31 — logout também revoga o cookie da casa. Com o banco da casa configurado, a sessão não volta para o Auth. A senha de `casa_login` ainda não foi definida.
+- 2026-10-31 — complemento da C083: a senha de `casa_login` continua sem definição. O prompt visto era o do Mac.
 - 2026-10-31 — o cookie da casa passou a carregar o identificador da linha. Logout e troca de senha revogam essa linha. A produção continua no Auth.
 - 2026-10-31 — sessão da casa no Next, desligada por padrão. O Auth de produção não muda.
 - 2026-10-22 — a casca saiu de `app/template.tsx`, que recriava `<html>` e `<body>` a cada navegação, e foi para `app/(shell)/layout.tsx` (`data-casa="layout-9"`). Sem sessão, ou se a sessão não responde em 8 segundos, a troca para o login é um carregamento inteiro.

@@ -200,4 +200,4 @@ Aplicação direta no BancoFlorescerPP, sem backup e sem database temporário. A
 | `public.organizations` | 0 linhas | COMPROVADO |
 | Provas | C077 e C082, transação desfeita, saída `C082_OK tabelas=102 orgs=0` | COMPROVADO |
 | Organizações, práticas e usuários reais | não criados | CONFIRMADO |
-| `0059`, senha de `casa_login`, `CASA_DATABASE_URL` | não aplicados. A tentativa caiu no Terminal local | CONFIRMADO |
+| `0059`, senha de `casa_login`, `CASA_DATABASE_URL` | não aplicados. Conferência de 2026-10-31: aba do Terminal era o Mac. Nenhum comando enviado | CONFIRMADO |

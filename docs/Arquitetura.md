@@ -33,7 +33,7 @@ O processo Next, quando a conexão for ligada, entra como `casa_login`. Esse pap
 
 ## Histórico
 
-- 2026-10-31 — a `0059` ficou no repositório, sem apply. Com a URL da casa, o Next deixa o cliente Supabase. A URL não foi gravada.
+- 2026-10-31 — complemento da C083: a aba selecionada ainda era o Mac. A `0059` segue sem apply. A senha de `casa_login` segue sem definição.
 - 2026-10-31 — schema `0000`–`0058` aplicado no BancoFlorescerPP, com `casa_login` e sessão revogável. A conexão de produção e a API não foram trocadas.
 - 2026-10-31 — caminho da casa no Next, com prelúdio e isolamento no repositório. Produção segue no Auth e na API.
 - 2026-10-21 — produção definida como Next standalone e Supabase self-hosted atrás do Caddy.

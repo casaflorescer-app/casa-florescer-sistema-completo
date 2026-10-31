@@ -20,7 +20,7 @@ O schema `0000`–`0058` está no BancoFlorescerPP. O navegador de produção co
 
 ## Histórico
 
-- 2026-10-31 — com a URL da casa, o Next deixa a API antiga. A URL e a `0059` ainda não foram aplicadas.
+- 2026-10-31 — complemento da C083: a URL da casa e a `0059` continuam sem apply. A aba do Terminal era a do Mac.
 - 2026-10-31 — o papel de conexão previsto passou a ser `casa_login`. O schema está no BancoFlorescerPP e a API de produção não mudou.
 - 2026-10-31 — organograma da casa no Postgres próprio, sem deploy e sem troca da API.
 - 2026-10-21 — organograma da VPS com app, gateway, Auth, API e Storage.

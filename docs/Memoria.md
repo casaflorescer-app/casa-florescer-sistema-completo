@@ -3,6 +3,7 @@
 ## 2026-10-31 — C083 o Terminal local recebeu o comando
 
 - O schema `0000`–`0058` continua no BancoFlorescerPP. A `0059` não foi aplicada. A senha de `casa_login` não foi criada e não foi impressa.
+- Em 2026-10-31, de novo, a aba selecionada do Terminal era o zsh do Mac (`Gabrieles-MacBook-Air`), não `root@srv2083061`. Nenhum comando foi enviado nessa conferência.
 - `do script` na aba selecionada do Terminal executou no zsh do Mac (`Gabrieles-MacBook-Air`), não em `root@srv2083061`. Sem a aba da VPS na frente, o apply não segue.
 - Com `CASA_DATABASE_URL`, o servidor não usa o cliente Supabase. Com `NEXT_PUBLIC_CASA_AUTH=1`, o browser também não. As duas continuam desligadas. Agenda, prontuário e financeiro ainda estão no cliente antigo enquanto o modo está desligado.
 - A redefinição responde a mesma frase e não grava token sem e-mail. Só `SYSTEM_ADMIN` cria usuário. O primeiro administrador não nasce pela função.
@@ -72,7 +73,7 @@
 
 ## Histórico
 
-- 2026-10-31 — o apply da C083 foi para o Terminal local; a aba da VPS precisa estar selecionada antes de repetir.
+- 2026-10-31 — a conferência do complemento viu de novo o prompt do Mac; nenhum comando foi enviado a essa aba.
 - 2026-10-31 — o schema do BancoFlorescerPP foi aplicado sem backup e sem database temporário; a `0020` vazia de clínica precisa retornar, e a retaguarda só lê a gestação com grant.
 - 2026-10-31 — o catálogo do BancoFlorescerPP fechou por SSH do administrador; a implantação não rodou.
 - 2026-10-31 — a chave deste computador continua sem autorização na VPS; as consultas do BancoFlorescerPP não saíram daqui.

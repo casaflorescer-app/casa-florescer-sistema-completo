@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
@@ -246,7 +247,27 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
 
   const load = useCallback(async (quiet = false) => {
     if (!supabase) {
-      setError("Autenticação não configurada neste ambiente.");
+      if (!isCasaBrowserAuth()) {
+        setError("Autenticação não configurada neste ambiente.");
+        setLoading(false);
+        return;
+      }
+      if (!quiet) setLoading(true);
+      const row = await getEncounter(null, encounterId);
+      if (!row) {
+        setEncounter(null);
+        setError("Atendimento não encontrado ou sem permissão de leitura.");
+        setLoading(false);
+        return;
+      }
+      const history = await listClinicalNotes(null, encounterId);
+      const latest = history.find((note) => note.templateCode === DEFAULT_NOTE_TEMPLATE) ?? null;
+      setEncounter(row);
+      setNotes(history.filter((note) => note.templateCode === DEFAULT_NOTE_TEMPLATE));
+      const nextSoap = soapFromBody(latest?.body);
+      setSoap(nextSoap);
+      setSavedSoap(nextSoap);
+      setError(null);
       setLoading(false);
       return;
     }

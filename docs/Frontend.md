@@ -8,10 +8,11 @@ As demais telas ainda leem e gravam pelo cliente do browser enquanto `NEXT_PUBLI
 
 Com `CASA_DATABASE_URL`, a casca da equipe manda para `/login` quando o cookie da casa abre e a linha da sessão não existe mais. Sem essa variável, `/app` continua na casca e não volta sozinho ao login. Sair chama `DELETE /api/casa/session` e, em seguida, o logout do Auth.
 
-Quando `NEXT_PUBLIC_CASA_AUTH` é `1`, a lista e o cadastro de pacientes, a agenda, o prontuário, a lista de gestações, a leitura de exames e de receitas, o repasse da gestação, os relatórios e o formulário de usuário do administrador principal chamam o servidor. Foto, PDF e a emissão de receita ou pedido continuam no cliente Supabase e ficam fora desse modo. A variável não foi ligada.
+Quando `NEXT_PUBLIC_CASA_AUTH` é `1`, a lista e o cadastro de pacientes, a agenda, o prontuário, a lista de gestações, a leitura de exames e de receitas, o repasse da gestação, os relatórios e a lista de usuários chamam o servidor. Nesse modo, a agenda grava status, chegada, fim, bloco e abertura de atendimento; o prontuário grava nota, assinatura e vínculo com a gestação; a gestação cria e atualiza o episódio; o pedido de exame e a emissão de documento chamam as funções já existentes; o rascunho de receita entra pelo servidor. A tela `/app/finance` lista fatura, pagamento, rateio e despesa. O rateio só mostra o valor gravado. A secretária não vê o item de menu. Foto, exame e PDF usam `/api/casa/files`. O compositor completo de receita e o painel de catálogo de exames ainda dependem de leituras que continuam no cliente Supabase, então ficam fora da tela enquanto o modo está ligado. Estoque, locação e relacionamento também. A variável não foi ligada.
 
 ## Histórico
 
+- 2026-10-31 — C085: gravações da agenda, do prontuário, da gestação, do pedido e da receita no modo da casa; lista de usuários no servidor; tela `/app/finance`; arquivos em `/api/casa/files`. O modo continua desligado.
 - 2026-10-31 — C084: as telas nomeadas chamam o servidor só com o modo da casa ligado. O modo continua desligado. Foto, PDF e emissão de receita ou pedido ficam de fora.
 - 2026-10-31 — o banco já tem `0000`–`0059` e a C074. As telas de produção continuam no cliente Supabase. `NEXT_PUBLIC_CASA_AUTH` não foi ligado.
 - 2026-10-31 — com o modo da casa ligado, as telas deixam o cliente Supabase. O logout revoga o cookie da casa. O modo não foi ligado.

@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { createPrescriptionDraftCasa } from "@/lib/casa/writes";
 
 export type PrescriptionRow = {
   id: string;
@@ -127,7 +129,7 @@ export async function listPrescriptionItems(
 }
 
 export async function createPrescriptionDraft(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     organizationId: string;
     practiceId: string;
@@ -139,6 +141,25 @@ export async function createPrescriptionDraft(
     notes?: string;
   },
 ): Promise<{ prescription: PrescriptionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { prescription: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const raw = await createPrescriptionDraftCasa({
+        organizationId: input.organizationId,
+        practiceId: input.practiceId,
+        patientId: input.patientId,
+        professionalId: input.professionalId,
+        encounterId: input.encounterId ?? null,
+        notes: input.notes ?? null,
+      });
+      return { prescription: toRx(raw), error: null };
+    } catch (error) {
+      return {
+        prescription: null,
+        error: error instanceof Error ? error.message : "Não foi possível criar a receita.",
+      };
+    }
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();

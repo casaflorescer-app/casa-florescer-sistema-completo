@@ -101,11 +101,18 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 ### RN-CASA-013 — Telas no servidor só com o modo da casa
 
 - **Status:** `⚠ inferida`
-- **Enunciado:** Enquanto `NEXT_PUBLIC_CASA_AUTH` não for exatamente `1`, o login e as telas continuam no Auth e no cliente Supabase. Com esse valor e com `CASA_DATABASE_URL` no processo, a lista e o cadastro de pacientes, a carga da agenda, a leitura do prontuário, a lista de gestações, a leitura de exames e de receitas, o repasse da gestação e os relatórios operacionais chamam o servidor. O servidor grava `app.user_id` e usa `SET LOCAL ROLE authenticated`. A criação de usuário dessa tela só aparece para o administrador principal e chama `POST /api/casa/staff`. A produção não tem essas variáveis. A prova `supabase/tests/c084_module_isolation.sql` ainda não rodou no BancoFlorescerPP. Foto, PDF e a emissão de receita ou pedido nesse modo continuam fora deste ramo.
-- **Rastreio:** `lib/auth/casa-mode.ts`, `lib/casa/actions.ts`, `components/patients/PatientList.tsx`, `components/attendance/AgendaPage.tsx`, `components/attendance/PatientChart.tsx`, `components/clinic-admin/ClinicUsersPanel.tsx`.
+- **Enunciado:** Enquanto `NEXT_PUBLIC_CASA_AUTH` não for exatamente `1`, o login e as telas continuam no Auth e no cliente Supabase. Com esse valor e com `CASA_DATABASE_URL` no processo, pacientes, agenda, prontuário, gestação, exame, receita, repasse, relatórios e a lista de usuários chamam o servidor. O servidor grava `app.user_id` e usa `SET LOCAL ROLE authenticated`. A criação de usuário dessa tela só aparece para o administrador principal e chama `POST /api/casa/staff`. Foto, exame e PDF usam o volume privado e as funções de leitura já existentes. A produção não tem essas variáveis. A prova `supabase/tests/c084_module_isolation.sql` ainda não rodou no BancoFlorescerPP.
+- **Rastreio:** `lib/auth/casa-mode.ts`, `lib/casa/actions.ts`, `lib/casa/rpc.ts`, `app/api/casa/files/route.ts`, `components/clinic-admin/ClinicUsersPanel.tsx`.
+
+### RN-CASA-014 — Financeiro na tela, sem percentual novo
+
+- **Status:** `⚠ inferida`
+- **Enunciado:** A tela lista o que a policy já devolve. Fatura e pagamento gravam só onde `invoices_write` e `payments_via_invoice` já permitem. O rateio é somente leitura e mostra `amount_cents` já gravado. Nenhum percentual é calculado. Despesa compartilhada é centro `is_shared` com `practice_id` nulo. Despesa particular leva `practice_id`. A administradora grava. A médica lê a compartilhada e a particular da própria prática. A secretária não lê. Se a policy recusar, a tela mostra a recusa.
+- **Rastreio:** `components/finance/FinanceDesk.tsx`, `lib/casa/writes.ts`, `0056` e `0057`. A prova SQL da C084 ainda não rodou.
 
 ## Histórico
 
+- 2026-10-31 — RN-CASA-014 inferida: tela de financeiro sobre as policies já existentes, sem percentual novo. RN-CASA-013 passou a incluir gravações e arquivos. A prova C084 ainda não rodou.
 - 2026-10-31 — RN-CASA-013 inferida: ramo do servidor ao lado do Supabase. A prova C084 ainda não rodou. Produção sem as variáveis da casa.
 - 2026-10-31 — RN-CASA-011 e RN-CASA-012: o teste SQL da C083 rodou no BancoFlorescerPP e foi desfeito. Organizações continuaram em 0.
 - 2026-10-31 — RN-CASA-011 e RN-CASA-012: só o administrador principal cria usuário; a redefinição não revela se o e-mail existe. A `0059` ainda não foi aplicada.

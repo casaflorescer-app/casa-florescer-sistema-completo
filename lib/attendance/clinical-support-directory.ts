@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
 import type {
   ClinicalAiPayload,
   ClinicalSuggestionType,
@@ -232,7 +234,7 @@ export async function upsertExamGroup(
 }
 
 export async function createExamRequest(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     catalogIds?: string[];
@@ -252,6 +254,25 @@ export async function createExamRequest(
     p_confirm: input.confirm ?? false,
   };
   // C040.9 / 0048: p_clinical_indication; fallback se remoto ainda for 0047
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { id: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("clinical_exam_request_create", [
+        input.encounterId,
+        input.catalogIds ?? [],
+        input.groupIds ?? [],
+        input.customNames ?? [],
+        input.notes ?? null,
+        input.confirm ?? false,
+        input.clinicalIndication ?? null,
+      ]);
+      const id =
+        data && typeof data === "object" && "id" in data ? String((data as { id: unknown }).id) : null;
+      return { id, error: null };
+    } catch (error) {
+      return { id: null, error: error instanceof Error ? error.message : "Não foi possível criar o pedido." };
+    }
+  }
   let { data, error } = await supabase.rpc("clinical_exam_request_create", {
     ...baseArgs,
     p_clinical_indication: input.clinicalIndication ?? null,
@@ -264,9 +285,18 @@ export async function createExamRequest(
 }
 
 export async function confirmExamRequest(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   requestId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("clinical_exam_request_confirm", [requestId]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível confirmar o pedido." };
+    }
+  }
   const { error } = await supabase.rpc("clinical_exam_request_confirm", {
     p_request_id: requestId,
   });

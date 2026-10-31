@@ -33,8 +33,19 @@ O processo Next, quando a conexão for ligada, entra como `casa_login`. Esse pap
 
 O ramo da C084 fica em `lib/casa/actions.ts`. As telas só o chamam quando `NEXT_PUBLIC_CASA_AUTH` é `1`. Sem essa variável, o cliente Supabase permanece. O build local de 2026-10-31 passou sem `CASA_DATABASE_URL`. A prova `supabase/tests/c084_module_isolation.sql` está no repositório e ainda não foi executada no BancoFlorescerPP.
 
+## C085 — gravações, volume privado e financeiro
+
+Com o modo da casa ligado, agenda, prontuário, gestação, pedido de exame, emissão de documento e rascunho de receita passam a chamar as funções SQL que já existem, por uma lista fechada em `lib/casa/rpc.ts`. A lista de usuários lê `profiles` e `user_practice_roles` no servidor. A criação continua em `POST /api/casa/staff`.
+
+Foto, exame e PDF entram por `POST /api/casa/files` e saem por `GET` no mesmo caminho. O arquivo fica sob `CASA_FILES_ROOT`, fora de `public/`. O banco guarda o caminho relativo. A leitura clínica exige `can_read_exam_file`. A fotografia exige `can_access_patient_photo`. Sem a variável do volume, a rota responde indisponível. Essa variável não foi gravada na produção.
+
+A tela `/app/finance` lista fatura, pagamento, rateio e despesa pelo que a policy já devolve. O rateio não calcula percentual. A gravação de despesa só aparece para administradora. Fatura e pagamento só aparecem para quem tem caixa ou é administradora. Estoque, locação e relacionamento continuam no cliente Supabase.
+
+A prova SQL da C084 continua pendente. Esta máquina não abriu sessão no BancoFlorescerPP. O sistema não está pronto para o corte.
+
 ## Histórico
 
+- 2026-10-31 — C085: gravações do modo da casa, volume privado em `/api/casa/files` e tela `/app/finance` sobre as policies já existentes. Sem variáveis da casa na produção. A prova SQL da C084 continua pendente.
 - 2026-10-31 — ramo servidor da C084 para pacientes, agenda, prontuário, gestação, exames, receitas, repasse e relatórios. Produção sem as variáveis da casa. A prova SQL ainda não rodou.
 - 2026-10-31 — `0059` e C074 aplicadas no BancoFlorescerPP. `casa_login` provado sem superusuário e sem `BYPASSRLS`. A URL da casa continua desligada.
 - 2026-10-31 — complemento da C083: a aba selecionada ainda era o Mac. A `0059` segue sem apply. A senha de `casa_login` segue sem definição.

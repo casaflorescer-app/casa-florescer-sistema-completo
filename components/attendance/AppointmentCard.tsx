@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { AppointmentRow, OperationalAppointmentStatus } from "@/lib/attendance/directory";
 import type { AppointmentPredictionView } from "@/lib/attendance/appointment-prediction";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { getPatientCasa } from "@/lib/casa/actions";
 import { getPatient, patientChartHref } from "@/lib/patients/directory";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -197,8 +199,10 @@ function AppointmentCardActions({
     setWaBusy(true);
     try {
       const supabase = createClient();
-      if (!supabase) return;
-      const patient = await getPatient(supabase, row.patientId);
+      if (!supabase && !isCasaBrowserAuth()) return;
+      const patient = supabase
+        ? await getPatient(supabase, row.patientId)
+        : await getPatientCasa(row.patientId);
       const name = patient?.fullName || row.patientName || "Paciente";
       const dateLabel = new Date(row.startsAt).toLocaleDateString("pt-BR");
       const timeLabel = formatClock(row.startsAt);

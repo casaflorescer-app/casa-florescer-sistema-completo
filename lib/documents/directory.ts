@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
 import {
   CLINICAL_DOCUMENT_BUCKET,
   DOCUMENT_KINDS,
@@ -185,7 +187,7 @@ export async function listDocumentsForPatientPortal(
 }
 
 export async function issueDocumentFromPrescription(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     prescriptionId: string;
     shareWithPatient?: boolean;
@@ -193,6 +195,23 @@ export async function issueDocumentFromPrescription(
     correctionReason?: string | null;
   },
 ): Promise<{ row: ClinicalDocumentRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("clinical_document_issue_from_prescription", [
+        input.prescriptionId,
+        input.shareWithPatient ?? true,
+        input.supersedesId ?? null,
+        input.correctionReason ?? null,
+      ]);
+      return {
+        row: data && typeof data === "object" ? mapDocument(data as Record<string, unknown>) : null,
+        error: null,
+      };
+    } catch (error) {
+      return { row: null, error: error instanceof Error ? error.message : "Não foi possível emitir o documento." };
+    }
+  }
   const { data, error } = await supabase.rpc("clinical_document_issue_from_prescription", {
     p_prescription_id: input.prescriptionId,
     p_share_with_patient: input.shareWithPatient ?? true,
@@ -204,7 +223,7 @@ export async function issueDocumentFromPrescription(
 }
 
 export async function issueDocumentFromExamRequest(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     requestId: string;
     clinicalIndication?: string | null;
@@ -213,6 +232,24 @@ export async function issueDocumentFromExamRequest(
     correctionReason?: string | null;
   },
 ): Promise<{ row: ClinicalDocumentRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("clinical_document_issue_from_exam_request", [
+        input.requestId,
+        input.clinicalIndication ?? null,
+        input.shareWithPatient ?? false,
+        input.supersedesId ?? null,
+        input.correctionReason ?? null,
+      ]);
+      return {
+        row: data && typeof data === "object" ? mapDocument(data as Record<string, unknown>) : null,
+        error: null,
+      };
+    } catch (error) {
+      return { row: null, error: error instanceof Error ? error.message : "Não foi possível emitir o documento." };
+    }
+  }
   const { data, error } = await supabase.rpc("clinical_document_issue_from_exam_request", {
     p_request_id: input.requestId,
     p_clinical_indication: input.clinicalIndication ?? null,

@@ -1,6 +1,15 @@
 /** Persistência e RPC do MVP C1 — Agenda, Encounter e Clinical Notes. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { updateAppointmentOpenCasa } from "@/lib/casa/writes";
+import {
+  readAppointmentCasa,
+  readClinicalNotesCasa,
+  readEncounterByAppointmentCasa,
+  readEncounterCasa,
+} from "@/lib/casa/reads";
 import type {
   AppointmentKind,
   AppointmentStatus,
@@ -523,10 +532,19 @@ export async function listAppointments(
     .filter((item): item is AppointmentRow => Boolean(item));
 }
 
+function rpcFailure(error: unknown) {
+  return error instanceof Error ? error.message : "Não foi possível concluir a operação.";
+}
+
 export async function getAppointment(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointmentId: string,
 ): Promise<AppointmentRow | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const raw = await readAppointmentCasa(appointmentId);
+    return raw ? toAppointmentRow(raw) : null;
+  }
   const { data, error } = await supabase
     .from("appointments")
     .select(APPOINTMENT_COLUMNS)
@@ -578,7 +596,7 @@ export async function createAppointment(
 }
 
 export async function updateAppointment(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: UpdateAppointmentInput,
 ): Promise<{ row: AppointmentRow | null; error: string | null }> {
   if (input.endsAt <= input.startsAt) {
@@ -586,6 +604,44 @@ export async function updateAppointment(
   }
   if (input.kind === "procedure" && !input.procedureId) {
     return { row: null, error: "Informe o procedimento para agendamentos deste tipo." };
+  }
+
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      if (input.procedureId == null) {
+        const data = await updateAppointmentOpenCasa({
+          appointmentId: input.appointmentId,
+          patientId: input.patientId,
+          professionalId: input.professionalId,
+          roomId: input.roomId,
+          kind: input.kind,
+          startsAt: input.startsAt,
+          endsAt: input.endsAt,
+          urgencyNote: input.urgencyNote?.trim() ? input.urgencyNote.trim() : null,
+        });
+        const row = data ? toAppointmentRow(data) : null;
+        return {
+          row,
+          error: row ? null : "Este agendamento não pode mais ser editado.",
+        };
+      }
+      const data = await callCasaRpc("appointment_update", [
+        input.appointmentId,
+        input.patientId,
+        input.professionalId,
+        input.roomId,
+        input.procedureId,
+        input.kind,
+        input.startsAt,
+        input.endsAt,
+        input.urgencyNote ?? null,
+      ]);
+      const row = data && typeof data === "object" ? toAppointmentRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
   }
 
   // C070: RPC appointment_update (0022) rejeita p_procedure_id null; a coluna é nullable.
@@ -661,7 +717,7 @@ export async function updateAppointment(
 }
 
 export async function appointmentSetStatus(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointmentId: string,
   status: AppointmentStatus,
 ): Promise<{ row: AppointmentRow | null; error: string | null }> {
@@ -671,6 +727,16 @@ export async function appointmentSetStatus(
       row: null,
       error: "Status clínico da agenda só pode ser alterado pelo atendimento.",
     };
+  }
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("appointment_set_status", [appointmentId, status]);
+      const row = data && typeof data === "object" ? toAppointmentRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
   }
 
   const { data, error } = await supabase.rpc("appointment_set_status", {
@@ -688,9 +754,19 @@ export async function appointmentSetStatus(
 }
 
 export async function appointmentRecordArrival(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointmentId: string,
 ): Promise<{ row: AppointmentRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("appointment_record_arrival", [appointmentId]);
+      const row = data && typeof data === "object" ? toAppointmentRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("appointment_record_arrival", {
     p_appointment_id: appointmentId,
   });
@@ -705,9 +781,19 @@ export async function appointmentRecordArrival(
 }
 
 export async function appointmentRecordActualEnd(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointmentId: string,
 ): Promise<{ row: AppointmentRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("appointment_record_actual_end", [appointmentId]);
+      const row = data && typeof data === "object" ? toAppointmentRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("appointment_record_actual_end", {
     p_appointment_id: appointmentId,
   });
@@ -726,9 +812,14 @@ export async function appointmentRecordActualEnd(
 // ---------------------------------------------------------------------------
 
 export async function getEncounter(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<EncounterRow | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const raw = await readEncounterCasa(encounterId);
+    return raw ? toEncounterRow(raw) : null;
+  }
   const { data, error } = await supabase
     .from("encounters")
     .select(`${ENCOUNTER_COLUMNS}, practice_units ( id, name, code )`)
@@ -742,9 +833,14 @@ export async function getEncounter(
 }
 
 export async function getEncounterByAppointment(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointmentId: string,
 ): Promise<EncounterRow | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const raw = await readEncounterByAppointmentCasa(appointmentId);
+    return raw ? toEncounterRow(raw) : null;
+  }
   const { data, error } = await supabase
     .from("encounters")
     .select(ENCOUNTER_COLUMNS)
@@ -818,9 +914,18 @@ export async function listRecentEncountersForProfessional(
 }
 
 export async function encounterOpenFromAppointment(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointmentId: string,
 ): Promise<{ encounterId: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { encounterId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("encounter_open_from_appointment", [appointmentId]);
+      return { encounterId: typeof data === "string" ? data : null, error: null };
+    } catch (error) {
+      return { encounterId: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_open_from_appointment", {
     p_appointment_id: appointmentId,
   });
@@ -833,12 +938,24 @@ export async function encounterOpenFromAppointment(
 
 /** C055: abre retorno vinculado à origem (idempotente para open do mesmo profissional). */
 export async function encounterOpenReturn(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     sourceEncounterId: string;
     appointmentId?: string | null;
   },
 ): Promise<{ encounterId: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { encounterId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("encounter_open_return", [
+        input.sourceEncounterId,
+        input.appointmentId ?? null,
+      ]);
+      return { encounterId: typeof data === "string" ? data : null, error: null };
+    } catch (error) {
+      return { encounterId: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_open_return", {
     p_source_encounter_id: input.sourceEncounterId,
     p_appointment_id: input.appointmentId ?? null,
@@ -868,9 +985,18 @@ export async function listReturnsOfEncounter(
 }
 
 export async function encounterSign(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<{ encounterId: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { encounterId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("encounter_sign", [encounterId]);
+      return { encounterId: typeof data === "string" ? data : null, error: null };
+    } catch (error) {
+      return { encounterId: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("encounter_sign", {
     p_encounter_id: encounterId,
   });
@@ -886,9 +1012,16 @@ export async function encounterSign(
 // ---------------------------------------------------------------------------
 
 export async function listClinicalNotes(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<ClinicalNoteRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const rows = await readClinicalNotesCasa(encounterId);
+    return rows
+      .map((raw) => toClinicalNoteRow(raw))
+      .filter((item): item is ClinicalNoteRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("clinical_notes")
     .select(CLINICAL_NOTE_COLUMNS)
@@ -919,7 +1052,7 @@ export async function getLatestClinicalNote(
 }
 
 export async function clinicalNoteUpsert(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     body: string;
@@ -928,6 +1061,19 @@ export async function clinicalNoteUpsert(
 ): Promise<{ noteId: string | null; error: string | null }> {
   const body = input.body.trim();
   if (!body) return { noteId: null, error: "Informe o conteúdo da nota clínica." };
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { noteId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("clinical_note_upsert", [
+        input.encounterId,
+        body,
+        input.templateCode?.trim() || DEFAULT_NOTE_TEMPLATE,
+      ]);
+      return { noteId: typeof data === "string" ? data : null, error: null };
+    } catch (error) {
+      return { noteId: null, error: rpcFailure(error) };
+    }
+  }
 
   const { data, error } = await supabase.rpc("clinical_note_upsert", {
     p_encounter_id: input.encounterId,
@@ -969,10 +1115,19 @@ export async function getEncounterPregnancy(
 }
 
 export async function linkEncounterToPregnancy(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
   pregnancyId: string,
 ): Promise<{ encounterId: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { encounterId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("link_encounter_to_pregnancy", [encounterId, pregnancyId]);
+      return { encounterId: typeof data === "string" ? data : encounterId, error: null };
+    } catch (error) {
+      return { encounterId: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("link_encounter_to_pregnancy", {
     p_encounter_id: encounterId,
     p_pregnancy_id: pregnancyId,
@@ -985,9 +1140,18 @@ export async function linkEncounterToPregnancy(
 }
 
 export async function unlinkEncounterFromPregnancy(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<{ encounterId: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { encounterId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("unlink_encounter_from_pregnancy", [encounterId]);
+      return { encounterId: typeof data === "string" ? data : encounterId, error: null };
+    } catch (error) {
+      return { encounterId: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("unlink_encounter_from_pregnancy", {
     p_encounter_id: encounterId,
   });
@@ -1413,7 +1577,7 @@ export async function listAgendaBlocksForDay(
 }
 
 export async function createAgendaBlock(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     organizationId: string;
     practiceId: string;
@@ -1426,19 +1590,30 @@ export async function createAgendaBlock(
     description?: string | null;
   },
 ): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  const payload = {
+    organization_id: input.organizationId,
+    practice_id: input.practiceId,
+    professional_id: input.professionalId ?? null,
+    room_id: input.roomId ?? null,
+    starts_at: input.startsAt,
+    ends_at: input.endsAt,
+    block_type: input.reasonCode,
+    reason_code: input.reasonCode,
+    title: input.title ?? AGENDA_BLOCK_REASON_LABEL[input.reasonCode],
+    description: input.description ?? null,
+  };
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("agenda_block_create", [payload]);
+      const row = data && typeof data === "object" ? toAgendaBlockRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("agenda_block_create", {
-    p_payload: {
-      organization_id: input.organizationId,
-      practice_id: input.practiceId,
-      professional_id: input.professionalId ?? null,
-      room_id: input.roomId ?? null,
-      starts_at: input.startsAt,
-      ends_at: input.endsAt,
-      block_type: input.reasonCode,
-      reason_code: input.reasonCode,
-      title: input.title ?? AGENDA_BLOCK_REASON_LABEL[input.reasonCode],
-      description: input.description ?? null,
-    },
+    p_payload: payload,
   });
   if (error) return { row: null, error: mapAttendanceRpcError(error) };
   if (!data || typeof data !== "object") {
@@ -1448,7 +1623,7 @@ export async function createAgendaBlock(
 }
 
 export async function updateAgendaBlock(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     id: string;
     startsAt?: string;
@@ -1456,13 +1631,24 @@ export async function updateAgendaBlock(
     description?: string | null;
   },
 ): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  const payload = {
+    id: input.id,
+    starts_at: input.startsAt ?? null,
+    ends_at: input.endsAt ?? null,
+    description: input.description ?? null,
+  };
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("agenda_block_update", [payload]);
+      const row = data && typeof data === "object" ? toAgendaBlockRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("agenda_block_update", {
-    p_payload: {
-      id: input.id,
-      starts_at: input.startsAt ?? null,
-      ends_at: input.endsAt ?? null,
-      description: input.description ?? null,
-    },
+    p_payload: payload,
   });
   if (error) return { row: null, error: mapAttendanceRpcError(error) };
   if (!data || typeof data !== "object") {
@@ -1472,10 +1658,20 @@ export async function updateAgendaBlock(
 }
 
 export async function cancelAgendaBlock(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   blockId: string,
   reason?: string | null,
 ): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("agenda_block_cancel", [blockId, reason ?? null]);
+      const row = data && typeof data === "object" ? toAgendaBlockRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("agenda_block_cancel", {
     p_block_id: blockId,
     p_reason: reason ?? null,
@@ -1488,9 +1684,19 @@ export async function cancelAgendaBlock(
 }
 
 export async function endAgendaBlock(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   blockId: string,
 ): Promise<{ row: AgendaBlockRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("agenda_block_end", [blockId]);
+      const row = data && typeof data === "object" ? toAgendaBlockRow(data as Record<string, unknown>) : null;
+      return { row, error: row ? null : "Resposta inválida do servidor." };
+    } catch (error) {
+      return { row: null, error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("agenda_block_end", {
     p_block_id: blockId,
   });

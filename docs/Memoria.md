@@ -81,10 +81,15 @@
 
 ## 2026-10-31 — C084 ainda sem prova no console
 
-O código do modo da casa não liga a produção. `npm run build` sem `CASA_DATABASE_URL` continua no caminho Supabase. A prova `supabase/tests/c084_module_isolation.sql` só conta depois de rodar no Bash do BancoFlorescerPP e terminar em `ROLLBACK`, com organizações em 0. Foto e PDF nesse modo ainda dependem do Storage antigo.
+O código do modo da casa não liga a produção. `npm run build` sem `CASA_DATABASE_URL` continua no caminho Supabase. A prova `supabase/tests/c084_module_isolation.sql` só conta depois de rodar no Bash do BancoFlorescerPP e terminar em `ROLLBACK`, com organizações em 0.
+
+## 2026-10-31 — C085 não alcançou o banco desta máquina
+
+A tentativa de SSH para `2.25.151.136` não abriu sessão. Não repetir esse acesso para “confirmar” a prova. O comando fica no console do container, com `psql -U postgre -d "BancoFlorescerPP"`. Arquivo clínico do modo da casa não vai para `public/` nem para URL estática: só `CASA_FILES_ROOT`, e essa variável não entra no Florescer Web neste ciclo.
 
 ## Histórico
 
+- 2026-10-31 — desta máquina a prova C084 não roda; o volume privado fica fora do Florescer Web até o corte autorizado.
 - 2026-10-31 — a C084 fica pendente até o teste SQL rodar no console do BancoFlorescerPP; o build sem a URL da casa permanece no Supabase.
 - 2026-10-31 — no Bash do container, `postgre` aplica no BancoFlorescerPP; a view de profissionais exige `DROP` antes de recriar; não colar `PGPASSWORD` no console.
 - 2026-10-31 — a conferência do complemento viu de novo o prompt do Mac; nenhum comando foi enviado a essa aba.

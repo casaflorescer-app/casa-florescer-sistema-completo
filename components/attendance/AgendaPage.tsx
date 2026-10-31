@@ -397,9 +397,9 @@ export function AgendaPage() {
 
   async function withClient(
     appointmentId: string,
-    run: (supabase: SupabaseClient) => Promise<void>,
+    run: (supabase: SupabaseClient | null) => Promise<void>,
   ) {
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       return;
     }
@@ -446,7 +446,7 @@ export function AgendaPage() {
         return;
       }
       // Recalcula cadeia com início clínico efetivo antes de sair da agenda.
-      if (organizationId && selectedPracticeId) {
+      if (supabase && organizationId && selectedPracticeId) {
         const bounds = dateRangeBoundsIso(dateFrom, dateTo);
         if (bounds) {
           const latest = await listAppointments(supabase, {
@@ -578,7 +578,7 @@ export function AgendaPage() {
           busy={formBusy}
           onViewImpact={() => setShowImpact(true)}
           onCancelBlock={() => {
-            if (!supabase) return;
+            if (!supabase && !isCasaBrowserAuth()) return;
             void (async () => {
               setFormBusy(true);
               const result = await cancelAgendaBlock(supabase, primaryBlock.id, "Cancelado na agenda");

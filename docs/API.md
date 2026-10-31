@@ -95,8 +95,17 @@ Cria um usuário da casa. Só o administrador principal passa. A rota não devol
 - Body: `email`, `fullName`, `password` (mínimo 8), `organizationId` e `memberships` com `practiceId` e `role` (`admin`, `physician` ou `secretary`).
 - 200 `{ "id": "<uuid>" }`. 400 pedido inválido. 401 sem sessão. 403 a criação foi recusada. 503 sessão da casa desligada.
 
+### `GET /api/casa/files` e `POST /api/casa/files`
+
+Grava e lê foto, exame e PDF no volume privado. Sem `CASA_DATABASE_URL` ou sem `CASA_FILES_ROOT` responde 503. A resposta não traz o diretório raiz.
+
+- `GET` recebe `kind` (`photo`, `exam` ou `document`) e `id`. O caminho lido é o gravado na linha. Exame e documento ainda passam por `can_read_exam_file`. Foto passa por `can_access_patient_photo`. Sem permissão ou sem arquivo: 404.
+- `POST` recebe `multipart` com `kind` e `file`. Foto aceita JPEG, PNG ou WebP até 2 MB. Documento e exame aceitam PDF, JPEG, PNG ou WebP até 15 MB. Tipo ou tamanho fora disso responde 400 e não grava. Se o banco recusar depois da escrita, o arquivo novo é apagado.
+- 200, 400, 403, 404 ou 503.
+
 ## Histórico
 
+- 2026-10-31 — C085: `/api/casa/files` grava e lê no volume privado. A rota fica indisponível sem `CASA_FILES_ROOT`. A variável não foi gravada na produção.
 - 2026-10-31 — a `0059` está no BancoFlorescerPP. As rotas `/api/casa/*` continuam inertes enquanto `CASA_DATABASE_URL` não existir no processo.
 - 2026-10-31 — redefinição de senha, leitura de autorização e criação de staff. A `0059` ainda não foi aplicada no BancoFlorescerPP.
 - 2026-10-31 — o cookie da sessão da casa passou a ter identificador. `DELETE` revoga a linha. `POST /api/casa/password` revoga todas as sessões da conta. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.

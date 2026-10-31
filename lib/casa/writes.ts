@@ -1,0 +1,315 @@
+"use server";
+
+import { getAuthUser } from "@/lib/auth/session";
+import { isCasaDatabaseConfigured, withCasaUser } from "@/lib/db/casa";
+
+type SqlRow = Record<string, unknown>;
+
+function plain(row: SqlRow): SqlRow {
+  const out: SqlRow = {};
+  for (const [key, value] of Object.entries(row)) {
+    out[key] = value instanceof Date ? value.toISOString() : value;
+  }
+  return out;
+}
+
+async function actorId() {
+  if (!isCasaDatabaseConfigured()) {
+    throw new Error("A sessão da casa ainda não está ligada neste processo.");
+  }
+  const user = await getAuthUser();
+  if (!user) throw new Error("Sem sessão.");
+  return user.userId;
+}
+
+function textOrNull(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export async function savePregnancyCasa(
+  pregnancyId: string | null,
+  input: {
+    practiceId: string;
+    primaryProfessionalId: string;
+    backupProfessionalId: string;
+    lmpDate: string;
+    clinicalEdd: string;
+    pregnancyNumber: string;
+    risk: string;
+    careStartedOn: string;
+    notes: string;
+    changeReason: string;
+  },
+  context: { patientId: string; organizationId: string },
+): Promise<SqlRow> {
+  const userId = await actorId();
+  const numberText = input.pregnancyNumber.trim();
+  const values = [
+    context.organizationId,
+    input.practiceId,
+    context.patientId,
+    input.primaryProfessionalId,
+    textOrNull(input.backupProfessionalId),
+    textOrNull(input.lmpDate),
+    textOrNull(input.clinicalEdd),
+    numberText ? Number(numberText) : null,
+    input.risk || null,
+    textOrNull(input.careStartedOn),
+    textOrNull(input.notes),
+    textOrNull(input.changeReason),
+  ];
+  return withCasaUser(userId, async (client) => {
+    const result = pregnancyId
+      ? await client.query<SqlRow>(
+          `update public.pregnancies
+              set practice_id = $2,
+                  primary_professional_id = $4,
+                  backup_professional_id = $5,
+                  lmp_date = $6,
+                  clinical_edd = $7,
+                  pregnancy_number = $8,
+                  risk = $9,
+                  care_started_on = $10,
+                  notes = $11,
+                  last_change_reason = $12,
+                  updated_at = now()
+            where id = $13
+              and organization_id = $1
+              and patient_id = $3
+            returning id, organization_id, practice_id, patient_id, primary_professional_id,
+                      backup_professional_id, lmp_date, calculated_edd, clinical_edd,
+                      pregnancy_number, risk, care_started_on, notes, status, status_reason,
+                      status_changed_at, status_changed_by, created_by, created_at, updated_at`,
+          [...values, pregnancyId],
+        )
+      : await client.query<SqlRow>(
+          `insert into public.pregnancies (
+             organization_id, practice_id, patient_id, primary_professional_id,
+             backup_professional_id, lmp_date, clinical_edd, pregnancy_number, risk,
+             care_started_on, notes, last_change_reason, created_by
+           ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+           returning id, organization_id, practice_id, patient_id, primary_professional_id,
+                     backup_professional_id, lmp_date, calculated_edd, clinical_edd,
+                     pregnancy_number, risk, care_started_on, notes, status, status_reason,
+                     status_changed_at, status_changed_by, created_by, created_at, updated_at`,
+          [...values, userId],
+        );
+    const row = result.rows[0];
+    if (!row) throw new Error("A política de acesso do banco recusou esta operação.");
+    return plain(row);
+  });
+}
+
+export type FinanceSnapshot = {
+  invoices: SqlRow[];
+  payments: SqlRow[];
+  splits: SqlRow[];
+  expenses: SqlRow[];
+  centers: SqlRow[];
+};
+
+export async function loadFinanceCasa(): Promise<FinanceSnapshot> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const [invoices, payments, splits, expenses, centers] = await Promise.all([
+      client.query<SqlRow>(
+        `select id, organization_id, practice_id, patient_id, payer_kind, issued_at, total_cents
+         from public.invoices
+         order by issued_at desc
+         limit 80`,
+      ),
+      client.query<SqlRow>(
+        `select id, invoice_id, method, paid_at, amount_cents
+         from public.payments
+         order by paid_at desc
+         limit 80`,
+      ),
+      client.query<SqlRow>(
+        `select id, payment_id, beneficiary_kind, beneficiary_practice_id, amount_cents
+         from public.payment_splits
+         order by id desc
+         limit 80`,
+      ),
+      client.query<SqlRow>(
+        `select a.id, a.organization_id, a.cost_center_id, a.practice_id, a.competence,
+                a.description, a.amount_cents, c.is_shared, c.name as center_name
+         from public.cost_allocations a
+         join public.cost_centers c on c.id = a.cost_center_id
+         order by a.competence desc
+         limit 80`,
+      ),
+      client.query<SqlRow>(
+        `select id, organization_id, code, name, is_shared
+         from public.cost_centers
+         order by name`,
+      ),
+    ]);
+    return {
+      invoices: invoices.rows.map(plain),
+      payments: payments.rows.map(plain),
+      splits: splits.rows.map(plain),
+      expenses: expenses.rows.map(plain),
+      centers: centers.rows.map(plain),
+    };
+  });
+}
+
+export async function createInvoiceCasa(input: {
+  organizationId: string;
+  practiceId: string;
+  patientId: string;
+  payerKind: string;
+  totalCents: number;
+}) {
+  if (!Number.isInteger(input.totalCents) || input.totalCents < 0) {
+    throw new Error("Informe o valor em centavos.");
+  }
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `insert into public.invoices (organization_id, practice_id, patient_id, payer_kind, total_cents)
+       values ($1, $2, $3, $4, $5)
+       returning id`,
+      [input.organizationId, input.practiceId, input.patientId || null, input.payerKind, input.totalCents],
+    );
+    if (!result.rows[0]) throw new Error("A política de acesso do banco recusou esta operação.");
+    return String(result.rows[0].id);
+  });
+}
+
+export async function createPaymentCasa(input: { invoiceId: string; method: string; amountCents: number }) {
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+    throw new Error("Informe o valor em centavos.");
+  }
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `insert into public.payments (invoice_id, method, amount_cents, received_by)
+       values ($1, $2, $3, $4)
+       returning id`,
+      [input.invoiceId, input.method.trim(), input.amountCents, userId],
+    );
+    if (!result.rows[0]) throw new Error("A política de acesso do banco recusou esta operação.");
+    return String(result.rows[0].id);
+  });
+}
+
+export async function createExpenseCasa(input: {
+  organizationId: string;
+  costCenterId: string;
+  practiceId: string;
+  competence: string;
+  description: string;
+  amountCents: number;
+  shared: boolean;
+}) {
+  if (!Number.isInteger(input.amountCents)) throw new Error("Informe o valor em centavos.");
+  const userId = await actorId();
+  const practiceId = input.shared ? null : input.practiceId;
+  if (!input.shared && !practiceId) throw new Error("A despesa particular precisa da prática.");
+  return withCasaUser(userId, async (client) => {
+    const center = await client.query<{ is_shared: boolean }>(
+      "select is_shared from public.cost_centers where id = $1",
+      [input.costCenterId],
+    );
+    const isShared = center.rows[0]?.is_shared === true;
+    if (input.shared !== isShared) {
+      throw new Error("A despesa compartilhada usa um centro compartilhado e sem prática. A particular fica na prática.");
+    }
+    const result = await client.query<SqlRow>(
+      `insert into public.cost_allocations (
+         organization_id, cost_center_id, practice_id, competence, description, amount_cents
+       ) values ($1, $2, $3, $4, $5, $6)
+       returning id`,
+      [
+        input.organizationId,
+        input.costCenterId,
+        practiceId,
+        input.competence,
+        input.description.trim(),
+        input.amountCents,
+      ],
+    );
+    if (!result.rows[0]) throw new Error("A política de acesso do banco recusou esta operação.");
+    return String(result.rows[0].id);
+  });
+}
+
+export async function updateAppointmentOpenCasa(input: {
+  appointmentId: string;
+  patientId: string;
+  professionalId: string;
+  roomId: string | null;
+  kind: string;
+  startsAt: string;
+  endsAt: string;
+  urgencyNote: string | null;
+}): Promise<SqlRow | null> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<{ data: SqlRow | null }>(
+      `update public.appointments
+       set patient_id = $2,
+           professional_id = $3,
+           room_id = $4,
+           procedure_id = null,
+           kind = $5,
+           starts_at = $6,
+           ends_at = $7,
+           urgency_note = $8
+       where id = $1
+         and status in ('scheduled', 'confirmed')
+         and not exists (
+           select 1 from public.encounters e where e.appointment_id = appointments.id
+         )
+       returning to_jsonb(appointments.*) as data`,
+      [
+        input.appointmentId,
+        input.patientId,
+        input.professionalId,
+        input.roomId,
+        input.kind,
+        input.startsAt,
+        input.endsAt,
+        input.urgencyNote,
+      ],
+    );
+    const data = result.rows[0]?.data;
+    return data ? plain(data) : null;
+  });
+}
+
+export async function createPrescriptionDraftCasa(input: {
+  organizationId: string;
+  practiceId: string;
+  patientId: string;
+  professionalId: string;
+  encounterId: string | null;
+  notes: string | null;
+}): Promise<SqlRow> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `insert into public.prescriptions (
+         organization_id, practice_id, patient_id, professional_id, encounter_id,
+         status, notes, created_by
+       ) values ($1,$2,$3,$4,$5,'draft',$6,$7)
+       returning id, organization_id, practice_id, patient_id, professional_id, encounter_id,
+                 orientation_id, exam_order_id, status, notes, signed_at, published_to_patient_at,
+                 viewed_by_patient_at, created_at`,
+      [
+        input.organizationId,
+        input.practiceId,
+        input.patientId,
+        input.professionalId,
+        input.encounterId,
+        input.notes,
+        userId,
+      ],
+    );
+    const row = result.rows[0];
+    if (!row) throw new Error("A política de acesso do banco recusou esta operação.");
+    return plain(row);
+  });
+}

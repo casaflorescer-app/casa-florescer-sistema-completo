@@ -137,6 +137,15 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         visible: clinicManagement,
       },
       {
+        id: "finance",
+        label: "Financeiro",
+        href: "/app/finance",
+        visible: (auth) =>
+          hasStaffRole(auth, "admin") ||
+          hasStaffRole(auth, "owner") ||
+          auth.memberships.some((item) => item.canCashier),
+      },
+      {
         id: "clinic-admin",
         label: "Administração",
         href: "/app/admin",

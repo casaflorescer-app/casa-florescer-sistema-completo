@@ -279,8 +279,23 @@ A senha de `casa_login` foi definida. A prova em `127.0.0.1` devolveu `casa_logi
 
 A C084 não gravou `CASA_DATABASE_URL` nem `NEXT_PUBLIC_CASA_AUTH`, não publicou a porta 5432 e não fez deploy. O arquivo `supabase/tests/c084_module_isolation.sql` espera execução no console do BancoFlorescerPP, com `BEGIN` e `ROLLBACK`. Essa execução ainda não aconteceu.
 
+## C085 — prova ainda no console, variáveis fora do Florescer Web
+
+Nesta máquina a sessão SSH para `2.25.151.136` não abriu. A prova continua pendente. O comando, no console do container do serviço `bancoflorescer`, depois de copiar o arquivo para dentro, é:
+
+```bash
+psql -U postgre -d "BancoFlorescerPP" -X -v ON_ERROR_STOP=1 -c "select current_database();"
+psql -U postgre -d "BancoFlorescerPP" -X -v ON_ERROR_STOP=1 -f /caminho/c084_module_isolation.sql
+psql -U postgre -d "BancoFlorescerPP" -X -c "select count(*) from public.organizations;"
+```
+
+O primeiro resultado precisa ser `BancoFlorescerPP`. O arquivo abre `BEGIN` e termina em `ROLLBACK`. A contagem seguinte precisa ser 0.
+
+`CASA_DATABASE_URL`, `CASA_SESSION_SECRET`, `CASA_FILES_ROOT` e `NEXT_PUBLIC_CASA_AUTH` continuam ausentes no Florescer Web. A porta 5432 não foi publicada. Não houve deploy. A ordem futura, ainda bloqueada, é: prova com organizações em 0, testes de arquivo já aprovados neste repositório, imagem nova só com autorização, e só então as variáveis no processo. `CASA_DATABASE_URL` usa `casa_login`. `CASA_FILES_ROOT` fica fora da pasta pública. `NEXT_PUBLIC_CASA_AUTH=1` entra no build seguinte. A API antiga permanece até esse corte.
+
 ## Histórico
 
+- 2026-10-31 — C085: a prova SQL da C084 continua no console do BancoFlorescerPP. Desta máquina a sessão não abriu. Nenhuma variável da casa entrou no Florescer Web. Sem deploy.
 - 2026-10-31 — C084 no repositório. Sem variáveis da casa no Florescer Web, sem porta 5432 e sem deploy. A prova SQL da C084 ainda não rodou no console.
 - 2026-10-31 — C083 no Bash do BancoFlorescerPP: `0059` e C074 aplicadas. `casa_login` provado sem superusuário e sem `BYPASSRLS`. O teste SQL rodou e foi desfeito. Organizações 0. Sem `CASA_DATABASE_URL` e sem deploy.
 - 2026-10-31 — C083 complemento: o prompt selecionado continuou o do Mac. A `0059` e a senha de `casa_login` não foram aplicadas. Build e testes locais de cookie e redefinição passaram. Sem deploy.

@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { savePregnancyCasa } from "@/lib/casa/writes";
 import { eddFromLmp } from "@/lib/patients/format";
 import type { PregnancyEventKind, PregnancyRisk, PregnancyStatus } from "@/lib/types/database";
 
@@ -513,12 +515,19 @@ export async function suggestPregnancyNumber(
 }
 
 export async function createPregnancy(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: PregnancyFormInput,
   context: PregnancyWriteContext,
 ): Promise<PregnancyRow> {
   const validation = validatePregnancyForm(input);
   if (validation) throw new Error(validation);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const raw = await savePregnancyCasa(null, input, context);
+    const row = toPregnancyRow(raw);
+    if (!row) throw new Error("Gestação criada, mas a resposta do banco foi inválida.");
+    return row;
+  }
   const result = await supabase
     .from("pregnancies")
     .insert(toPersistPayload(input, context))
@@ -534,13 +543,20 @@ export async function createPregnancy(
 }
 
 export async function updatePregnancy(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
   input: PregnancyFormInput,
   context: PregnancyWriteContext,
 ): Promise<PregnancyRow> {
   const validation = validatePregnancyForm(input);
   if (validation) throw new Error(validation);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const raw = await savePregnancyCasa(pregnancyId, input, context);
+    const row = toPregnancyRow(raw);
+    if (!row) throw new Error("Gestação atualizada, mas a resposta do banco foi inválida.");
+    return row;
+  }
   const payload = toPersistPayload(input, context);
   const result = await supabase
     .from("pregnancies")

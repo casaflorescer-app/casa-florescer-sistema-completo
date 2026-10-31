@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { listPlatformUsers, setProfileActive, setSecretaryCarePolicyView } from "@/lib/platform/users";
 import type { PlatformMembership, PlatformUser } from "@/lib/platform/types";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listClinicUsersCasa } from "@/lib/casa/reads";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { roleLabels } from "@/lib/auth/app-nav";
 import { formatDateTime } from "@/lib/platform/format";
@@ -32,9 +33,65 @@ export function ClinicUsersPanel() {
     if (!supabase) {
       if (!isCasaBrowserAuth()) {
         setError("Autenticação não configurada neste ambiente.");
+        setUsers([]);
+        setLoading(false);
+        return;
       }
-      setUsers([]);
-      setLoading(false);
+      void listClinicUsersCasa()
+        .then((data) => {
+          const orgNames = new Map(
+            data.organizations.map((row) => [
+              String(row.id),
+              String(row.trade_name || row.legal_name || row.id),
+            ]),
+          );
+          const admins = new Set(
+            data.admins
+              .filter((row) => row.revoked_at == null)
+              .map((row) => String(row.user_id)),
+          );
+          const memberships = new Map<string, PlatformUser["memberships"]>();
+          for (const row of data.roles) {
+            const userId = String(row.user_id ?? "");
+            const list = memberships.get(userId) ?? [];
+            list.push({
+              id: String(row.id),
+              practiceId: String(row.practice_id),
+              practiceName: String(row.practice_name || row.practice_id),
+              practiceKind: row.practice_kind === "house" || row.practice_kind === "sublet" ? row.practice_kind : null,
+              role: row.role as PlatformUser["memberships"][number]["role"],
+              clinicalAccess: String(row.clinical_access ?? "none"),
+              canViewCarePolicies: row.can_view_care_policies === true,
+            });
+            memberships.set(userId, list);
+          }
+          const rows: PlatformUser[] = data.profiles.flatMap((row) => {
+            const id = String(row.id ?? "");
+            const organizationId = String(row.organization_id ?? "");
+            if (!id || !row.full_name || !row.email || !organizationId) return [];
+            if (orgId && organizationId !== orgId) return [];
+            return [
+              {
+                id,
+                fullName: String(row.full_name),
+                email: String(row.email),
+                organizationId,
+                organizationName: orgNames.get(organizationId) ?? null,
+                isActive: row.is_active !== false,
+                createdAt: String(row.created_at ?? ""),
+                lastAccess: null,
+                isSystemAdmin: admins.has(id),
+                memberships: memberships.get(id) ?? [],
+              },
+            ];
+          });
+          setUsers(rows);
+          setLoading(false);
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : "Não foi possível carregar os usuários.");
+          setLoading(false);
+        });
       return;
     }
     void listPlatformUsers(supabase)

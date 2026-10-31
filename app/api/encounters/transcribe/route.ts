@@ -27,11 +27,34 @@ export async function POST(request: Request) {
 
     const transcriptionId = body.transcriptionId?.trim();
     const audioStoragePath = body.audioStoragePath?.trim();
-    if (!transcriptionId || !audioStoragePath) {
+    if (!transcriptionId || !audioStoragePath || audioStoragePath.includes("..")) {
       return NextResponse.json({ error: "Parâmetros inválidos." }, { status: 400 });
     }
 
-    await supabase.rpc("encounter_recording_save_transcription_result", {
+    const { data: transcription, error: transcriptionError } = await supabase
+      .from("encounter_recording_transcriptions")
+      .select("segment_id")
+      .eq("id", transcriptionId)
+      .maybeSingle();
+    if (transcriptionError || !transcription?.segment_id) {
+      return NextResponse.json({ error: "Transcrição não encontrada." }, { status: 404 });
+    }
+
+    const { data: segment, error: segmentError } = await supabase
+      .from("encounter_recording_segments")
+      .select("audio_storage_path")
+      .eq("id", transcription.segment_id)
+      .maybeSingle();
+    const storedPath =
+      typeof segment?.audio_storage_path === "string" ? segment.audio_storage_path : "";
+    if (segmentError || !storedPath || storedPath !== audioStoragePath) {
+      return NextResponse.json(
+        { error: "Áudio não corresponde a esta transcrição." },
+        { status: 403 },
+      );
+    }
+
+    const started = await supabase.rpc("encounter_recording_save_transcription_result", {
       p_transcription_id: transcriptionId,
       p_status: "processing",
       p_provider: null,
@@ -39,6 +62,9 @@ export async function POST(request: Request) {
       p_error_message: null,
       p_is_simulation: false,
     });
+    if (started.error) {
+      return NextResponse.json({ error: "Transcrição não autorizada." }, { status: 403 });
+    }
 
     const { data: file, error: downloadError } = await supabase.storage
       .from(ENCOUNTER_RECORDING_BUCKET)

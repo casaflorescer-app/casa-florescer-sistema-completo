@@ -35,8 +35,8 @@ const clinicalAi = read("app/api/encounters/clinical-ai/route.ts");
 const transcribe = read("app/api/encounters/transcribe/route.ts");
 const returnPanel = read("components/attendance/ClinicalReturnPanel.tsx");
 const workspace = read("components/attendance/EncounterWorkspace.tsx");
-const medicaHome = read("app/medica/page.tsx");
-const medicaAgenda = read("app/medica/agenda/page.tsx");
+const medicaHome = read("app/(shell)/medica/page.tsx");
+const medicaAgenda = read("app/(shell)/medica/agenda/page.tsx");
 
 ok("ignoreBuildErrors false", /ignoreBuildErrors:\s*false/.test(nextConfig));
 ok("PATH_RULES records=physician", access.includes('prefix: "/app/records"') && access.includes('hasStaffRole(auth, "physician")'));
@@ -45,7 +45,7 @@ ok("PATH_RULES admin/owner gestão", access.includes('prefix: "/app/rooms"') && 
 ok("canAccessClinicManagement owner|admin", clinica.includes("canAccessClinicManagement") && clinica.includes('hasStaffRole(auth, "owner")') && clinica.includes('hasStaffRole(auth, "admin")'));
 ok("LEGACY_PORTAL_PREFIXES inclui medica/secretaria/gestao", paths.includes('"/medica"') && paths.includes('"/secretaria"') && paths.includes('"/gestao"'));
 ok("middleware redireciona legado autenticado", mwRoot.includes("isLegacyPortalPath") && mwRoot.includes("AUTHENTICATED_HOME"));
-ok("middleware exige login", mwRoot.includes('pathname = "/login"'));
+ok("middleware exige login no portal legado", mwRoot.includes('"/login"') && mwRoot.includes("isLegacyPortalPath"));
 ok("API render-pdf usa createServerSupabase", renderPdf.includes("createServerSupabase"));
 ok("API clinical-ai autenticada", clinicalAi.includes("createServerSupabase") || clinicalAi.includes("getUser") || clinicalAi.includes("auth"));
 ok("API transcribe autenticada", transcribe.includes("createServerSupabase") || transcribe.includes("getUser") || transcribe.includes("auth"));

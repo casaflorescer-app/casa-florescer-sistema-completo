@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { Playfair_Display } from "next/font/google";
 import { RedirectIfSession } from "@/components/layout/StaticAuthGates";
@@ -46,9 +45,7 @@ export default function LoginPage() {
             Bem-vinda! Acesse sua conta.
           </p>
 
-          <Suspense fallback={<p className="mt-6 text-sm text-rose-900/70">Carregando…</p>}>
-            <LoginForm />
-          </Suspense>
+          <LoginForm />
 
           <div className="mt-6 space-y-1.5 text-sm">
             <p>

@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
-import { APP_PATHNAME_HEADER } from "@/lib/auth/paths";
+import { APP_PATHNAME_HEADER, isPublicPath } from "@/lib/auth/paths";
 import { isSupabaseConfigured } from "./config";
 
 type CookieToSet = {
@@ -22,6 +22,13 @@ export async function updateSession(request: NextRequest): Promise<{
   response: NextResponse;
   user: User | null;
 }> {
+  // Reescrever o pedido (x-casa-pathname) e chamar o Auth aqui faz o Next
+  // responder 307 para /login nas rotas públicas. Essas rotas não precisam
+  // de sessão no servidor; o formulário trata o login no browser.
+  if (isPublicPath(request.nextUrl.pathname)) {
+    return { response: NextResponse.next(), user: null };
+  }
+
   let response = nextWithPathname(request);
   if (!isSupabaseConfigured()) return { response, user: null };
 

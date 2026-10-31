@@ -37,6 +37,23 @@ export function isAuthEntryPath(pathname: string) {
   return path === "/login" || path === "/login/criar" || path === "/login/esqueci-senha";
 }
 
+const PROTECTED_PREFIXES = [
+  "/app",
+  "/medica",
+  "/secretaria",
+  "/gestao",
+  "/paciente",
+  "/unauthorized",
+] as const;
+
+/** Rotas em que o guard server-side pode mandar para /login. */
+export function isProtectedPath(pathname: string) {
+  const path = normalizePathname(pathname);
+  return PROTECTED_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+}
+
 export function isLegacyPortalPath(pathname: string) {
   const path = normalizePathname(pathname);
   return LEGACY_PORTAL_PREFIXES.some(

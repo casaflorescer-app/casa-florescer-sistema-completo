@@ -7,10 +7,19 @@ O app continua com Supabase Auth e cookie de sessão (`middleware.ts`, `lib/supa
 `deploy/supabase/override.yml` força, no serviço `auth`:
 
 - cadastro público desligado
+- login por e-mail e senha ligado
 - login por telefone desligado
 - usuário anônimo desligado
 
-A tela `app/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
+No compose oficial do Supabase, `ENABLE_EMAIL_SIGNUP=false` vira `GOTRUE_EXTERNAL_EMAIL_ENABLED=false` e o Auth responde `email_provider_disabled` até para quem já tem conta. O cadastro público fica fechado por `DISABLE_SIGNUP=true`, não por essa variável.
+
+A tela `app/(shell)/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
+
+O layout raiz guarda `metadata` e `viewport` e só repassa os filhos. `<html>` e `<body>` ficam no layout do grupo `app/(shell)/layout.tsx` (`data-casa="layout-9"`), junto com `AuthProvider`, `AlertProvider`, `PwaRegister` e o `import` de `globals.css`. As URLs continuam as mesmas. No ar, o layout raiz não entra no HTML. Um `template.tsx` recria o documento em toda navegação interna e a página fica branca; a casca saiu de lá. Sem o import de CSS nesse layout, a produção só recebe o CSS da fonte e a tela de login fica sem o visual. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele.
+
+`requireSession` só chama `redirect("/login")` quando o middleware informa um caminho protegido em `x-casa-pathname`. Sem esse caminho, esse guard não redireciona.
+
+Em `/app`, a casca aparece mesmo sem esse cabeçalho. Se o servidor não vê a sessão, a página mostra “Verificando sessão…” e o browser decide. Se `getUser()` não responder em 8 segundos, o carregamento termina como sessão ausente. Redirecionar `/app` para `/login` nesse caso, com a sessão já gravada no browser, trocava as duas telas até a navegação ficar branca. O middleware não manda `/app` nem `/unauthorized` para o login. Quem está deslogado volta pelo gate do cliente, com carregamento inteiro da página (`window.location.replace`). O acesso negado faz o mesmo para `/unauthorized`. Depois do login, a entrada em `/app` também é um carregamento inteiro, não uma troca interna do roteador.
 
 ## URLs
 
@@ -51,4 +60,15 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-22 — a casca saiu de `app/template.tsx`, que recriava `<html>` e `<body>` a cada navegação, e foi para `app/(shell)/layout.tsx` (`data-casa="layout-9"`). Sem sessão, ou se a sessão não responde em 8 segundos, a troca para o login é um carregamento inteiro.
+- 2026-10-22 — transcrição de atendimento e de orientação só baixa o áudio cujo caminho é o do registro da sessão. Um caminho diferente responde 403 e não segue para o provedor.
+- 2026-10-22 — a navegação depois do login deixava a tela branca. `/app` passou a manter a casca, o middleware não devolve mais essa rota ao login, e o formulário entra com carregamento inteiro da página.
+- 2026-10-22 — login por e-mail ficou explícito no override. `ENABLE_EMAIL_SIGNUP=false` desligava a senha e o Auth respondia `email_provider_disabled`.
+- 2026-10-22 — `globals.css` passou a ser importado em `app/template.tsx`. No ar, o CSS do layout não entra na página e o login ficava sem o Tailwind.
+- 2026-10-22 — a casca `<html>`/`<body>` foi para `app/template.tsx` (`data-casa="layout-8"`). O layout raiz ficou só com metadata e viewport.
+- 2026-10-22 — layout raiz voltou a ser só a casca `html`/`body`. Providers foram para `app/template.tsx`. `force-dynamic` saiu do layout raiz.
+- 2026-10-22 — `/login` deixou o 307 e passou a responder 500. `useAuth()` sem provider derrubava a tela no navegador. Sem provider, o hook agora responde como sessão ausente.
+- 2026-10-21 — middleware limitado às rotas com sessão. `/login` ficou de fora depois que `x-casa-rev: 3` no ar continuou em 307.
+- 2026-10-21 — rotas públicas não passam pelo Auth no middleware; guards não redirecionam caminho público de volta a `/login`.
 - 2026-10-21 — signup público desligado, URLs de redirect e bootstrap do primeiro admin e da clínica.
+- 2026-10-21 — layout raiz dinâmico para o cookie de sessão não gerar ciclo 307 em `/login`.

@@ -9,6 +9,8 @@ services:
   auth:
     environment:
       GOTRUE_DISABLE_SIGNUP: "true"
+      # No compose oficial, ENABLE_EMAIL_SIGNUP=false desliga o login por senha.
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
   supavisor:

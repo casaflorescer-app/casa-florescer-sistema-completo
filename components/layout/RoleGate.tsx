@@ -1,11 +1,22 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppWorkspace } from "@/components/auth/AppRouteGuard";
 import { PermissionsProvider } from "@/lib/hooks/usePermissions";
+import {
+  APP_PATHNAME_HEADER,
+  isProtectedPath,
+  isPublicPath,
+} from "@/lib/auth/paths";
 import { getSessionContext } from "@/lib/auth/session";
 import type { ModuleId } from "@/lib/permissions";
 import type { SessionContext, UiRole } from "@/lib/types/domain";
 
-export async function requireSession(): Promise<SessionContext> {
+export async function requireSession(): Promise<SessionContext | null> {
+  const headerPath = headers().get(APP_PATHNAME_HEADER);
+  if (!headerPath || isPublicPath(headerPath) || !isProtectedPath(headerPath)) {
+    return null;
+  }
+
   const session = await getSessionContext();
   if (!session) redirect("/login");
   return session;
@@ -34,12 +45,12 @@ export async function requireModule(_moduleId: ModuleId) {
 }
 
 export async function StaffAppLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireSession();
-  return (
-    <PermissionsProvider session={session}>
-      <AppWorkspace>{children}</AppWorkspace>
-    </PermissionsProvider>
-  );
+  // Sem o pathname do middleware a casca não pode sumir: a página interna
+  // devolve vazio e a navegação fica branca. O cliente confirma a sessão.
+  const session = await getSessionContext();
+  const workspace = <AppWorkspace>{children}</AppWorkspace>;
+  if (!session) return workspace;
+  return <PermissionsProvider session={session}>{workspace}</PermissionsProvider>;
 }
 
 export async function RoleLayout({

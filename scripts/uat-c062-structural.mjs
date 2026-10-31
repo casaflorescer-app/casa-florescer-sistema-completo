@@ -24,7 +24,7 @@ function read(rel) {
   return readFileSync(p, "utf8");
 }
 
-const page = read("app/app/reports/page.tsx");
+const page = read("app/(shell)/app/reports/page.tsx");
 const mod = read("components/reports/ReportsModule.tsx");
 const dir = read("lib/reports/directory.ts");
 const period = read("lib/reports/period.ts");

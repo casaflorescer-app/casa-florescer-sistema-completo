@@ -114,9 +114,9 @@ chmod 600 deploy/.env
 Edite `deploy/.env` e preencha só isto, sem `https://`:
 
 ```text
-APP_HOST=sistema.seudominio.com.br
-API_HOST=api.seudominio.com.br
-ACME_EMAIL=voce@seudominio.com.br
+APP_HOST=sistema.thvp.cloud
+API_HOST=api.thvp.cloud
+ACME_EMAIL=voce@thvp.cloud
 ```
 
 Gere o resto. O comando grava o arquivo e não imprime a chave `service_role`.
@@ -142,6 +142,16 @@ grep -o '^[A-Za-z_][A-Za-z0-9_]*=' deploy/.env
 Ainda em `deploy/.env`, preencha `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` e `SMTP_SENDER_NAME`. É o que envia a redefinição de senha. Sem isso o primeiro login funciona e o e-mail não sai.
 
 Senha com espaço ou `#` fica entre aspas simples: `SMTP_PASS='a senha'`.
+
+## 6.1. Só o banco
+
+O e-mail do passo 6 não entra nesta etapa. O script sobe apenas o Postgres, aplica as migrations e recusa seguir se a porta 5432 aparecer na internet. A clínica e o primeiro usuário continuam para o `deploy/bootstrap-admin.sh`.
+
+```bash
+bash deploy/up-db.sh
+```
+
+A saída esperada termina com `Organizações: 0`.
 
 ## 7. Subir
 
@@ -226,4 +236,5 @@ O `npm run build` avisa que `next@14.2.15` tem uma atualização de segurança p
 
 ## Histórico
 
-- 2026-10-21 — guia da VPS com Caddy, Supabase pinado e bootstrap do primeiro admin.
+- 2026-10-21 — guia da VPS com Caddy, Supabase pinado e bootstrap do primeiro administrador.
+- 2026-10-21 — passo só do banco em `deploy/up-db.sh`, com `sistema.thvp.cloud` e `api.thvp.cloud`.

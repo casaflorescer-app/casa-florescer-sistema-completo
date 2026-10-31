@@ -105,7 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (loadContext) void refreshAuthorization(next);
     };
 
+    const timeout = window.setTimeout(() => {
+      if (cancelled || handledInitial) return;
+      handledInitial = true;
+      applyUser(null, false);
+    }, 8000);
+
     supabase.auth.getUser().then(({ data }) => {
+      window.clearTimeout(timeout);
       handledInitial = true;
       applyUser(data.user ?? null, Boolean(data.user));
     });
@@ -135,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, [clearAuthorization, refreshAuthorization]);
@@ -169,10 +177,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+const loggedOut: AuthContextValue = {
+  user: null,
+  loading: false,
+  configured: false,
+  authorization: null,
+  authorizationLoading: false,
+  authorizationError: null,
+  signOut: async () => {},
+};
+
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth() precisa do AuthProvider");
-  }
-  return ctx;
+  // Na tela pública o layout às vezes não entrega o provider. Tratar como
+  // deslogado evita a exceção que derruba o /login no navegador.
+  return useContext(AuthContext) ?? loggedOut;
 }

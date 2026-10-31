@@ -27,15 +27,32 @@ export async function POST(request: Request) {
 
     const versionId = body.versionId?.trim();
     const audioStoragePath = body.audioStoragePath?.trim();
-    if (!versionId || !audioStoragePath) {
+    if (!versionId || !audioStoragePath || audioStoragePath.includes("..")) {
       return NextResponse.json({ error: "Parâmetros inválidos." }, { status: 400 });
     }
 
-    await saveOrientationDraft(supabase, {
+    const { data: version, error: versionError } = await supabase
+      .from("clinical_orientation_versions")
+      .select("audio_storage_path")
+      .eq("id", versionId)
+      .maybeSingle();
+    const storedPath =
+      typeof version?.audio_storage_path === "string" ? version.audio_storage_path : "";
+    if (versionError || !storedPath || storedPath !== audioStoragePath) {
+      return NextResponse.json(
+        { error: "Áudio não corresponde a esta orientação." },
+        { status: 403 },
+      );
+    }
+
+    const started = await saveOrientationDraft(supabase, {
       version_id: versionId,
       transcription_status: "processing",
       transcription_error: null,
     });
+    if (started.error) {
+      return NextResponse.json({ error: "Transcrição não autorizada." }, { status: 403 });
+    }
 
     const { data: file, error: downloadError } = await supabase.storage
       .from(CLINICAL_ORIENTATION_BUCKET)

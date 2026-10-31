@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AUTHENTICATED_HOME } from "@/lib/auth/paths";
 
@@ -12,29 +11,23 @@ function LoadingLine() {
 }
 
 export function RedirectIfSession() {
-  const router = useRouter();
   const { user, loading } = useAuth();
 
   useEffect(() => {
     if (loading) return;
-    if (user) router.replace(AUTHENTICATED_HOME);
-  }, [user, loading, router]);
+    if (user) window.location.assign(AUTHENTICATED_HOME);
+  }, [user, loading]);
 
   return null;
 }
 
 export function ClientRoleHomeRedirect() {
-  const router = useRouter();
   const { user, loading } = useAuth();
 
   useEffect(() => {
     if (loading) return;
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
-    router.replace(AUTHENTICATED_HOME);
-  }, [user, loading, router]);
+    window.location.assign(user ? AUTHENTICATED_HOME : "/login");
+  }, [user, loading]);
 
   return <LoadingLine />;
 }

@@ -26,7 +26,7 @@ ok(
   /relacionamentos[\s\S]*physician/.test(nav) || nav.includes('hasStaffRole(auth, "physician")'),
 );
 ok("Médico sem Obstetrícia no grupo (lista exata C041)", !/Receitas[\s\S]*obstetrics[\s\S]*relacionamentos/.test(nav));
-ok("seção Gestão Clínica", nav.includes('id: "gestao_clinica"') && nav.includes("Gestão de Salas"));
+ok("seção Gestão Clínica", nav.includes('id: "gestao_clinica"') && nav.includes('href: "/app/rooms"'));
 ok("Gestão usa canAccessClinicManagement", nav.includes("canAccessClinicManagement"));
 ok("sem email hardcode no nav", !/samara@|thais@|===.*email/i.test(nav));
 

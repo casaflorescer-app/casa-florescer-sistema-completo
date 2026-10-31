@@ -8,6 +8,7 @@ export default function HomePage() {
       <RedirectIfSession />
       <BrandMark />
       <h1 className="mt-8 page-title">Casa Florescer</h1>
+      <p className="text-xs text-lotus-600">entrada 5</p>
       <p className="page-sub">
         Sistema da casa: recepção compartilhada, prontuário isolado por
         consultório, portal da paciente e gestão de estoque e contratos.

@@ -39,10 +39,10 @@ const patients = read("components/patients/PatientList.tsx");
 const rentals = read("components/rentals/RentalsModule.tsx");
 const inventory = read("components/inventory/InventoryModule.tsx");
 const docs = read("docs/c059-responsiveness-pwa.md");
-const appPage = read("app/app/page.tsx");
-const medica = existsSync(resolve(root, "app/medica"));
-const secretaria = existsSync(resolve(root, "app/secretaria"));
-const gestao = existsSync(resolve(root, "app/gestao"));
+const appPage = read("app/(shell)/app/page.tsx");
+const medica = existsSync(resolve(root, "app/(shell)/medica"));
+const secretaria = existsSync(resolve(root, "app/(shell)/secretaria"));
+const gestao = existsSync(resolve(root, "app/(shell)/gestao"));
 
 let manifestJson = {};
 try {
@@ -77,9 +77,9 @@ ok("PwaRegister presente", pwa.includes("serviceWorker") && pwa.includes("sw.js"
 ok("Layout viewportFit cover + appleWebApp", layout.includes("viewportFit") && layout.includes("appleWebApp"));
 ok("globals overflow-x clip", globals.includes("overflow-x: clip"));
 ok("Docs C059", docs.includes("C059") && docs.includes("standalone") && /service worker/i.test(docs));
-ok("Superfície /app presente", appPage.length > 0 || existsSync(resolve(root, "app/app")));
+ok("Superfície /app presente", appPage.length > 0 || existsSync(resolve(root, "app/(shell)/app")));
 ok("Sem shell legado como superfície obrigatória (pastas podem existir)", true);
-ok("Placeholders reports/specialties fechados (C060/C062)", !read("app/app/reports/page.tsx").includes("ModulePlaceholder") && !read("app/app/specialties/page.tsx").includes("ModulePlaceholder"));
+ok("Placeholders reports/specialties fechados (C060/C062)", !read("app/(shell)/app/reports/page.tsx").includes("ModulePlaceholder") && !read("app/(shell)/app/specialties/page.tsx").includes("ModulePlaceholder"));
 ok("Sem mock operacional no shell", !shell.toLowerCase().includes("mock") && !sw.toLowerCase().includes("offline clinic"));
 
 console.log(`\nEstrutural C059: ${pass}/${pass + fail}`);

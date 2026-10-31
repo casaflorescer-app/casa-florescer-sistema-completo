@@ -66,11 +66,11 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   },
   {
     id: "relacionamentos",
-    title: "Central de Relacionamentos",
+    title: "Relacionamentos",
     items: [
       {
         id: "relationship",
-        label: "Central de Relacionamentos",
+        label: "Relacionamentos",
         href: "/app/relationship",
         // C041: grupo visível também à médica. Operação de fila permanece
         // secretaria/owner/admin via canManage na página + RPCs (C037).

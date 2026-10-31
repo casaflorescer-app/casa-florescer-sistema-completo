@@ -84,7 +84,11 @@ comment on column public.professionals.is_active is
 -- 2) Views: LEFT JOIN profiles + display_name (sem filtrar is_active aqui)
 -- ---------------------------------------------------------------------------
 
-create or replace view public.professional_labels
+-- A view da 0011 termina em full_name. category e is_active entram antes
+-- desse nome, e o CREATE OR REPLACE recusa a troca de coluna.
+drop view if exists public.professional_labels;
+
+create view public.professional_labels
 with (security_invoker = false)
 as
 select

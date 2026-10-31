@@ -269,14 +269,17 @@ Leitura depois dos testes: `citext` 1.8, `btree_gist` 1.8 e `pgcrypto` 1.4 insta
 
 Não houve `CASA_DATABASE_URL`, deploy, organização real, usuário real nem reinício da VPS. `florescerweb`, `florescerapi` e os serviços vizinhos não foram alterados.
 
-## C083 — código pronto, apply ainda não
+## C083 — 0059 e C074 no BancoFlorescerPP
 
-A `0059` cria a redefinição de senha e a função que só o administrador principal usa para criar usuário. O teste `supabase/tests/c083_login_and_staff.sql` desfaz a transação. O script `scripts/c083-bootstrap.sql` recusa a execução e não tem senha nem pessoa real.
+A `0059` cria a redefinição de senha e a função que só o administrador principal usa para criar usuário. O script `scripts/c083-bootstrap.sql` recusa a execução e não tem senha nem pessoa real.
 
-Em 2026-10-31 a tentativa de aplicar isso pelo Terminal caiu na aba local do Mac, não na sessão `root@srv2083061`. Uma conferência seguinte, sem enviar comando, mostrou de novo o prompt `thiagovideirapereira@Gabrieles-MacBook-Air`. A migration não entrou. A senha de `casa_login` não foi definida. `CASA_DATABASE_URL` não foi gravada. Nenhuma credencial foi impressa. A produção não mudou.
+Em 2026-10-31 o Bash do container do serviço `bancoflorescer` aplicou a `0059` e a C074 no `BancoFlorescerPP`, com o usuário de console `postgre`. A função `casa_staff_create(text,text,text,uuid,jsonb)` existe. A coluna `professionals.display_name` e a função `professional_upsert(jsonb)` existem. Organizações e profissionais continuam em 0. A view `professional_labels` precisou ser apagada e criada de novo: o `CREATE OR REPLACE` recusou trocar a coluna `full_name` por `category`. O arquivo da migration ficou com esse `DROP VIEW`.
+
+A senha de `casa_login` foi definida. A prova em `127.0.0.1` devolveu `casa_login|false|false`. O valor não está no Git. Um valor gerado antes apareceu no console, porque o comando de teste foi deformado, e foi substituído. `CASA_DATABASE_URL` e `NEXT_PUBLIC_CASA_AUTH` não foram gravados. Não houve deploy. O teste `supabase/tests/c083_login_and_staff.sql` ainda não rodou.
 
 ## Histórico
 
+- 2026-10-31 — C083 no Bash do BancoFlorescerPP: `0059` e C074 aplicadas. `casa_login` provado sem superusuário e sem `BYPASSRLS`. Sem `CASA_DATABASE_URL`, sem deploy e sem o teste SQL da C083.
 - 2026-10-31 — C083 complemento: o prompt selecionado continuou o do Mac. A `0059` e a senha de `casa_login` não foram aplicadas. Build e testes locais de cookie e redefinição passaram. Sem deploy.
 - 2026-10-31 — C082: schema `0000`–`0058`, papéis e `GRANT` no BancoFlorescerPP. Testes C077 e C082 desfeitos. 102 tabelas, 0 organizações. Sem backup, sem database temporário, sem troca da API e sem deploy.
 - 2026-10-31 — catálogo do BancoFlorescerPP lido: extensões disponíveis e não instaladas, schemas `auth`, `storage` e `extensions` ausentes, 0 tabelas. Backup, ordem e rollback escritos. Sem apply.

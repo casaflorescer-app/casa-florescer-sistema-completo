@@ -60,7 +60,7 @@ Com `NEXT_PUBLIC_CASA_AUTH=1`, o login deixa o GoTrue. A senha é conferida com 
 
 Sair chama `DELETE /api/casa/session`, que revoga aquela linha e apaga o cookie, e em seguida encerra a sessão do Auth. Trocar a senha em `POST /api/casa/password` confere a senha atual, grava um hash Argon2id novo, apaga todas as linhas daquela conta e apaga o cookie. O pedido de nova senha, com o modo da casa ligado, responde sempre a mesma frase e não grava token enquanto não houver envio de e-mail. Cadastro público continua fechado.
 
-A conexão prevista é o papel `casa_login`: login, sem superusuário e sem `BYPASSRLS`, membro de `casa_app` e de `authenticated`. Cada pedido grava `app.user_id`, faz `SET LOCAL ROLE authenticated` e, ao devolver a conexão, `RESET ROLE`. `staff_credentials` e `casa_sessions` não ficam legíveis para `authenticated`. A senha desse papel ainda não foi definida. Com `CASA_DATABASE_URL`, uma sessão inválida da casa não cai no Auth. Com `NEXT_PUBLIC_CASA_AUTH=1`, o browser deixa de abrir o cliente Supabase. Só o administrador principal cria usuário. O script `scripts/c083-bootstrap.sql` recusa a execução e não contém senha.
+A conexão prevista é o papel `casa_login`: login, sem superusuário e sem `BYPASSRLS`, membro de `casa_app` e de `authenticated`. Cada pedido grava `app.user_id`, faz `SET LOCAL ROLE authenticated` e, ao devolver a conexão, `RESET ROLE`. `staff_credentials` e `casa_sessions` não ficam legíveis para `authenticated`. Em 2026-10-31 a senha desse papel foi definida no BancoFlorescerPP e a conexão em `127.0.0.1` devolveu `casa_login|false|false`. O valor não está no Git. Com `CASA_DATABASE_URL`, uma sessão inválida da casa não cai no Auth. Com `NEXT_PUBLIC_CASA_AUTH=1`, o browser deixa de abrir o cliente Supabase. Só o administrador principal cria usuário. O script `scripts/c083-bootstrap.sql` recusa a execução e não contém senha.
 
 Sem a variável pública, a produção segue no Auth. A variável não foi ligada. `CASA_DATABASE_URL` também não foi gravada no processo de produção.
 
@@ -70,6 +70,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-31 — a senha de `casa_login` foi definida no BancoFlorescerPP. A prova devolveu `casa_login|false|false`. `CASA_DATABASE_URL` continua ausente na produção.
 - 2026-10-31 — complemento da C083: a senha de `casa_login` continua sem definição. O prompt visto era o do Mac.
 - 2026-10-31 — o cookie da casa passou a carregar o identificador da linha. Logout e troca de senha revogam essa linha. A produção continua no Auth.
 - 2026-10-31 — sessão da casa no Next, desligada por padrão. O Auth de produção não muda.

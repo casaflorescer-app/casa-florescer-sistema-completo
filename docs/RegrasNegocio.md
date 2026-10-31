@@ -90,16 +90,17 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 - **Status:** `confirmada`
 - **Enunciado:** Só o administrador principal, que é `SYSTEM_ADMIN`, cria usuário da casa. A administradora, a secretária e as médicas não criam. A criação não concede `SYSTEM_ADMIN`. A secretária entra sem caixa e sem prontuário. A administradora entra no financeiro das duas práticas, sem prontuário e sem caixa própria. A médica entra só na própria prática, com a própria caixa. O primeiro administrador principal não nasce por essa função, porque ela exige um `SYSTEM_ADMIN` já ativo.
-- **Rastreio:** `0059_c083_staff_and_reset.sql`, `app/api/casa/staff/route.ts`, `scripts/c083-bootstrap.sql`. A migration ainda não foi aplicada no BancoFlorescerPP.
+- **Rastreio:** `0059_c083_staff_and_reset.sql`, `app/api/casa/staff/route.ts`, `scripts/c083-bootstrap.sql`. A migration foi aplicada no BancoFlorescerPP em 2026-10-31. O teste `supabase/tests/c083_login_and_staff.sql` ainda não rodou.
 
 ### RN-CASA-012 — Redefinição sem revelar a conta
 
 - **Status:** `confirmada`
 - **Enunciado:** O pedido de redefinição responde a mesma mensagem para qualquer e-mail. Sem envio de e-mail configurado, nenhum token é gravado. Quando um token é usado, a senha nova é Argon2id e todas as sessões daquela conta caem.
-- **Rastreio:** `app/api/casa/password/recover/route.ts`, `app/api/casa/password/reset/route.ts`, `0059_c083_staff_and_reset.sql`. A função SQL ainda não está no banco.
+- **Rastreio:** `app/api/casa/password/recover/route.ts`, `app/api/casa/password/reset/route.ts`, `0059_c083_staff_and_reset.sql`. As funções SQL estão no BancoFlorescerPP desde 2026-10-31. O teste dessa migration ainda não rodou.
 
 ## Histórico
 
+- 2026-10-31 — RN-CASA-011 e RN-CASA-012: a `0059` entrou no BancoFlorescerPP. O teste SQL da C083 ainda não rodou.
 - 2026-10-31 — RN-CASA-011 e RN-CASA-012: só o administrador principal cria usuário; a redefinição não revela se o e-mail existe. A `0059` ainda não foi aplicada.
 - 2026-10-31 — RN-CASA-010: sessão da casa revogável no logout e na troca de senha. As provas C077 e C082 rodaram no BancoFlorescerPP e foram desfeitas. Nenhuma organização foi criada.
 - 2026-10-31 — RN-CASA-007 revogada. Ficha por prática, rateio da própria fatura e repasse das duas para a administradora. O SQL da C077 ainda não foi aplicado.

@@ -200,4 +200,17 @@ Aplicação direta no BancoFlorescerPP, sem backup e sem database temporário. A
 | `public.organizations` | 0 linhas | COMPROVADO |
 | Provas | C077 e C082, transação desfeita, saída `C082_OK tabelas=102 orgs=0` | COMPROVADO |
 | Organizações, práticas e usuários reais | não criados | CONFIRMADO |
-| `0059`, senha de `casa_login`, `CASA_DATABASE_URL` | não aplicados. Conferência de 2026-10-31: aba do Terminal era o Mac. Nenhum comando enviado | CONFIRMADO |
+| `0059`, senha de `casa_login`, `CASA_DATABASE_URL` | ver a seção C083 abaixo | CONFIRMADO |
+
+## C083 — 0059 e C074 no BancoFlorescerPP (2026-10-31)
+
+Aplicação pelo Bash do container do serviço `bancoflorescer`, usuário de console `postgre`, database `BancoFlorescerPP`. A API `api.thvp.cloud`, `CASA_DATABASE_URL` e `NEXT_PUBLIC_CASA_AUTH` não foram alteradas. Nenhum deploy. Nenhuma organização, prática ou usuário real.
+
+| Item | Valor | Confiança |
+|---|---|---|
+| `public.casa_staff_create(text,text,text,uuid,jsonb)` | presente | COMPROVADO |
+| `professionals.display_name` e `professional_upsert(jsonb)` | presentes. Profissionais 0 | COMPROVADO |
+| `public.organizations` | 0 linhas, depois da C074 | COMPROVADO |
+| `casa_login` | login em `127.0.0.1`, `rolsuper` falso, `rolbypassrls` falso. Saída `casa_login\|false\|false` | COMPROVADO |
+| Senha de `casa_login` | definida no papel. O valor não está no Git. Um valor anterior apareceu no console e foi substituído | CONFIRMADO |
+| Teste `supabase/tests/c083_login_and_staff.sql` | ainda não executado | CONFIRMADO |

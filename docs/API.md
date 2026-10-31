@@ -97,6 +97,7 @@ Cria um usuário da casa. Só o administrador principal passa. A rota não devol
 
 ## Histórico
 
+- 2026-10-31 — a `0059` está no BancoFlorescerPP. As rotas `/api/casa/*` continuam inertes enquanto `CASA_DATABASE_URL` não existir no processo.
 - 2026-10-31 — redefinição de senha, leitura de autorização e criação de staff. A `0059` ainda não foi aplicada no BancoFlorescerPP.
 - 2026-10-31 — o cookie da sessão da casa passou a ter identificador. `DELETE` revoga a linha. `POST /api/casa/password` revoga todas as sessões da conta. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.
 - 2026-10-31 — sessão da casa em `/api/casa/session`. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.

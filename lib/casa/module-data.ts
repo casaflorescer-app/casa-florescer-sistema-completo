@@ -376,6 +376,78 @@ export async function listPrescriptionTemplatesCasa(practiceId: string) {
   );
 }
 
+export async function listPrescriptionTemplateItemsCasa(practiceId: string) {
+  return rows(
+    `select i.id, i.template_id, i.medication_name, i.presentation, i.concentration, i.dosage,
+            i.route, i.frequency, i.duration, i.quantity, i.observations
+     from public.prescription_template_items i
+     join public.prescription_templates t on t.id = i.template_id
+     where t.practice_id = $1
+     order by i.sort_order`,
+    [practiceId],
+  );
+}
+
+export async function listExamRequestsCasa(input: { encounterId?: string; patientId?: string }) {
+  return rows(
+    `select id, encounter_id, patient_id, status, notes, clinical_indication, confirmed_at, created_at
+     from public.clinical_exam_requests
+     where ($1::uuid is null or encounter_id = $1)
+       and ($2::uuid is null or patient_id = $2)
+     order by created_at desc`,
+    [input.encounterId ?? null, input.patientId ?? null],
+  );
+}
+
+export async function listExamRequestItemsCasa(requestIds: string[]) {
+  if (requestIds.length === 0) return [];
+  return rows(
+    `select i.id, i.request_id, i.catalog_id, i.group_id, i.custom_name,
+            c.name as catalog_name, g.name as group_name
+     from public.clinical_exam_request_items i
+     left join public.clinical_exam_catalog c on c.id = i.catalog_id
+     left join public.clinical_exam_groups g on g.id = i.group_id
+     where i.request_id = any($1::uuid[])
+     order by i.sort_order`,
+    [requestIds],
+  );
+}
+
+export async function searchPatientsCasa(organizationId: string, query: string) {
+  const search = query.trim().replace(/[%_\\]/g, "");
+  return rows(
+    `select id, full_name, phone
+     from public.patients
+     where organization_id = $1
+       and ($2::text = '' or full_name ilike '%' || $2 || '%' or coalesce(phone, '') ilike '%' || $2 || '%')
+     order by full_name
+     limit 30`,
+    [organizationId, search],
+  );
+}
+
+export async function listExamOrdersCasa(patientId: string) {
+  return rows(
+    `select id, organization_id, practice_id, patient_id, title, source, clinical_status, observation,
+            document_date::text, encounter_id, analysis_notes, analyzed_at, analyzed_by, received_at,
+            requested_at, updated_at
+     from public.exam_orders
+     where patient_id = $1
+     order by requested_at desc`,
+    [patientId],
+  );
+}
+
+export async function listExamUploadsCasa(examOrderId: string) {
+  return rows(
+    `select id, exam_order_id, storage_path, original_name, mime_type, uploaded_at
+     from public.exam_uploads
+     where exam_order_id = $1
+     order by uploaded_at desc`,
+    [examOrderId],
+  );
+}
+
 export async function listPrescriptionsCasa(patientId: string) {
   return rows(
     `select id, organization_id, practice_id, patient_id, professional_id, encounter_id, orientation_id,

@@ -468,7 +468,7 @@ export function ExamsModule() {
         </section>
       ) : null}
 
-      {patient && membership && supabase ? (
+      {patient && membership && (supabase || isCasaBrowserAuth()) ? (
         <ClinicalExamsPanel
           supabase={supabase}
           organizationId={

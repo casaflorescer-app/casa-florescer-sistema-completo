@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { hasStaffRole } from "@/lib/auth/access";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { formatCep, formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
@@ -482,7 +483,7 @@ export function PatientDetail({
 
           <PatientPregnancies patientId={patientId} />
 
-          {supabase && row && authorization ? (
+          {(supabase || isCasaBrowserAuth()) && row && authorization ? (
             <>
               {(physicianMembership || hasStaffRole(authorization, "secretary")) && (
                 <ClinicalExamsPanel
@@ -502,7 +503,7 @@ export function PatientDetail({
                   attachSource="secretaria"
                 />
               )}
-              {physicianMembership?.professional?.id ? (
+              {physicianMembership?.professional?.id && supabase ? (
                 <>
                   <ClinicalOrientationsPanel
                     supabase={supabase}
@@ -523,6 +524,15 @@ export function PatientDetail({
                     canManage={hasStaffRole(authorization, "physician")}
                   />
                 </>
+              ) : physicianMembership?.professional?.id ? (
+                <ClinicalPrescriptionPanel
+                  supabase={supabase}
+                  organizationId={row.organizationId}
+                  practiceId={physicianMembership.practiceId}
+                  patientId={patientId}
+                  professionalId={physicianMembership.professional.id}
+                  canManage={hasStaffRole(authorization, "physician")}
+                />
               ) : null}
             </>
           ) : null}

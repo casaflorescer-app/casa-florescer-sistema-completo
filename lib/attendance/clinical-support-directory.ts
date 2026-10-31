@@ -1,7 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { callCasaRpc } from "@/lib/casa/rpc";
-import { listExamCatalogCasa, listExamGroupsCasa, listPrescriptionTemplatesCasa } from "@/lib/casa/module-data";
+import {
+  listExamCatalogCasa,
+  listExamGroupsCasa,
+  listExamRequestItemsCasa,
+  listExamRequestsCasa,
+  listPrescriptionTemplateItemsCasa,
+  listPrescriptionTemplatesCasa,
+} from "@/lib/casa/module-data";
 import type {
   ClinicalAiPayload,
   ClinicalSuggestionType,
@@ -457,11 +464,56 @@ async function hydrateExamRequestRows(
   return rows;
 }
 
+function mapExamRequest(row: Record<string, unknown>, items: Record<string, unknown>[]): ExamRequestRow | null {
+  const id = asString(row.id);
+  const enc = asString(row.encounter_id);
+  const status = asString(row.status) as ExamRequestRow["status"] | null;
+  const createdAt = asString(row.created_at);
+  if (!id || !enc || !status || !createdAt) return null;
+  return {
+    id,
+    encounterId: enc,
+    patientId: asString(row.patient_id),
+    status,
+    notes: asString(row.notes),
+    clinicalIndication: asString(row.clinical_indication),
+    confirmedAt: asString(row.confirmed_at),
+    createdAt,
+    items: items.map((item) => {
+      const catalogId = asString(item.catalog_id);
+      const groupId = asString(item.group_id);
+      return {
+        id: asString(item.id) ?? "",
+        catalogId,
+        groupId,
+        customName: asString(item.custom_name),
+        catalogName: asString(item.catalog_name),
+        groupName: asString(item.group_name),
+      };
+    }),
+  };
+}
+
+async function listExamRequestsCasaRows(input: { encounterId?: string; patientId?: string }) {
+  const data = await listExamRequestsCasa(input);
+  const items = await listExamRequestItemsCasa(data.map((row) => String(row.id)));
+  return data.flatMap((row) => {
+    const mapped = mapExamRequest(
+      row,
+      items.filter((item) => String(item.request_id) === String(row.id)),
+    );
+    return mapped ? [mapped] : [];
+  });
+}
+
 export async function listExamRequestsForEncounter(
   supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<ExamRequestRow[]> {
-  if (!supabase) return [];
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return listExamRequestsCasaRows({ encounterId });
+  }
   const { data, error } = await supabase
     .from("clinical_exam_requests")
     .select("id, encounter_id, patient_id, status, notes, clinical_indication, confirmed_at, created_at")
@@ -476,7 +528,10 @@ export async function listExamRequestsForPatient(
   supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<ExamRequestRow[]> {
-  if (!supabase) return [];
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return listExamRequestsCasaRows({ patientId });
+  }
   const { data, error } = await supabase
     .from("clinical_exam_requests")
     .select("id, encounter_id, patient_id, status, notes, clinical_indication, confirmed_at, created_at")
@@ -494,6 +549,7 @@ export async function listPrescriptionTemplates(
   if (!supabase) {
     if (!isCasaBrowserAuth()) return [];
     const data = await listPrescriptionTemplatesCasa(practiceId);
+    const itemRows = await listPrescriptionTemplateItemsCasa(practiceId);
     return data.flatMap((row) => {
       if (activeOnly && row.is_active === false) return [];
       const id = asString(row.id);
@@ -506,7 +562,20 @@ export async function listPrescriptionTemplates(
         name,
         description: asString(row.description),
         isActive: Boolean(row.is_active),
-        items: [],
+        items: itemRows
+          .filter((item) => String(item.template_id) === id)
+          .map((item) => ({
+            id: asString(item.id) ?? "",
+            medicationName: asString(item.medication_name) ?? "",
+            presentation: asString(item.presentation),
+            concentration: asString(item.concentration),
+            dosage: asString(item.dosage),
+            route: asString(item.route),
+            frequency: asString(item.frequency),
+            duration: asString(item.duration),
+            quantity: asString(item.quantity),
+            observations: asString(item.observations),
+          })),
       }];
     });
   }

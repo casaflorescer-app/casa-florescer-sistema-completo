@@ -101,7 +101,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 ### RN-CASA-013 — Telas no servidor só com o modo da casa
 
 - **Status:** `⚠ inferida`
-- **Enunciado:** Enquanto `NEXT_PUBLIC_CASA_AUTH` não for exatamente `1`, o login e as telas continuam no Auth e no cliente Supabase. Com esse valor e com `CASA_DATABASE_URL` no processo, pacientes, agenda, prontuário, gestação, exame, receita, repasse, relatórios, a lista de usuários, estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames chamam o servidor. O servidor grava `app.user_id` e usa `SET LOCAL ROLE authenticated`. A criação de usuário dessa tela só aparece para o administrador principal e chama `POST /api/casa/staff`. Foto, exame, PDF e áudio usam o volume privado e as funções de leitura já existentes. A produção não tem essas variáveis. A prova `supabase/tests/c084_module_isolation.sql` ainda não rodou no BancoFlorescerPP.
+- **Enunciado:** Enquanto `NEXT_PUBLIC_CASA_AUTH` não for exatamente `1`, o login e as telas continuam no Auth e no cliente Supabase. Com esse valor e com `CASA_DATABASE_URL` no processo, pacientes, agenda, prontuário, gestação, exame, receita, repasse, relatórios, a lista de usuários, estoque, locação, relacionamento, portal, gravação, compositor de receitas, catálogo de exames e o painel de resultados chamam o servidor. O servidor grava `app.user_id` e usa `SET LOCAL ROLE authenticated`. A criação de usuário dessa tela só aparece para o administrador principal e chama `POST /api/casa/staff`. Foto, exame, PDF e áudio usam o volume privado e as funções de leitura já existentes. A produção não tem essas variáveis. A prova `supabase/tests/c084_module_isolation.sql` ainda não rodou no BancoFlorescerPP.
 - **Rastreio:** `lib/auth/casa-mode.ts`, `lib/casa/actions.ts`, `lib/casa/rpc.ts`, `lib/casa/module-data.ts`, `app/api/casa/files/route.ts`, `components/clinic-admin/ClinicUsersPanel.tsx`.
 
 ### RN-CASA-014 — Financeiro na tela, sem percentual novo
@@ -112,6 +112,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 ## Histórico
 
+- 2026-10-31 — RN-CASA-013 segue inferida e passou a incluir pedidos de exame, itens de modelo, busca de audiência e painel de resultados. A prova C084 ainda não rodou. Nenhum percentual novo.
 - 2026-10-31 — RN-CASA-013 segue inferida e passou a incluir estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames. A prova C084 ainda não rodou. Nenhum percentual novo.
 - 2026-10-31 — RN-CASA-014 inferida: tela de financeiro sobre as policies já existentes, sem percentual novo. RN-CASA-013 passou a incluir gravações e arquivos. A prova C084 ainda não rodou.
 - 2026-10-31 — RN-CASA-013 inferida: ramo do servidor ao lado do Supabase. A prova C084 ainda não rodou. Produção sem as variáveis da casa.

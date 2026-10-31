@@ -198,10 +198,10 @@ export async function POST(request: Request) {
         practice_id: practiceId,
         patient_id: patientId,
         title,
-        source: String(form.get("source") ?? "medico"),
-        observation: null,
-        document_date: null,
-        encounter_id: null,
+        source: String(form.get("source") ?? "paciente"),
+        observation: String(form.get("observation") ?? "") || null,
+        document_date: String(form.get("documentDate") ?? "") || null,
+        encounter_id: String(form.get("encounterId") ?? "") || null,
       },
     ]);
     const payload = created as { order?: { id?: string }; upload_id?: string; storage_path?: string };

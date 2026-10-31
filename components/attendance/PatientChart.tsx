@@ -553,7 +553,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
                   </ul>
                 )}
               </div>
-              {activeMembership && patient && supabase ? (
+              {activeMembership && patient && (supabase || isCasaBrowserAuth()) ? (
                 <ClinicalExamsPanel
                   supabase={supabase}
                   organizationId={

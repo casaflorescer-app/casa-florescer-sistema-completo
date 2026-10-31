@@ -1,4 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { listExamOrdersCasa, listExamUploadsCasa } from "@/lib/casa/module-data";
 import {
   CLINICAL_EXAM_BUCKET,
   type ExamClinicalStatus,
@@ -69,9 +72,16 @@ export function mapExamRpcError(error: { message?: string } | null): string {
 }
 
 export async function listExamOrdersForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<ExamOrderRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listExamOrdersCasa(patientId);
+    return data
+      .map((row) => toOrder(row))
+      .filter((item): item is ExamOrderRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("exam_orders")
     .select(
@@ -86,9 +96,16 @@ export async function listExamOrdersForPatient(
 }
 
 export async function listUploadsForOrder(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   examOrderId: string,
 ): Promise<ExamUploadRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listExamUploadsCasa(examOrderId);
+    return data
+      .map((row) => toUpload(row))
+      .filter((item): item is ExamUploadRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("exam_uploads")
     .select("id, exam_order_id, storage_path, original_name, mime_type, uploaded_at")
@@ -101,10 +118,11 @@ export async function listUploadsForOrder(
 }
 
 export async function createSignedExamUrl(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   path: string,
   expiresIn = 120,
 ): Promise<string | null> {
+  if (!supabase) return null;
   const { data, error } = await supabase.storage
     .from(CLINICAL_EXAM_BUCKET)
     .createSignedUrl(path, expiresIn);
@@ -113,7 +131,7 @@ export async function createSignedExamUrl(
 }
 
 export async function submitExamWithFile(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     organizationId: string;
     practiceId: string;
@@ -126,6 +144,25 @@ export async function submitExamWithFile(
     file: File;
   },
 ): Promise<{ order: ExamOrderRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) {
+      return { order: null, error: "Autenticação não configurada neste ambiente." };
+    }
+    const body = new FormData();
+    body.set("kind", "exam");
+    body.set("organizationId", input.organizationId);
+    body.set("practiceId", input.practiceId);
+    body.set("patientId", input.patientId);
+    body.set("title", input.title);
+    body.set("source", input.source);
+    if (input.observation) body.set("observation", input.observation);
+    if (input.documentDate) body.set("documentDate", input.documentDate);
+    if (input.encounterId) body.set("encounterId", input.encounterId);
+    body.set("file", input.file);
+    const response = await fetch("/api/casa/files", { method: "POST", body });
+    if (!response.ok) return { order: null, error: "Não foi possível guardar o exame." };
+    return { order: null, error: null };
+  }
   const { data, error } = await supabase.rpc("exam_order_submit", {
     p_payload: {
       organization_id: input.organizationId,
@@ -179,9 +216,19 @@ export async function submitExamWithFile(
 }
 
 export async function markExamInAnalysis(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   examOrderId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("exam_mark_in_analysis", [examOrderId]);
+      return { error: null };
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Não foi possível concluir a operação.";
+      return { error: message };
+    }
+  }
   const { error } = await supabase.rpc("exam_mark_in_analysis", {
     p_exam_order_id: examOrderId,
   });
@@ -189,10 +236,22 @@ export async function markExamInAnalysis(
 }
 
 export async function markExamAnalyzed(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   examOrderId: string,
   analysisNotes?: string,
 ): Promise<{ order: ExamOrderRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { order: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("exam_mark_analyzed", [
+        { exam_order_id: examOrderId, analysis_notes: analysisNotes ?? null },
+      ]);
+      return { order: data ? toOrder(data as Record<string, unknown>) : null, error: null };
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Não foi possível concluir a operação.";
+      return { order: null, error: message };
+    }
+  }
   const { data, error } = await supabase.rpc("exam_mark_analyzed", {
     p_payload: {
       exam_order_id: examOrderId,

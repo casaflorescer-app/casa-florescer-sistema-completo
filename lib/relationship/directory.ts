@@ -7,6 +7,7 @@ import {
   listCampaignsCasa,
   listOpenOpportunitiesCasa,
   listRelationshipHistoryCasa,
+  searchPatientsCasa,
 } from "@/lib/casa/module-data";
 import type {
   AudienceFilter,
@@ -703,7 +704,16 @@ export async function searchPatientsForAudience(
   organizationId: string,
   query: string,
 ): Promise<Array<{ id: string; fullName: string; phone: string | null }>> {
-  if (!supabase) return [];
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await searchPatientsCasa(organizationId, query);
+    return data.flatMap((row) => {
+      const id = typeof row.id === "string" ? row.id : "";
+      const fullName = typeof row.full_name === "string" ? row.full_name : "";
+      if (!id || !fullName) return [];
+      return [{ id, fullName, phone: typeof row.phone === "string" ? row.phone : null }];
+    });
+  }
   const q = query.trim();
   let builder = supabase
     .from("patients")

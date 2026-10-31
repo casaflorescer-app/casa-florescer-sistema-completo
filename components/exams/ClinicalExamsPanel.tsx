@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import {
   createSignedExamUrl,
   listExamOrdersForPatient,
@@ -29,7 +30,7 @@ export function ClinicalExamsPanel({
   canAttach,
   attachSource = "secretaria",
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   organizationId: string;
   practiceId: string;
   patientId: string;
@@ -112,7 +113,10 @@ export function ClinicalExamsPanel({
       setError("Arquivo do exame não encontrado.");
       return;
     }
-    const url = await createSignedExamUrl(supabase, uploads[0].storagePath);
+    const url =
+      !supabase && isCasaBrowserAuth()
+        ? `/api/casa/files?kind=exam&id=${uploads[0].id}`
+        : await createSignedExamUrl(supabase, uploads[0].storagePath);
     if (!url) {
       setError("Não foi possível abrir o arquivo.");
       return;

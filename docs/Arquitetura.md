@@ -41,12 +41,20 @@ Foto, exame e PDF entram por `POST /api/casa/files` e saem por `GET` no mesmo ca
 
 A tela `/app/finance` lista fatura, pagamento, rateio e despesa pelo que a policy já devolve. O rateio não calcula percentual. A gravação de despesa só aparece para administradora. Fatura e pagamento só aparecem para quem tem caixa ou é administradora.
 
-Com o modo da casa ligado, estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames chamam as funções SQL já existentes. A gravação lê o áudio no volume privado e só segue se o caminho pedido for o caminho gravado. O PDF do documento segue o mesmo volume. O painel de resultados de exame anexados continua no cliente publicado e fica fora da tela nesse modo. O SDK permanece no repositório porque a produção ainda depende dele.
+Com o modo da casa ligado, estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames chamam as funções SQL já existentes. A gravação lê o áudio no volume privado e só segue se o caminho pedido for o caminho gravado. O PDF do documento segue o mesmo volume. Pedidos de exame, itens de modelo de receita, busca de paciente para audiência e o painel de resultados também leem pelo servidor. O anexo do resultado entra por `POST /api/casa/files` e a abertura usa o identificador gravado.
+
+Dependências do Supabase, com a variável desligada:
+
+- Migrado no modo da casa: login da casa, leituras e gravações já ligadas ao servidor, e arquivo privado.
+- Ainda necessário: o caminho publicado, enquanto a variável não for `1`. A busca de item de estoque e o painel de orientação clínica ainda exigem o cliente. Não há chamada de Realtime no código.
+- Legado sem uso operacional: nenhuma chamada `.channel`.
+- Referência histórica: o SDK permanece no repositório porque a produção ainda depende dele. Buckets e a API antiga não foram apagados.
 
 A prova SQL da C084 continua pendente. A saída do console não chegou. O sistema não está pronto para o corte.
 
 ## Histórico
 
+- 2026-10-31 — C086: pedidos de exame, itens de modelo, busca de audiência e painel de resultados no ramo do servidor. A saída do console da C084 não chegou. Sem corte.
 - 2026-10-31 — C086: estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames no ramo do servidor. A prova SQL da C084 não chegou. Sem corte.
 - 2026-10-31 — C085: gravações do modo da casa, volume privado em `/api/casa/files` e tela `/app/finance` sobre as policies já existentes. Sem variáveis da casa na produção. A prova SQL da C084 continua pendente.
 - 2026-10-31 — ramo servidor da C084 para pacientes, agenda, prontuário, gestação, exames, receitas, repasse e relatórios. Produção sem as variáveis da casa. A prova SQL ainda não rodou.

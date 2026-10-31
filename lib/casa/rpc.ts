@@ -22,6 +22,8 @@ const ALLOWED: Record<string, number> = {
   clinical_exam_request_confirm: 1,
   exam_order_submit: 1,
   exam_upload_register: 1,
+  exam_mark_in_analysis: 1,
+  exam_mark_analyzed: 1,
   clinical_document_issue_from_prescription: 4,
   clinical_document_issue_from_exam_request: 5,
   clinical_document_attach_pdf: 3,

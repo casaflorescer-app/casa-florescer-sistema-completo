@@ -299,6 +299,7 @@ A prova da C084 continua sem execução. Desta máquina a sessão não foi tenta
 
 ## Histórico
 
+- 2026-10-31 — C086: a saída do console da prova C084 de novo não chegou. Variáveis da casa ausentes, porta 5432 fechada, deploy não feito.
 - 2026-10-31 — C086: a saída do console da prova C084 não chegou. Variáveis da casa ausentes, porta 5432 fechada, deploy não feito.
 - 2026-10-31 — C085: a prova SQL da C084 continua no console do BancoFlorescerPP. Desta máquina a sessão não abriu. Nenhuma variável da casa entrou no Florescer Web. Sem deploy.
 - 2026-10-31 — C084 no repositório. Sem variáveis da casa no Florescer Web, sem porta 5432 e sem deploy. A prova SQL da C084 ainda não rodou no console.

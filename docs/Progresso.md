@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-31 — C086: pedidos de exame, itens de modelo, busca de audiência e painel de resultados no ramo do servidor. Testes locais: 4 passaram. Build do Next passou sem `CASA_DATABASE_URL`. A saída do console da prova C084 não chegou. Deploy não feito. Status bloqueado.
 - 2026-10-31 — C086: estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames no ramo do servidor. Testes locais: 4 passaram. Build do Next passou sem `CASA_DATABASE_URL`. A saída do console da prova C084 não chegou. Deploy não feito. Status bloqueado.
 - 2026-10-31 — C085: gravações do modo da casa, `/api/casa/files` e tela `/app/finance`. Testes locais do modo e do caminho de arquivo: 4 passaram. Build do Next passou sem `CASA_DATABASE_URL`. A prova SQL da C084 não rodou porque desta máquina a sessão no BancoFlorescerPP não abriu. Deploy não feito. O sistema não está pronto para o corte.
 - 2026-10-31 — C084: ramo servidor ao lado do Supabase para pacientes, agenda, prontuário, gestação, exames, receitas, repasse e relatórios. A tela de usuários chama `POST /api/casa/staff` só com o modo da casa e só para o administrador principal. O bootstrap continua recusando. Teste local do modo: 1 passou. Build do Next passou sem `CASA_DATABASE_URL`. A prova `supabase/tests/c084_module_isolation.sql` não rodou no BancoFlorescerPP. Sem deploy.

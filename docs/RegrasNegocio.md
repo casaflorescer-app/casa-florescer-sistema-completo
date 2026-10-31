@@ -34,8 +34,8 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 ### RN-CASA-002 — Fatura da própria prática
 
 - **Status:** `confirmada`
-- **Enunciado:** `can_cashier` lê e grava a fatura só da prática daquele papel. A administradora vê o financeiro das duas. A secretária não lê fatura.
-- **Rastreio:** policy `invoices_select` em `0056`.
+- **Enunciado:** `can_cashier` lê e grava a fatura só da prática daquele papel e lê o rateio dessa fatura. A administradora vê as faturas e os rateios das duas. A secretária não lê fatura nem rateio.
+- **Rastreio:** policy `invoices_select` em `0056`. Policy `payment_splits_select` em `0057`.
 
 ### RN-CASA-003 — Secretária nas duas agendas
 
@@ -46,8 +46,8 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 ### RN-CASA-004 — Administradora sem prontuário
 
 - **Status:** `confirmada`
-- **Enunciado:** A administradora central é `admin`. Vê o financeiro consolidado. Não entra em `can_read_clinical`. `SYSTEM_ADMIN` não é essa conta e não ganha prontuário.
-- **Rastreio:** `0056` não cria policy clínica para `admin` nem para `system_admins`.
+- **Enunciado:** A administradora central é `admin`. Vê o financeiro consolidado, inclusive o repasse das duas práticas. Não entra em `can_read_clinical`. `SYSTEM_ADMIN` não é essa conta e não ganha prontuário.
+- **Rastreio:** `0056` não cria policy clínica para `admin` nem para `system_admins`. `can_read_pregnancy_procedure_payout` em `0057`.
 
 ### RN-CASA-005 — Despesa compartilhada e particular
 
@@ -58,14 +58,21 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 ### RN-CASA-006 — Ficha e evolução
 
 - **Status:** `confirmada`
-- **Enunciado:** A leitura de `patient_clinical_data` e de `obstetric_followups` segue `can_read_clinical` da prática vinculada. A escrita da ficha segue `can_write_clinical` dessa prática.
-- **Rastreio:** policies `patient_clinical_data_clinical_*` e `obstetric_followups_select` em `0056`.
+- **Enunciado:** A ficha `patient_clinical_data` é uma linha por paciente em cada prática. A médica lê e grava só a linha da prática dela, mesmo quando a paciente está vinculada às duas. A evolução segue `can_read_clinical` da prática do atendimento. Uma gestação em acompanhamento pode existir em cada prática.
+- **Rastreio:** `patient_clinical_data` e o índice `pregnancies_one_in_care_per_practice` em `0057`. `obstetric_followups_select` em `0056`.
 
 ### RN-CASA-007 — Recepção de exame e receita
 
-- **Status:** `confirmada`
+- **Status:** `revogada` em 2026-10-31
 - **Enunciado:** Exame e receita assinada que já passam por `is_house_ops` permanecem assim até a recepção ser validada. Esta regra não abre prontuário.
-- **Rastreio:** `0055` e `0003`, sem alteração em `0056`.
+- **Motivo:** a recepção fechou esse recorte. Alergia, exame e receita saem do caminho da secretária. A agenda continua em `is_house_ops`.
+- **Rastreio:** `0055` e `0003`. Substituída por RN-CASA-009.
+
+### RN-CASA-009 — Exame, receita e alergia fora da recepção
+
+- **Status:** `confirmada`
+- **Enunciado:** A secretária não lê alergia, pedido de exame, arquivo de exame nem receita. Quem lê é a médica da prática, o break-glass e a própria paciente. A administradora também não lê. A função `is_house_ops` permanece para a agenda.
+- **Rastreio:** `0057_c077_clinical_finance_isolation.sql`. Prova em `supabase/tests/c077_practice_isolation.sql`, ainda sem execução.
 
 ### RN-CASA-008 — Senha da casa
 
@@ -75,4 +82,5 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 ## Histórico
 
+- 2026-10-31 — RN-CASA-007 revogada. Ficha por prática, rateio da própria fatura e repasse das duas para a administradora. O SQL da C077 ainda não foi aplicado.
 - 2026-10-31 — regras de isolamento das duas práticas, da fatura, da despesa e da sessão da casa. O SQL ainda não foi aplicado no banco.

@@ -1,5 +1,11 @@
 # Memória
 
+## 2026-10-31 — C077 ficha e catálogo
+
+- A ficha `patient_clinical_data` nascia uma linha por paciente, sem `practice_id`. Com a paciente nas duas práticas, as duas médicas liam a mesma alergia e a mesma DUM. A `0057` torna a linha única por paciente e prática. A `0056` não foi editada.
+- O índice `pregnancies_one_in_care_per_patient` impedia duas gestações em acompanhamento da mesma paciente na casa. Passa a valer por prática.
+- No console do `bancoflorescer`, `echo c077-catalog-ready` apareceu no shell. O `SELECT` de `auth`, `storage`, `extensions` e de `citext`, `btree_gist` e `pgcrypto` não voltou. Não há prova de que a imagem tenha ou não tenha essas extensões. O apply continua começando por esse `SELECT`. Sem `citext` ou `btree_gist`, a `0001` para.
+
 ## 2026-10-31 — C076 BancoFlorescerPP
 
 - O nome `BancoFlorescerPP` é um database dentro do serviço EasyPanel `bancoflorescer`, ao lado do database `postgres`. A leitura só de `organizations` e de nomes com `practice` ou `organ` voltou vazia. A API que responde em `api.thvp.cloud` não é esse banco. Os schemas `auth`, `storage` e `extensions` não foram listados por nome: o console recusou o `SELECT` nesta sessão. Antes de aplicar, repetir essa lista.
@@ -32,6 +38,7 @@
 
 ## Histórico
 
+- 2026-10-31 — o catálogo de extensões do BancoFlorescerPP não voltou; a ficha clínica única por paciente vaza entre as duas práticas até a `0057`, que ainda não foi aplicada.
 - 2026-10-31 — BancoFlorescerPP não tem o schema da clínica; a casa no Next fica no repositório até autorização de apply e de conexão.
 - 2026-10-22 — a casca do documento saiu do template, que remontava a página, e foi para o grupo `(shell)`.
 - 2026-10-21 — registros da preparação da VPS.

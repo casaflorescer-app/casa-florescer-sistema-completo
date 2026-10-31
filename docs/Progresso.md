@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-31 — C077 no repositório: `0057` separa a ficha por prática, tira alergia, exame e receita da secretária, abre o rateio da própria fatura e o repasse das duas para a administradora. O teste `supabase/tests/c077_practice_isolation.sql` não foi executado. O `SELECT` de schemas e extensões no BancoFlorescerPP não voltou. Nada foi aplicado.
 - 2026-10-31 — C076 no repositório: prelúdio `0000`, papéis em `scripts/c076-roles.sql`, isolamento `0056`, sessão Argon2id e consulta no papel `casa_app`. Nada foi aplicado no BancoFlorescerPP. A API `api.thvp.cloud` não foi trocada. As telas, fora o login opcional, ainda usam o cliente Supabase. Conferência do SQL e do typecheck nesta sessão. Sem deploy.
 - 2026-10-22 — A tela branca na navegação vinha do template, que recriava `<html>` e `<body>`. A casca foi para `app/(shell)/layout.tsx` (`layout-9`). Sessão que não responde em 8 segundos segue como ausente, e a ida ao login é carregamento inteiro. Build e navegação local conferidos. O ar só muda depois de um novo deploy do florescerweb.
 - 2026-10-22 — Auditoria pré-produção na branch `auditoria-pre-producao`. A transcrição só baixa o áudio do próprio registro. UAT estrutural reexecutado. Sem banco isolado e sem deploy. Classificação no relatório: não apto para produção até o ar ser revisto. Relatório em `docs/auditoria-pre-producao.md`.

@@ -14,6 +14,7 @@ import { listClinicWorkforce, upsertClinicWorkforce, workforceDashboard } from "
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { FormActions } from "@/components/ui/FormActions";
+import { CreateFormShell } from "@/components/ui/CreateFormShell";
 
 const EMPTY = {
   fullName: "",
@@ -36,6 +37,7 @@ export function WorkforceModule() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY);
 
@@ -64,9 +66,19 @@ export function WorkforceModule() {
     void reload();
   }, [reload]);
 
-  function startCreate() {
+  function resetFormFields() {
     setEditingId(null);
     setForm(EMPTY);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    resetFormFields();
+  }
+
+  function startCreate() {
+    resetFormFields();
+    setFormOpen(true);
   }
 
   function startEdit(row: ClinicWorkforceMember) {
@@ -81,6 +93,7 @@ export function WorkforceModule() {
       documentCpf: row.documentCpf ?? "",
       notes: row.notes ?? "",
     });
+    setFormOpen(true);
   }
 
   async function onSave() {
@@ -95,7 +108,7 @@ export function WorkforceModule() {
         ...form,
       });
       setNotice(editingId ? "Cadastro atualizado." : "Cadastro criado.");
-      startCreate();
+      closeForm();
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao salvar.");
@@ -110,18 +123,7 @@ export function WorkforceModule() {
         eyebrow="Pessoas"
         title="Funcionários"
         description="Pessoas que trabalham ou prestam serviço à clínica. Médicos locatários ficam em Profissionais + contrato de locação."
-        actions={
-          <PrimaryCreateButton
-            label="Novo funcionário"
-            onClick={() => {
-              startCreate();
-              document.getElementById("workforce-create-form")?.scrollIntoView({
-                behavior: "smooth",
-                block: "nearest",
-              });
-            }}
-          />
-        }
+        actions={<PrimaryCreateButton label="Novo funcionário" onClick={startCreate} />}
       />
       <StatusMessage error={error} notice={notice} />
 
@@ -140,124 +142,126 @@ export function WorkforceModule() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section>
-          <div className="flex flex-wrap gap-2">
-            <input
-              className={fieldClass}
-              placeholder="Nome, função, e-mail ou telefone…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Pesquisar funcionário"
-            />
-            <button type="button" className={ghostButtonClass} onClick={() => void reload()}>
-              Atualizar
-            </button>
-          </div>
-          {loading ? <p className="mt-4 text-sm text-lotus-600">Carregando…</p> : null}
-          {!loading && rows.length === 0 ? (
-            <p className="card mt-4 text-sm text-lotus-700">Nenhum funcionário/prestador cadastrado.</p>
-          ) : null}
-          <ul className="mt-4 space-y-3">
-            {rows.map((row) => (
-              <li key={row.id}>
-                <article className="card flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-lotus-900">{row.fullName}</p>
-                    <p className="mt-1 text-sm text-lotus-700">
-                      {row.roleTitle} · {ENGAGEMENT_LABEL[row.engagementKind]} ·{" "}
-                      {WORKFORCE_STATUS_LABEL[row.status]}
-                    </p>
-                  </div>
-                  <button type="button" className={ghostButtonClass} onClick={() => startEdit(row)}>
-                    Editar
-                  </button>
-                </article>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <aside className="card h-fit" id="workforce-create-form">
-          <h2 className="text-base font-semibold text-lotus-900">
-            {editingId ? "Editar cadastro" : "Novo funcionário"}
-          </h2>
-          <label className="mt-3 block text-sm">
-            Nome
-            <input
-              className={fieldClass}
-              value={form.fullName}
-              onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
-            />
-          </label>
-          <label className="mt-3 block text-sm">
-            Função
-            <input
-              className={fieldClass}
-              value={form.roleTitle}
-              onChange={(e) => setForm((f) => ({ ...f, roleTitle: e.target.value }))}
-              placeholder="Ex.: Secretária, Copeira, Eletricista"
-            />
-          </label>
-          <label className="mt-3 block text-sm">
-            Tipo de vínculo
-            <select
-              className={fieldClass}
-              value={form.engagementKind}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, engagementKind: e.target.value as WorkforceEngagement }))
-              }
-            >
-              <option value="employee">Funcionário</option>
-              <option value="contractor">Prestador</option>
-              <option value="other">Outro</option>
-            </select>
-          </label>
-          <label className="mt-3 block text-sm">
-            Situação
-            <select
-              className={fieldClass}
-              value={form.status}
-              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as WorkforceStatus }))}
-            >
-              <option value="active">Ativo</option>
-              <option value="inactive">Inativo</option>
-            </select>
-          </label>
-          <label className="mt-3 block text-sm">
-            Telefone
-            <input
-              className={fieldClass}
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            />
-          </label>
-          <label className="mt-3 block text-sm">
-            E-mail
-            <input
-              className={fieldClass}
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-          </label>
-          <label className="mt-3 block text-sm">
-            Observações
-            <textarea
-              className={fieldClass}
-              rows={2}
-              value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            />
-          </label>
-          <FormActions
-            primaryLabel="Salvar"
-            primaryBusy={busy}
-            primaryDisabled={!form.fullName.trim() || !form.roleTitle.trim()}
-            onPrimary={() => void onSave()}
-            onCancel={editingId ? startCreate : undefined}
+      <section className="mt-6 min-w-0">
+        <div className="flex flex-wrap gap-2">
+          <input
+            className={fieldClass}
+            placeholder="Nome, função, e-mail ou telefone…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Pesquisar funcionário"
           />
-        </aside>
-      </div>
+          <button type="button" className={ghostButtonClass} onClick={() => void reload()}>
+            Atualizar
+          </button>
+        </div>
+        {loading ? <p className="mt-4 text-sm text-lotus-600">Carregando…</p> : null}
+        {!loading && rows.length === 0 ? (
+          <p className="card mt-4 text-sm text-lotus-700">Nenhum funcionário/prestador cadastrado.</p>
+        ) : null}
+        <ul className="mt-4 space-y-3">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <article className="card flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-lotus-900">{row.fullName}</p>
+                  <p className="mt-1 text-sm text-lotus-700">
+                    {row.roleTitle} · {ENGAGEMENT_LABEL[row.engagementKind]} ·{" "}
+                    {WORKFORCE_STATUS_LABEL[row.status]}
+                  </p>
+                </div>
+                <button type="button" className={ghostButtonClass} onClick={() => startEdit(row)}>
+                  Editar
+                </button>
+              </article>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <CreateFormShell
+        open={formOpen}
+        title={editingId ? "Editar cadastro" : "Novo funcionário"}
+        size="lg"
+        busy={busy}
+        onClose={closeForm}
+        formId="workforce-create-form"
+      >
+        <label className="block text-sm">
+          Nome
+          <input
+            className={fieldClass}
+            value={form.fullName}
+            onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Função
+          <input
+            className={fieldClass}
+            value={form.roleTitle}
+            onChange={(e) => setForm((f) => ({ ...f, roleTitle: e.target.value }))}
+            placeholder="Ex.: Secretária, Copeira, Eletricista"
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Tipo de vínculo
+          <select
+            className={fieldClass}
+            value={form.engagementKind}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, engagementKind: e.target.value as WorkforceEngagement }))
+            }
+          >
+            <option value="employee">Funcionário</option>
+            <option value="contractor">Prestador</option>
+            <option value="other">Outro</option>
+          </select>
+        </label>
+        <label className="mt-3 block text-sm">
+          Situação
+          <select
+            className={fieldClass}
+            value={form.status}
+            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as WorkforceStatus }))}
+          >
+            <option value="active">Ativo</option>
+            <option value="inactive">Inativo</option>
+          </select>
+        </label>
+        <label className="mt-3 block text-sm">
+          Telefone
+          <input
+            className={fieldClass}
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          E-mail
+          <input
+            className={fieldClass}
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Observações
+          <textarea
+            className={fieldClass}
+            rows={2}
+            value={form.notes}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          />
+        </label>
+        <FormActions
+          primaryLabel="Salvar"
+          primaryBusy={busy}
+          primaryDisabled={!form.fullName.trim() || !form.roleTitle.trim()}
+          onPrimary={() => void onSave()}
+          onCancel={closeForm}
+        />
+      </CreateFormShell>
     </div>
   );
 }

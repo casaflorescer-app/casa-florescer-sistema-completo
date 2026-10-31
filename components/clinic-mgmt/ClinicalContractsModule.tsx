@@ -26,6 +26,8 @@ import { createClient } from "@/lib/supabase/client";
 import { EntityCombobox } from "@/components/ui/EntityCombobox";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
+import { FormActions } from "@/components/ui/FormActions";
+import { CreateFormShell } from "@/components/ui/CreateFormShell";
 import {
   searchPatientOptions,
   searchProfessionalOptions,
@@ -45,6 +47,7 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
 
   const [patientId, setPatientId] = useState("");
   const [patientName, setPatientName] = useState("");
@@ -115,6 +118,30 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
     [orgId, supabase],
   );
 
+  function resetCreateFields() {
+    setPatientId("");
+    setPatientName("");
+    setProfessionalId("");
+    setProfessionalName("");
+    setProcedureId("");
+    setNormalBirth(true);
+    setCesarean(false);
+    setProcName("");
+    setProcTitle("Termo de ciência dos riscos");
+    setProcKind("risk_acknowledgment");
+    setProcBody("");
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    resetCreateFields();
+  }
+
+  function openCreate() {
+    resetCreateFields();
+    setFormOpen(true);
+  }
+
   async function onCreateObs() {
     if (!orgId || !patientId || !professionalId) return;
     setBusy(true);
@@ -129,10 +156,7 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
         includesCesarean: cesarean,
       });
       setNotice("Contrato obstétrico criado.");
-      setPatientId("");
-      setPatientName("");
-      setProfessionalId("");
-      setProfessionalName("");
+      closeForm();
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao criar contrato.");
@@ -157,8 +181,7 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
         professionalId: professionalId || undefined,
       });
       setNotice("Termo/contrato de procedimento criado.");
-      setProcName("");
-      setProcBody("");
+      closeForm();
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao criar termo.");
@@ -176,12 +199,7 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
         actions={
           <PrimaryCreateButton
             label={tab === "obstetric" ? "Novo contrato" : "Novo termo"}
-            onClick={() =>
-              document.getElementById("clinical-contract-form")?.scrollIntoView({
-                behavior: "smooth",
-                block: "nearest",
-              })
-            }
+            onClick={openCreate}
           />
         }
       />
@@ -221,276 +239,276 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section>
-          <div className="flex flex-wrap gap-2">
-            <input
-              className={fieldClass}
-              placeholder="Pesquisar paciente, profissional ou código"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            <button type="button" className={ghostButtonClass} onClick={() => void reload()}>
-              Atualizar
-            </button>
-          </div>
-          {loading ? <p className="mt-4 text-sm text-lotus-600">Carregando…</p> : null}
+      <section className="mt-6 min-w-0">
+        <div className="flex flex-wrap gap-2">
+          <input
+            className={fieldClass}
+            placeholder="Pesquisar paciente, profissional ou código"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <button type="button" className={ghostButtonClass} onClick={() => void reload()}>
+            Atualizar
+          </button>
+        </div>
+        {loading ? <p className="mt-4 text-sm text-lotus-600">Carregando…</p> : null}
 
-          {tab === "obstetric" ? (
-            <ul className="mt-4 space-y-3">
-              {obs.map((row) => (
-                <li key={row.id}>
-                  <article className="card">
-                    <p className="font-semibold text-lotus-900">
-                      {row.contractCode ?? "Contrato"} · {row.patientName ?? row.patientId}
-                    </p>
-                    <p className="mt-1 text-sm text-lotus-700">
-                      {row.professionalName ?? "—"} · {OBS_STATUS_LABEL[row.status]} ·{" "}
-                      {[row.includesNormalBirth ? "Parto normal" : null, row.includesCesarean ? "Cesariana" : null]
-                        .filter(Boolean)
-                        .join(" + ")}
-                    </p>
-                    <div className="mt-2 text-sm">
-                      <Link className="underline" href={`/app/patients/${row.patientId}`}>
-                        Abrir paciente
-                      </Link>
+        {tab === "obstetric" ? (
+          <ul className="mt-4 space-y-3">
+            {obs.map((row) => (
+              <li key={row.id}>
+                <article className="card">
+                  <p className="font-semibold text-lotus-900">
+                    {row.contractCode ?? "Contrato"} · {row.patientName ?? row.patientId}
+                  </p>
+                  <p className="mt-1 text-sm text-lotus-700">
+                    {row.professionalName ?? "—"} · {OBS_STATUS_LABEL[row.status]} ·{" "}
+                    {[row.includesNormalBirth ? "Parto normal" : null, row.includesCesarean ? "Cesariana" : null]
+                      .filter(Boolean)
+                      .join(" + ")}
+                  </p>
+                  <div className="mt-2 text-sm">
+                    <Link className="underline" href={`/app/patients/${row.patientId}`}>
+                      Abrir paciente
+                    </Link>
+                  </div>
+                  {row.status === "active" || row.status === "draft" ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className={ghostButtonClass}
+                        disabled={busy}
+                        onClick={() =>
+                          void endObstetricContract({
+                            organizationId: orgId!,
+                            id: row.id,
+                            op: "end",
+                            reason: "Encerrado via Gestão Clínica",
+                          }).then(reload)
+                        }
+                      >
+                        Encerrar
+                      </button>
+                      <button
+                        type="button"
+                        className={ghostButtonClass}
+                        disabled={busy}
+                        onClick={() =>
+                          void endObstetricContract({
+                            organizationId: orgId!,
+                            id: row.id,
+                            op: "cancel",
+                            reason: "Cancelado via Gestão Clínica",
+                          }).then(reload)
+                        }
+                      >
+                        Cancelar
+                      </button>
                     </div>
-                    {row.status === "active" || row.status === "draft" ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className={ghostButtonClass}
-                          disabled={busy}
-                          onClick={() =>
-                            void endObstetricContract({
-                              organizationId: orgId!,
-                              id: row.id,
-                              op: "end",
-                              reason: "Encerrado via Gestão Clínica",
-                            }).then(reload)
-                          }
-                        >
-                          Encerrar
-                        </button>
-                        <button
-                          type="button"
-                          className={ghostButtonClass}
-                          disabled={busy}
-                          onClick={() =>
-                            void endObstetricContract({
-                              organizationId: orgId!,
-                              id: row.id,
-                              op: "cancel",
-                              reason: "Cancelado via Gestão Clínica",
-                            }).then(reload)
-                          }
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : null}
-                  </article>
-                </li>
-              ))}
-              {!loading && obs.length === 0 ? (
-                <p className="card text-sm text-lotus-700">Nenhum contrato obstétrico encontrado.</p>
-              ) : null}
-            </ul>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {procs.map((row) => (
-                <li key={row.id}>
-                  <article className="card">
-                    <p className="font-semibold text-lotus-900">
-                      {row.title} · v{row.versionNumber}
+                  ) : null}
+                </article>
+              </li>
+            ))}
+            {!loading && obs.length === 0 ? (
+              <p className="card text-sm text-lotus-700">Nenhum contrato obstétrico encontrado.</p>
+            ) : null}
+          </ul>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {procs.map((row) => (
+              <li key={row.id}>
+                <article className="card">
+                  <p className="font-semibold text-lotus-900">
+                    {row.title} · v{row.versionNumber}
+                  </p>
+                  <p className="mt-1 text-sm text-lotus-700">
+                    {row.patientName ?? row.patientId} · {row.procedureName} ·{" "}
+                    {PROC_KIND_LABEL[row.agreementKind]} · {PROC_STATUS_LABEL[row.status]}
+                  </p>
+                  {row.acknowledgedAt ? (
+                    <p className="mt-1 text-xs text-lotus-600">
+                      Ciência registrada em {new Date(row.acknowledgedAt).toLocaleString("pt-BR")}
+                      {row.acknowledgedByName ? ` por ${row.acknowledgedByName}` : ""}
                     </p>
-                    <p className="mt-1 text-sm text-lotus-700">
-                      {row.patientName ?? row.patientId} · {row.procedureName} ·{" "}
-                      {PROC_KIND_LABEL[row.agreementKind]} · {PROC_STATUS_LABEL[row.status]}
-                    </p>
-                    {row.acknowledgedAt ? (
-                      <p className="mt-1 text-xs text-lotus-600">
-                        Ciência registrada em {new Date(row.acknowledgedAt).toLocaleString("pt-BR")}
-                        {row.acknowledgedByName ? ` por ${row.acknowledgedByName}` : ""}
-                      </p>
-                    ) : null}
-                    <div className="mt-2 text-sm">
-                      <Link className="underline" href={`/app/patients/${row.patientId}`}>
-                        Abrir paciente
-                      </Link>
-                    </div>
-                    {row.status === "draft" ? (
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-                        <label className="block flex-1 text-sm">
-                          Quem registrou a ciência
-                          <input
-                            className={fieldClass}
-                            value={ackName}
-                            onChange={(e) => setAckName(e.target.value)}
-                            placeholder="Nome do responsável pelo registro"
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          className={buttonClass}
-                          disabled={busy || !ackName.trim()}
-                          onClick={() =>
-                            void acknowledgeProcedureAgreement({
-                              organizationId: orgId!,
-                              id: row.id,
-                              acknowledgedByName: ackName,
+                  ) : null}
+                  <div className="mt-2 text-sm">
+                    <Link className="underline" href={`/app/patients/${row.patientId}`}>
+                      Abrir paciente
+                    </Link>
+                  </div>
+                  {row.status === "draft" ? (
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <label className="block flex-1 text-sm">
+                        Quem registrou a ciência
+                        <input
+                          className={fieldClass}
+                          value={ackName}
+                          onChange={(e) => setAckName(e.target.value)}
+                          placeholder="Nome do responsável pelo registro"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className={buttonClass}
+                        disabled={busy || !ackName.trim()}
+                        onClick={() =>
+                          void acknowledgeProcedureAgreement({
+                            organizationId: orgId!,
+                            id: row.id,
+                            acknowledgedByName: ackName,
+                          })
+                            .then(() => {
+                              setNotice("Ciência registrada.");
+                              setAckName("");
+                              return reload();
                             })
-                              .then(() => {
-                                setNotice("Ciência registrada.");
-                                setAckName("");
-                                return reload();
-                              })
-                              .catch((err: unknown) =>
-                                setError(err instanceof Error ? err.message : "Falha ao registrar ciência."),
-                              )
-                          }
-                        >
-                          Registrar ciência
-                        </button>
-                        <button
-                          type="button"
-                          className={ghostButtonClass}
-                          disabled={busy}
-                          onClick={() =>
-                            void cancelProcedureAgreement({
-                              organizationId: orgId!,
-                              id: row.id,
-                              reason: "Cancelado",
-                            }).then(reload)
-                          }
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : null}
-                  </article>
-                </li>
-              ))}
-              {!loading && procs.length === 0 ? (
-                <p className="card text-sm text-lotus-700">Nenhum termo/contrato de procedimento encontrado.</p>
-              ) : null}
-            </ul>
-          )}
-        </section>
+                            .catch((err: unknown) =>
+                              setError(err instanceof Error ? err.message : "Falha ao registrar ciência."),
+                            )
+                        }
+                      >
+                        Registrar ciência
+                      </button>
+                      <button
+                        type="button"
+                        className={ghostButtonClass}
+                        disabled={busy}
+                        onClick={() =>
+                          void cancelProcedureAgreement({
+                            organizationId: orgId!,
+                            id: row.id,
+                            reason: "Cancelado",
+                          }).then(reload)
+                        }
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              </li>
+            ))}
+            {!loading && procs.length === 0 ? (
+              <p className="card text-sm text-lotus-700">Nenhum termo/contrato de procedimento encontrado.</p>
+            ) : null}
+          </ul>
+        )}
+      </section>
 
-        <aside className="card h-fit" id="clinical-contract-form">
-          <h2 className="text-base font-semibold text-lotus-900">
-            {tab === "obstetric" ? "Novo contrato obstétrico" : "Novo termo / contrato"}
-          </h2>
-          <p className="mt-1 text-xs text-lotus-600">Paciente obrigatória. Não cria decisão clínica.</p>
-          <label className="mt-3 block text-sm">
-            Paciente
-            <EntityCombobox
-              value={patientId}
-              selectedLabel={patientName}
-              onChange={(id, option) => {
-                setPatientId(id);
-                setPatientName(option?.label ?? "");
-              }}
-              onSearch={searchPatientsCb}
-              minChars={2}
-              placeholder="Digite o nome, CPF ou telefone…"
-              emptyLabel="Nenhum paciente encontrado."
-            />
-          </label>
-          <label className="mt-3 block text-sm">
-            Profissional
-            <EntityCombobox
-              value={professionalId}
-              selectedLabel={professionalName}
-              onChange={(id, option) => {
-                setProfessionalId(id);
-                setProfessionalName(option?.label ?? "");
-              }}
-              onSearch={searchProfessionalsCb}
-              minChars={2}
-              placeholder="Nome ou registro profissional…"
-              emptyLabel="Nenhum profissional encontrado."
-            />
-          </label>
+      <CreateFormShell
+        open={formOpen}
+        title={tab === "obstetric" ? "Novo contrato obstétrico" : "Novo termo / contrato"}
+        description="Paciente obrigatória. Não cria decisão clínica."
+        size="xl"
+        busy={busy}
+        onClose={closeForm}
+        formId="clinical-contract-form"
+      >
+        <label className="block text-sm">
+          Paciente
+          <EntityCombobox
+            value={patientId}
+            selectedLabel={patientName}
+            onChange={(id, option) => {
+              setPatientId(id);
+              setPatientName(option?.label ?? "");
+            }}
+            onSearch={searchPatientsCb}
+            minChars={2}
+            placeholder="Digite o nome, CPF ou telefone…"
+            emptyLabel="Nenhum paciente encontrado."
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Profissional
+          <EntityCombobox
+            value={professionalId}
+            selectedLabel={professionalName}
+            onChange={(id, option) => {
+              setProfessionalId(id);
+              setProfessionalName(option?.label ?? "");
+            }}
+            onSearch={searchProfessionalsCb}
+            minChars={2}
+            placeholder="Nome ou registro profissional…"
+            emptyLabel="Nenhum profissional encontrado."
+          />
+        </label>
 
-          {tab === "obstetric" ? (
-            <>
-              <label className="mt-3 flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={normalBirth} onChange={(e) => setNormalBirth(e.target.checked)} />
-                Parto normal
-              </label>
-              <label className="mt-2 flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={cesarean} onChange={(e) => setCesarean(e.target.checked)} />
-                Cesariana
-              </label>
-              <button
-                type="button"
-                className={`${buttonClass} mt-4`}
-                disabled={busy || !patientId || (!normalBirth && !cesarean)}
-                onClick={() => void onCreateObs()}
+        {tab === "obstetric" ? (
+          <>
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={normalBirth} onChange={(e) => setNormalBirth(e.target.checked)} />
+              Parto normal
+            </label>
+            <label className="mt-2 flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={cesarean} onChange={(e) => setCesarean(e.target.checked)} />
+              Cesariana
+            </label>
+            <FormActions
+              primaryLabel="Criar contrato"
+              primaryBusy={busy}
+              primaryDisabled={!patientId || !professionalId || (!normalBirth && !cesarean)}
+              onPrimary={() => void onCreateObs()}
+              onCancel={closeForm}
+            />
+          </>
+        ) : (
+          <>
+            <label className="mt-3 block text-sm">
+              Procedimento
+              <EntityCombobox
+                value={procedureId}
+                selectedLabel={procName}
+                onChange={(id, option) => {
+                  setProcedureId(id);
+                  setProcName(option?.label ?? "");
+                  if (option?.label && !procTitle.trim()) {
+                    setProcTitle(`Termo — ${option.label}`);
+                  }
+                }}
+                onSearch={searchProceduresCb}
+                minChars={2}
+                placeholder="Nome ou código do procedimento…"
+                emptyLabel="Nenhum procedimento encontrado."
+              />
+            </label>
+            <label className="mt-3 block text-sm">
+              Tipo
+              <select
+                className={fieldClass}
+                value={procKind}
+                onChange={(e) => setProcKind(e.target.value as ProcedureAgreementKind)}
               >
-                {busy ? "Salvando…" : "Criar contrato"}
-              </button>
-            </>
-          ) : (
-            <>
-              <label className="mt-3 block text-sm">
-                Procedimento
-                <EntityCombobox
-                  value={procedureId}
-                  selectedLabel={procName}
-                  onChange={(id, option) => {
-                    setProcedureId(id);
-                    setProcName(option?.label ?? "");
-                    if (option?.label && !procTitle.trim()) {
-                      setProcTitle(`Termo — ${option.label}`);
-                    }
-                  }}
-                  onSearch={searchProceduresCb}
-                  minChars={2}
-                  placeholder="Nome ou código do procedimento…"
-                  emptyLabel="Nenhum procedimento encontrado."
-                />
-              </label>
-              <label className="mt-3 block text-sm">
-                Tipo
-                <select
-                  className={fieldClass}
-                  value={procKind}
-                  onChange={(e) => setProcKind(e.target.value as ProcedureAgreementKind)}
-                >
-                  <option value="risk_acknowledgment">Termo de ciência dos riscos</option>
-                  <option value="procedure_contract">Contrato de procedimento</option>
-                  <option value="other">Outro</option>
-                </select>
-              </label>
-              <label className="mt-3 block text-sm">
-                Título
-                <input className={fieldClass} value={procTitle} onChange={(e) => setProcTitle(e.target.value)} />
-              </label>
-              <label className="mt-3 block text-sm">
-                Conteúdo do termo (texto administrativo)
-                <textarea
-                  className={fieldClass}
-                  rows={4}
-                  value={procBody}
-                  onChange={(e) => setProcBody(e.target.value)}
-                  placeholder="Texto configurável. Não afirma validade jurídica específica."
-                />
-              </label>
-              <button
-                type="button"
-                className={`${buttonClass} mt-4`}
-                disabled={busy || !patientId || !procName.trim() || !procTitle.trim()}
-                onClick={() => void onCreateProc()}
-              >
-                {busy ? "Salvando…" : "Criar termo"}
-              </button>
-            </>
-          )}
-        </aside>
-      </div>
+                <option value="risk_acknowledgment">Termo de ciência dos riscos</option>
+                <option value="procedure_contract">Contrato de procedimento</option>
+                <option value="other">Outro</option>
+              </select>
+            </label>
+            <label className="mt-3 block text-sm">
+              Título
+              <input className={fieldClass} value={procTitle} onChange={(e) => setProcTitle(e.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm">
+              Conteúdo do termo (texto administrativo)
+              <textarea
+                className={fieldClass}
+                rows={4}
+                value={procBody}
+                onChange={(e) => setProcBody(e.target.value)}
+                placeholder="Texto configurável. Não afirma validade jurídica específica."
+              />
+            </label>
+            <FormActions
+              primaryLabel="Criar termo"
+              primaryBusy={busy}
+              primaryDisabled={!patientId || !procName.trim() || !procTitle.trim()}
+              onPrimary={() => void onCreateProc()}
+              onCancel={closeForm}
+            />
+          </>
+        )}
+      </CreateFormShell>
     </div>
   );
 }

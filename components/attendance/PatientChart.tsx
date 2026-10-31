@@ -11,6 +11,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { loadPatientChartCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
@@ -91,7 +93,8 @@ export function PatientChart({ patientId }: { patientId: string }) {
   }, [physicianMemberships, practiceId]);
 
   const load = useCallback(async () => {
-    if (!supabase || !authorization) {
+    const casa = isCasaBrowserAuth();
+    if ((!supabase && !casa) || !authorization) {
       setLoading(false);
       return;
     }
@@ -112,6 +115,35 @@ export function PatientChart({ patientId }: { patientId: string }) {
 
     setLoading(true);
     setError(null);
+    if (casa) {
+      try {
+        const chart = await loadPatientChartCasa({
+          patientId,
+          practiceId: membership.practiceId,
+        });
+        if (!chart.patient) {
+          setPatient(null);
+          setSummary(null);
+          setEncounters([]);
+          setError("Paciente não encontrada ou sem permissão para visualização.");
+          return;
+        }
+        setPatient(chart.patient);
+        setSummary(chart.summary);
+        setOverview(null);
+        setEncounters(chart.encounters);
+        setPrescriptions(chart.prescriptions);
+        setExams(chart.exams);
+        setExamRequests(chart.examRequests);
+        setOrientations(chart.orientations);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Não foi possível abrir o prontuário.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    if (!supabase) return;
     try {
       const detail = await getPatient(supabase, patientId);
       if (!detail) {
@@ -194,7 +226,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
     return <p className="text-sm text-lotus-600">Carregando prontuário…</p>;
   }
 
-  if (!supabase) {
+  if (!supabase && !isCasaBrowserAuth()) {
     return <p className="text-sm text-rose-800">Autenticação não configurada.</p>;
   }
 
@@ -403,12 +435,14 @@ export function PatientChart({ patientId }: { patientId: string }) {
                   </ul>
                 )}
               </div>
+              {supabase ? (
               <EncounterTimeline
                 supabase={supabase}
                 encounters={filteredEncounters}
                 currentEncounterId=""
                 loading={loading}
               />
+              ) : null}
             </section>
           ) : null}
 
@@ -435,7 +469,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
                   Abrir módulo Receitas
                 </Link>
               </div>
-              {activeMembership?.professional?.id && patient ? (
+              {activeMembership?.professional?.id && patient && supabase ? (
                 <ClinicalPrescriptionPanel
                   supabase={supabase}
                   organizationId={
@@ -519,7 +553,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
                   </ul>
                 )}
               </div>
-              {activeMembership && patient ? (
+              {activeMembership && patient && supabase ? (
                 <ClinicalExamsPanel
                   supabase={supabase}
                   organizationId={

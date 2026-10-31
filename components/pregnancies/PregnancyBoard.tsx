@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listVisiblePregnanciesCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import { formatIsoDateBr } from "@/lib/patients/format";
 import {
@@ -18,13 +20,14 @@ export function PregnancyBoard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
     }
-    void listVisiblePregnancies(supabase)
+    void (casa ? listVisiblePregnanciesCasa() : listVisiblePregnancies(supabase!))
       .then((data) => {
         setRows(data);
         setError(null);

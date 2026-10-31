@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { createPatientCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import {
   applyBillingModalityChange,
@@ -70,8 +72,9 @@ export function PatientCreateForm() {
       return;
     }
 
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       return;
     }
@@ -79,8 +82,14 @@ export function PatientCreateForm() {
     setBusy(true);
     setError(null);
     try {
-      const created = await createPatient(supabase, payload, { organizationId, createdBy });
-      if (photoFile) {
+      const created = casa
+        ? await createPatientCasa(payload)
+        : await createPatient(supabase!, payload, { organizationId, createdBy });
+      if (photoFile && !supabase) {
+        router.replace(`/app/patients/${created.id}?foto=falhou`);
+        return;
+      }
+      if (photoFile && supabase) {
         try {
           await uploadPatientPhoto(supabase, created.organizationId, created.id, photoFile);
         } catch (photoErr: unknown) {

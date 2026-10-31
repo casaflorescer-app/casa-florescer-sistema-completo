@@ -1,7 +1,20 @@
 /** Persistência e RPC da Fase B2 — procedimentos de gestação + repasse. */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
+import {
+  cancelPayoutCasa,
+  createPregnancyProcedureCasa,
+  createPregnancyProcedurePayoutCasa,
+  listPayoutEventsCasa,
+  listPayoutLedgerCasa,
+  listPregnancyProcedurePayoutsCasa,
+  listPregnancyProceduresCasa,
+  settlePayoutCasa,
+  updatePayoutAmountCasa,
+  updatePayoutNotesCasa,
+} from "@/lib/casa/actions";
 import {
   canManageProcedurePayout,
   canViewProcedurePayout,
@@ -251,10 +264,20 @@ export function activePayout(
 }
 
 export async function listPregnancyProcedures(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
   nameByProfessionalId?: Map<string, string>,
 ): Promise<PregnancyProcedureRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listPregnancyProceduresCasa(pregnancyId);
+    return data
+      .map((row) => {
+        const performerId = asString(row.performed_by_professional_id);
+        return toProcedureRow(row, performerId ? nameByProfessionalId?.get(performerId) ?? null : null);
+      })
+      .filter((item): item is PregnancyProcedureRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("pregnancy_procedures")
     .select("*")
@@ -275,9 +298,16 @@ export async function listPregnancyProcedures(
 }
 
 export async function listPregnancyProcedurePayouts(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
 ): Promise<PregnancyProcedurePayoutRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listPregnancyProcedurePayoutsCasa(pregnancyId);
+    return data
+      .map((raw) => toPayoutRow(raw))
+      .filter((item): item is PregnancyProcedurePayoutRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("pregnancy_procedure_payouts")
     .select("*")
@@ -290,9 +320,37 @@ export async function listPregnancyProcedurePayouts(
 }
 
 export async function listPayoutEvents(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payoutId: string,
 ): Promise<PayoutEventRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listPayoutEventsCasa(payoutId);
+    return data
+      .map((value) => {
+        const id = asString(value.id);
+        const kind = asString(value.kind);
+        const occurredAt = asString(value.occurred_at);
+        if (!id || !kind || !occurredAt) return null;
+        const detail =
+          value.detail && typeof value.detail === "object" && !Array.isArray(value.detail)
+            ? (value.detail as Record<string, unknown>)
+            : {};
+        return {
+          id,
+          payoutId,
+          kind,
+          actorId: asString(value.actor_id),
+          beforeStatus: asString(value.before_status),
+          afterStatus: asString(value.after_status),
+          beforeAmountCents: asNumber(value.before_amount_cents),
+          afterAmountCents: asNumber(value.after_amount_cents),
+          detail,
+          occurredAt,
+        } satisfies PayoutEventRow;
+      })
+      .filter((item): item is PayoutEventRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("pregnancy_procedure_payout_events")
     .select("*")
@@ -327,9 +385,46 @@ export async function listPayoutEvents(
 }
 
 export async function listPayoutLedger(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payoutId: string,
 ): Promise<LedgerEntryRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listPayoutLedgerCasa(payoutId);
+    return data
+      .map((value) => {
+        const id = asString(value.id);
+        const professionalId = asString(value.professional_id);
+        const counterparty = asString(value.counterparty_professional_id);
+        const direction = asString(value.direction);
+        const effect = asString(value.effect);
+        const amountCents = asNumber(value.amount_cents);
+        const entryAt = asString(value.entry_at);
+        if (
+          !id ||
+          !professionalId ||
+          !counterparty ||
+          (direction !== "outflow" && direction !== "inflow") ||
+          (effect !== "post" && effect !== "reverse") ||
+          amountCents == null ||
+          !entryAt
+        ) {
+          return null;
+        }
+        return {
+          id,
+          payoutId,
+          professionalId,
+          counterpartyProfessionalId: counterparty,
+          direction,
+          effect,
+          amountCents,
+          entryAt,
+          note: asString(value.note),
+        } satisfies LedgerEntryRow;
+      })
+      .filter((item): item is LedgerEntryRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("professional_payout_ledger_entries")
     .select("*")
@@ -373,7 +468,7 @@ export async function listPayoutLedger(
 }
 
 export async function createPregnancyProcedure(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     pregnancyId: string;
     procedureCode: string;
@@ -382,6 +477,21 @@ export async function createPregnancyProcedure(
     notes?: string;
   },
 ): Promise<{ id: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { id: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const id = await createPregnancyProcedureCasa({
+        pregnancyId: input.pregnancyId,
+        procedureCode: input.procedureCode,
+        performedByProfessionalId: input.performedByProfessionalId,
+        performedAt: input.performedAt,
+        notes: input.notes ?? null,
+      });
+      return { id, error: null };
+    } catch (err) {
+      return { id: null, error: err instanceof Error ? err.message : "Não foi possível registrar o procedimento." };
+    }
+  }
   const { data, error } = await supabase.rpc("create_pregnancy_procedure", {
     p_pregnancy_id: input.pregnancyId,
     p_procedure_code: input.procedureCode,
@@ -394,7 +504,7 @@ export async function createPregnancyProcedure(
 }
 
 export async function createPregnancyProcedurePayout(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     pregnancyProcedureId: string;
     amountReais: string;
@@ -404,6 +514,20 @@ export async function createPregnancyProcedurePayout(
 ): Promise<{ id: string | null; error: string | null }> {
   const cents = parseReaisToCents(input.amountReais);
   if (cents == null) return { id: null, error: "Informe um valor válido em reais." };
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { id: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const id = await createPregnancyProcedurePayoutCasa({
+        pregnancyProcedureId: input.pregnancyProcedureId,
+        amountCents: cents,
+        notes: input.notes ?? null,
+        effectiveOn: input.effectiveOn || null,
+      });
+      return { id, error: null };
+    } catch (err) {
+      return { id: null, error: err instanceof Error ? err.message : "Não foi possível criar o repasse." };
+    }
+  }
   const { data, error } = await supabase.rpc("create_pregnancy_procedure_payout", {
     p_pregnancy_procedure_id: input.pregnancyProcedureId,
     p_amount_cents: cents,
@@ -415,10 +539,11 @@ export async function createPregnancyProcedurePayout(
 }
 
 export async function updatePayoutNotes(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payoutId: string,
   notes: string,
 ): Promise<string | null> {
+  if (!supabase) return isCasaBrowserAuth() ? updatePayoutNotesCasa(payoutId, notes) : "Autenticação não configurada neste ambiente.";
   const { error } = await supabase.rpc("update_pregnancy_procedure_payout_notes", {
     p_payout_id: payoutId,
     p_notes: notes,
@@ -427,12 +552,17 @@ export async function updatePayoutNotes(
 }
 
 export async function updatePayoutAmount(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payoutId: string,
   amountReais: string,
 ): Promise<string | null> {
   const cents = parseReaisToCents(amountReais);
   if (cents == null) return "Informe um valor válido em reais.";
+  if (!supabase) {
+    return isCasaBrowserAuth()
+      ? updatePayoutAmountCasa(payoutId, cents)
+      : "Autenticação não configurada neste ambiente.";
+  }
   const { error } = await supabase.rpc("update_pregnancy_procedure_payout_amount", {
     p_payout_id: payoutId,
     p_amount_cents: cents,
@@ -441,10 +571,11 @@ export async function updatePayoutAmount(
 }
 
 export async function settlePayout(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payoutId: string,
   effectiveOn: string,
 ): Promise<string | null> {
+  if (!supabase) return isCasaBrowserAuth() ? settlePayoutCasa(payoutId, effectiveOn) : "Autenticação não configurada neste ambiente.";
   const { error } = await supabase.rpc("settle_pregnancy_procedure_payout", {
     p_payout_id: payoutId,
     p_effective_on: effectiveOn,
@@ -453,10 +584,11 @@ export async function settlePayout(
 }
 
 export async function cancelPayout(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payoutId: string,
   reason: string,
 ): Promise<string | null> {
+  if (!supabase) return isCasaBrowserAuth() ? cancelPayoutCasa(payoutId, reason) : "Autenticação não configurada neste ambiente.";
   const { error } = await supabase.rpc("cancel_pregnancy_procedure_payout", {
     p_payout_id: payoutId,
     p_reason: reason || null,

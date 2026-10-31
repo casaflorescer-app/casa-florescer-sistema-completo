@@ -98,8 +98,15 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 - **Enunciado:** O pedido de redefinição responde a mesma mensagem para qualquer e-mail. Sem envio de e-mail configurado, nenhum token é gravado. Quando um token é usado, a senha nova é Argon2id e todas as sessões daquela conta caem.
 - **Rastreio:** `app/api/casa/password/recover/route.ts`, `app/api/casa/password/reset/route.ts`, `0059_c083_staff_and_reset.sql`. As funções SQL estão no BancoFlorescerPP desde 2026-10-31. O teste dessa migration rodou e foi desfeito na mesma data.
 
+### RN-CASA-013 — Telas no servidor só com o modo da casa
+
+- **Status:** `⚠ inferida`
+- **Enunciado:** Enquanto `NEXT_PUBLIC_CASA_AUTH` não for exatamente `1`, o login e as telas continuam no Auth e no cliente Supabase. Com esse valor e com `CASA_DATABASE_URL` no processo, a lista e o cadastro de pacientes, a carga da agenda, a leitura do prontuário, a lista de gestações, a leitura de exames e de receitas, o repasse da gestação e os relatórios operacionais chamam o servidor. O servidor grava `app.user_id` e usa `SET LOCAL ROLE authenticated`. A criação de usuário dessa tela só aparece para o administrador principal e chama `POST /api/casa/staff`. A produção não tem essas variáveis. A prova `supabase/tests/c084_module_isolation.sql` ainda não rodou no BancoFlorescerPP. Foto, PDF e a emissão de receita ou pedido nesse modo continuam fora deste ramo.
+- **Rastreio:** `lib/auth/casa-mode.ts`, `lib/casa/actions.ts`, `components/patients/PatientList.tsx`, `components/attendance/AgendaPage.tsx`, `components/attendance/PatientChart.tsx`, `components/clinic-admin/ClinicUsersPanel.tsx`.
+
 ## Histórico
 
+- 2026-10-31 — RN-CASA-013 inferida: ramo do servidor ao lado do Supabase. A prova C084 ainda não rodou. Produção sem as variáveis da casa.
 - 2026-10-31 — RN-CASA-011 e RN-CASA-012: o teste SQL da C083 rodou no BancoFlorescerPP e foi desfeito. Organizações continuaram em 0.
 - 2026-10-31 — RN-CASA-011 e RN-CASA-012: só o administrador principal cria usuário; a redefinição não revela se o e-mail existe. A `0059` ainda não foi aplicada.
 - 2026-10-31 — RN-CASA-010: sessão da casa revogável no logout e na troca de senha. As provas C077 e C082 rodaram no BancoFlorescerPP e foram desfeitas. Nenhuma organização foi criada.

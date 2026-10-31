@@ -514,7 +514,7 @@ export function patientDetailToForm(row: PatientDetailRow): PatientCreateInput {
   };
 }
 
-function toPersistPayload(input: PatientCreateInput) {
+export function toPersistPayload(input: PatientCreateInput) {
   const cepDigits = onlyDigits(input.addressCep);
   const uf = input.addressState.trim().toUpperCase();
   const modality = isBillingModality(input.billingModality) ? input.billingModality : null;

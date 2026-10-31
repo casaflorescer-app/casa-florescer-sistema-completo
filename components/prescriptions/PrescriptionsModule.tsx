@@ -10,6 +10,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { getPatientCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import {
@@ -72,7 +74,7 @@ export function PrescriptionsModule() {
 
   const loadPatient = useCallback(
     async (id: string) => {
-      if (!supabase || !id) {
+      if ((!supabase && !isCasaBrowserAuth()) || !id) {
         setPatient(null);
         setLoadingPatient(false);
         return;
@@ -80,7 +82,7 @@ export function PrescriptionsModule() {
       setLoadingPatient(true);
       setError(null);
       try {
-        const detail = await getPatient(supabase, id);
+        const detail = supabase ? await getPatient(supabase, id) : await getPatientCasa(id);
         if (!detail) {
           setPatient(null);
           setError("Paciente não encontrada ou sem permissão no seu escopo.");
@@ -134,7 +136,7 @@ export function PrescriptionsModule() {
     return <p className="text-sm text-lotus-600">Carregando receitas…</p>;
   }
 
-  if (!supabase) {
+  if (!supabase && !isCasaBrowserAuth()) {
     return <p className="text-sm text-lotus-600">Supabase não configurado.</p>;
   }
 
@@ -269,7 +271,7 @@ export function PrescriptionsModule() {
         </section>
       ) : null}
 
-      {patient && membership?.professional?.id ? (
+      {patient && membership?.professional?.id && supabase ? (
         <ClinicalPrescriptionPanel
           supabase={supabase}
           organizationId={

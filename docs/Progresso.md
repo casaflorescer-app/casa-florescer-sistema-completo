@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-31 — C084: ramo servidor ao lado do Supabase para pacientes, agenda, prontuário, gestação, exames, receitas, repasse e relatórios. A tela de usuários chama `POST /api/casa/staff` só com o modo da casa e só para o administrador principal. O bootstrap continua recusando. Teste local do modo: 1 passou. Build do Next passou sem `CASA_DATABASE_URL`. A prova `supabase/tests/c084_module_isolation.sql` não rodou no BancoFlorescerPP. Sem deploy.
 - 2026-10-31 — C083 no Bash do BancoFlorescerPP: `0059` e C074 aplicadas pelo console do serviço. `casa_login` provado com `casa_login|false|false`. O teste SQL rodou, devolveu `DO` e `ROLLBACK`, e a contagem de organizações ficou 0. Sem `CASA_DATABASE_URL` e sem deploy.
 - 2026-10-31 — C083 complemento: build do Next concluído de novo. Testes locais de cookie e redefinição: 5 passaram. A `0059` e a conexão `casa_login` não rodaram porque a aba do Terminal era a do Mac. Sem deploy.
 - 2026-10-31 — C082: papéis, migrations `0000`–`0058` e `GRANT` no BancoFlorescerPP. Provas C077 e C082 desfeitas. 102 tabelas em `public`, 0 organizações. `casa_login` sem superusuário e sem `BYPASSRLS`. Sem `CASA_DATABASE_URL`, sem deploy e sem cadastro real. A API `api.thvp.cloud` não foi trocada.

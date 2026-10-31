@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { searchPatientsCasa } from "@/lib/casa/actions";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
   maskCpf,
@@ -25,7 +27,7 @@ export function PatientSearchPanel({
   autoFocus = false,
   onSelectPatient,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   title?: string;
   hint?: string;
   actionLabel?: string;
@@ -51,9 +53,10 @@ export function PatientSearchPanel({
       setError(null);
       return;
     }
+    if (!supabase && !isCasaBrowserAuth()) return;
     let cancelled = false;
     setBusy(true);
-    void searchPatients(supabase, debounced, { limit: 30 })
+    void (supabase ? searchPatients(supabase, debounced, { limit: 30 }) : searchPatientsCasa(debounced))
       .then((data) => {
         if (cancelled) return;
         setRows(

@@ -10,6 +10,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { getPatientCasa, loadExamBoardCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import {
@@ -105,7 +107,19 @@ export function ExamsModule() {
 
   const reloadClinical = useCallback(
     async (pid: string, pracId: string) => {
-      if (!supabase) return;
+      if (!supabase) {
+        if (!isCasaBrowserAuth()) return;
+        const board = await loadExamBoardCasa({ patientId: pid, practiceId: pracId });
+        setEncounters(board.encounters);
+        setRequests(board.requests);
+        setDocs([]);
+        const open = board.encounters.filter((item) => item.status === "open");
+        setSelectedEncounterId((prev) => {
+          if (prev && open.some((item) => item.id === prev)) return prev;
+          return open[0]?.id ?? "";
+        });
+        return;
+      }
       const [enc, req, documents] = await Promise.all([
         listEncountersForPatient(supabase, pracId, pid),
         listExamRequestsForPatient(supabase, pid),
@@ -125,7 +139,7 @@ export function ExamsModule() {
 
   const loadPatient = useCallback(
     async (id: string) => {
-      if (!supabase || !id || !membership?.practiceId) {
+      if ((!supabase && !isCasaBrowserAuth()) || !id || !membership?.practiceId) {
         setPatient(null);
         setLoadingPatient(false);
         return;
@@ -133,7 +147,7 @@ export function ExamsModule() {
       setLoadingPatient(true);
       setError(null);
       try {
-        const detail = await getPatient(supabase, id);
+        const detail = supabase ? await getPatient(supabase, id) : await getPatientCasa(id);
         if (!detail) {
           setPatient(null);
           setError("Paciente não encontrada ou sem permissão no seu escopo.");
@@ -215,7 +229,7 @@ export function ExamsModule() {
     return <p className="text-sm text-lotus-600">Carregando exames…</p>;
   }
 
-  if (!supabase) {
+  if (!supabase && !isCasaBrowserAuth()) {
     return <p className="text-sm text-lotus-600">Supabase não configurado.</p>;
   }
 
@@ -439,7 +453,7 @@ export function ExamsModule() {
                   ))}
                 </select>
               </label>
-              {selectedEncounterId ? (
+              {selectedEncounterId && supabase ? (
                 <ExamRequestPanel
                   key={selectedEncounterId}
                   supabase={supabase}
@@ -454,7 +468,7 @@ export function ExamsModule() {
         </section>
       ) : null}
 
-      {patient && membership ? (
+      {patient && membership && supabase ? (
         <ClinicalExamsPanel
           supabase={supabase}
           organizationId={

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listPatientsCasa, searchPatientsCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
@@ -119,14 +121,15 @@ export function PatientList() {
   }, [query]);
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
     }
 
-    void listPatients(supabase)
+    void (casa ? listPatientsCasa() : listPatients(supabase!))
       .then((data) => {
         setRows(data);
         setError(null);
@@ -151,11 +154,12 @@ export function PatientList() {
       setFiltered([]);
       return;
     }
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     let cancelled = false;
     setSearching(true);
-    void searchPatients(supabase, debounced, { limit: 40 })
+    void (casa ? searchPatientsCasa(debounced) : searchPatients(supabase!, debounced, { limit: 40 }))
       .then((data) => {
         if (!cancelled) setFiltered(data);
       })

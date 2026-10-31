@@ -7,6 +7,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { hasStaffRole } from "@/lib/auth/access";
 import { usePracticeUi } from "@/components/layout/PracticeUi";
 import { StatusMessage, ghostButtonClass } from "@/components/platform/Ui";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { loadAgendaBoardCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
@@ -135,7 +137,8 @@ export function AgendaPage() {
 
   useEffect(() => {
     if (authorizationLoading) return;
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -161,6 +164,67 @@ export function AgendaPage() {
 
     let cancelled = false;
     setLoading(true);
+    if (casa) {
+      void loadAgendaBoardCasa({
+        organizationId,
+        filter: {
+          practiceId: selectedPracticeId,
+          from: bounds.from,
+          to: bounds.to,
+          professionalId: professionalId || undefined,
+          patientId: patientFilterId || undefined,
+          roomId: roomFilterId || undefined,
+          procedureId: procedureFilterId || undefined,
+          kind: kindFilter || undefined,
+          status: status || undefined,
+        },
+      })
+        .then((board) => {
+          if (cancelled) return;
+          setProcedureNames(new Map(board.procedureNames));
+          setPatientNames(new Map(board.patientNames));
+          setRooms(
+            board.rooms.flatMap((item) => {
+              const room = toRoom(item);
+              return room ? [room] : [];
+            }),
+          );
+          setOccupancy(
+            board.occupancy.flatMap((item) => {
+              const row = parseRoomOccupancy(item);
+              return row ? [row] : [];
+            }),
+          );
+          setProfessionals(
+            board.professionals.map((row) => ({
+              id: row.id,
+              practiceId: row.practiceId,
+              organizationId,
+              fullName: row.fullName,
+              councilType: "",
+              councilNumber: "",
+            })),
+          );
+          setRows(board.appointments);
+          setBlocks(board.blocks);
+          setPredictions(new Map());
+          setError(null);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setRows([]);
+          setPredictions(new Map());
+          setBlocks([]);
+          setError(err instanceof Error ? err.message : "Não foi possível carregar a agenda.");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (!supabase) return;
     void (async () => {
       try {
         const [appointmentRows, professionalRows, roomResult, occupancyResult, blockResult] =

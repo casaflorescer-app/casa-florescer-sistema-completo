@@ -277,8 +277,11 @@ Em 2026-10-31 o Bash do container do serviço `bancoflorescer` aplicou a `0059` 
 
 A senha de `casa_login` foi definida. A prova em `127.0.0.1` devolveu `casa_login|false|false`. O valor não está no Git. Um valor gerado antes apareceu no console, porque o comando de teste foi deformado, e foi substituído. `CASA_DATABASE_URL` e `NEXT_PUBLIC_CASA_AUTH` não foram gravados. Não houve deploy. O teste `supabase/tests/c083_login_and_staff.sql` rodou e terminou em `ROLLBACK`. A contagem de organizações depois dele foi 0.
 
+A C084 não gravou `CASA_DATABASE_URL` nem `NEXT_PUBLIC_CASA_AUTH`, não publicou a porta 5432 e não fez deploy. O arquivo `supabase/tests/c084_module_isolation.sql` espera execução no console do BancoFlorescerPP, com `BEGIN` e `ROLLBACK`. Essa execução ainda não aconteceu.
+
 ## Histórico
 
+- 2026-10-31 — C084 no repositório. Sem variáveis da casa no Florescer Web, sem porta 5432 e sem deploy. A prova SQL da C084 ainda não rodou no console.
 - 2026-10-31 — C083 no Bash do BancoFlorescerPP: `0059` e C074 aplicadas. `casa_login` provado sem superusuário e sem `BYPASSRLS`. O teste SQL rodou e foi desfeito. Organizações 0. Sem `CASA_DATABASE_URL` e sem deploy.
 - 2026-10-31 — C083 complemento: o prompt selecionado continuou o do Mac. A `0059` e a senha de `casa_login` não foram aplicadas. Build e testes locais de cookie e redefinição passaram. Sem deploy.
 - 2026-10-31 — C082: schema `0000`–`0058`, papéis e `GRANT` no BancoFlorescerPP. Testes C077 e C082 desfeitos. 102 tabelas, 0 organizações. Sem backup, sem database temporário, sem troca da API e sem deploy.

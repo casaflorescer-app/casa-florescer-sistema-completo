@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { mapAuthError } from "@/lib/auth/errors";
 import { resolveAuthenticatedPath } from "@/lib/auth/paths";
@@ -33,7 +34,7 @@ export function LoginForm() {
       setError("Informe sua senha.");
       return;
     }
-    if (process.env.NEXT_PUBLIC_CASA_AUTH === "1") {
+    if (isCasaBrowserAuth()) {
       setBusy(true);
       try {
         const response = await fetch("/api/casa/session", {

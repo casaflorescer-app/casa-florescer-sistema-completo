@@ -1,5 +1,7 @@
 "use client";
 
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { reportsAppointmentsCasa, reportsSummaryCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import {
   periodToTimestamptzRange,
@@ -158,8 +160,11 @@ export async function loadReportsSummary(
   organizationId: string,
   period: ReportPeriod,
 ): Promise<ReportsSummary> {
-  const supabase = requireClient();
   const { fromIso, toIso } = periodToTimestamptzRange(period);
+  if (isCasaBrowserAuth()) {
+    return parseSummary(await reportsSummaryCasa(organizationId, fromIso, toIso));
+  }
+  const supabase = requireClient();
   const { data, error } = await supabase.rpc("reports_operational_summary", {
     p_organization_id: organizationId,
     p_from: fromIso,
@@ -177,8 +182,42 @@ export async function loadAppointmentsDetail(params: {
   limit?: number;
   offset?: number;
 }): Promise<AppointmentsDetail> {
-  const supabase = requireClient();
   const { fromIso, toIso } = periodToTimestamptzRange(params.period);
+  if (isCasaBrowserAuth()) {
+    const data = await reportsAppointmentsCasa({
+      organizationId: params.organizationId,
+      fromIso,
+      toIso,
+      status: params.status || null,
+      kind: params.kind || null,
+      limit: params.limit ?? 50,
+      offset: params.offset ?? 0,
+    });
+    const rec = asRecord(data);
+    const rowsRaw = Array.isArray(rec.rows) ? rec.rows : [];
+    const rows: AppointmentDetailRow[] = rowsRaw.map((item) => {
+      const row = asRecord(item);
+      return {
+        id: String(row.id ?? ""),
+        scheduled_starts_at: String(row.scheduled_starts_at ?? ""),
+        status: String(row.status ?? ""),
+        kind: String(row.kind ?? ""),
+        practice_id: String(row.practice_id ?? ""),
+        professional_id: String(row.professional_id ?? ""),
+        room_id: String(row.room_id ?? ""),
+        patient_id: String(row.patient_id ?? ""),
+        patient_name: String(row.patient_name ?? ""),
+        professional_name: String(row.professional_name ?? ""),
+      };
+    });
+    return {
+      total: asNum(rec.total),
+      limit: asNum(rec.limit),
+      offset: asNum(rec.offset),
+      rows,
+    };
+  }
+  const supabase = requireClient();
   const { data, error } = await supabase.rpc("reports_appointments_detail", {
     p_organization_id: params.organizationId,
     p_from: fromIso,

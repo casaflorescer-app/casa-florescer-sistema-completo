@@ -79,8 +79,13 @@
 - O domínio `api.thvp.cloud` no EasyPanel aponta para o serviço Compose `porta-api` na porta 80. Na porta 3000 o Traefik mostra “Service is not reachable” e o login vira “Não foi possível conectar”. O Caddy desse serviço escuta só HTTP na porta 80; o aviso de HTTPS automático é esperado. Com a porta certa, `/auth/v1/health` responde 401 e o CORS libera `https://sistema.thvp.cloud`.
 - `app/template.tsx` entra no HTML de produção, mas o Next desmonta e monta esse arquivo de novo em toda navegação interna. Recriar `<html>` e `<body>` apaga a página: o primeiro HTML tem texto e, depois do JavaScript, a tela fica branca. A casca persistente é o layout de grupo `app/(shell)/layout.tsx` (`data-casa="layout-9"`). O layout raiz continua de fora do HTML no ar. Conferir o próximo deploy por `layout-9`, não por `layout-8`.
 
+## 2026-10-31 — C084 ainda sem prova no console
+
+O código do modo da casa não liga a produção. `npm run build` sem `CASA_DATABASE_URL` continua no caminho Supabase. A prova `supabase/tests/c084_module_isolation.sql` só conta depois de rodar no Bash do BancoFlorescerPP e terminar em `ROLLBACK`, com organizações em 0. Foto e PDF nesse modo ainda dependem do Storage antigo.
+
 ## Histórico
 
+- 2026-10-31 — a C084 fica pendente até o teste SQL rodar no console do BancoFlorescerPP; o build sem a URL da casa permanece no Supabase.
 - 2026-10-31 — no Bash do container, `postgre` aplica no BancoFlorescerPP; a view de profissionais exige `DROP` antes de recriar; não colar `PGPASSWORD` no console.
 - 2026-10-31 — a conferência do complemento viu de novo o prompt do Mac; nenhum comando foi enviado a essa aba.
 - 2026-10-31 — o schema do BancoFlorescerPP foi aplicado sem backup e sem database temporário; a `0020` vazia de clínica precisa retornar, e a retaguarda só lê a gestação com grant.

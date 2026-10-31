@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { listPlatformUsers, setProfileActive, setSecretaryCarePolicyView } from "@/lib/platform/users";
 import type { PlatformMembership, PlatformUser } from "@/lib/platform/types";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { roleLabels } from "@/lib/auth/app-nav";
 import { formatDateTime } from "@/lib/platform/format";
@@ -18,11 +19,21 @@ export function ClinicUsersPanel() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const casa = isCasaBrowserAuth();
+  const [staffName, setStaffName] = useState("");
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffPassword, setStaffPassword] = useState("");
+  const [staffRole, setStaffRole] = useState<"secretary" | "physician" | "admin">("secretary");
+  const [staffPractices, setStaffPractices] = useState("");
+  const [staffBusy, setStaffBusy] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) {
-      setError("Autenticação não configurada neste ambiente.");
+      if (!isCasaBrowserAuth()) {
+        setError("Autenticação não configurada neste ambiente.");
+      }
+      setUsers([]);
       setLoading(false);
       return;
     }
@@ -92,6 +103,53 @@ export function ClinicUsersPanel() {
     }
   }
 
+  async function createStaff(event: React.FormEvent) {
+    event.preventDefault();
+    if (!authorization?.isSystemAdmin || !orgId) {
+      setError("Só o administrador principal cria usuários.");
+      return;
+    }
+    const practiceIds = staffPractices
+      .split(/[\s,;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (staffPassword.length < 8 || practiceIds.length === 0) {
+      setError("Informe uma senha de 8 caracteres e ao menos uma prática.");
+      return;
+    }
+    setStaffBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/casa/staff", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: staffEmail.trim(),
+          fullName: staffName.trim(),
+          password: staffPassword,
+          organizationId: orgId,
+          memberships: practiceIds.map((practiceId) => ({
+            practiceId,
+            role: staffRole,
+            canScheduleAnyPractice: staffRole !== "physician",
+          })),
+        }),
+      });
+      if (!response.ok) {
+        setError("Não foi possível criar o usuário.");
+        return;
+      }
+      setStaffPassword("");
+      setStaffEmail("");
+      setStaffName("");
+      setNotice("Usuário criado. A senha digitada não fica nesta tela.");
+    } catch {
+      setError("Não foi possível criar o usuário.");
+    } finally {
+      setStaffBusy(false);
+    }
+  }
+
   const secretaries = users.filter((item) =>
     item.memberships.some((membership) => membership.role === "secretary"),
   );
@@ -103,8 +161,27 @@ export function ClinicUsersPanel() {
       </p>
       <h1 className="page-title mt-1">Usuários da clínica</h1>
       <p className="page-sub mt-2">
-        Profiles da organização. A criação de contas Auth permanece fora desta fase.
+        {casa
+          ? "No modo da casa, só o administrador principal cria usuários por esta tela."
+          : "Profiles da organização. A criação de contas Auth permanece fora desta fase."}
       </p>
+      {casa && authorization?.isSystemAdmin ? (
+        <form className="mb-6 max-w-xl space-y-3 rounded-2xl border border-lotus-100 bg-white p-4" onSubmit={(event) => void createStaff(event)}>
+          <h2 className="text-sm font-semibold text-lotus-900">Novo usuário</h2>
+          <input className={fieldClass} placeholder="Nome" value={staffName} onChange={(event) => setStaffName(event.target.value)} required />
+          <input className={fieldClass} type="email" placeholder="E-mail" value={staffEmail} onChange={(event) => setStaffEmail(event.target.value)} required />
+          <input className={fieldClass} type="password" placeholder="Senha inicial" value={staffPassword} onChange={(event) => setStaffPassword(event.target.value)} autoComplete="new-password" required minLength={8} />
+          <select className={fieldClass} value={staffRole} onChange={(event) => setStaffRole(event.target.value as "secretary" | "physician" | "admin")}>
+            <option value="secretary">Secretária</option>
+            <option value="physician">Médica</option>
+            <option value="admin">Administradora</option>
+          </select>
+          <textarea className={fieldClass} placeholder="IDs das práticas, um por linha" value={staffPractices} onChange={(event) => setStaffPractices(event.target.value)} required />
+          <button className={ghostButtonClass} type="submit" disabled={staffBusy}>
+            {staffBusy ? "Criando…" : "Criar usuário"}
+          </button>
+        </form>
+      ) : null}
       <StatusMessage error={error} notice={notice} />
       <input
         className={`${fieldClass} mb-4 max-w-sm`}

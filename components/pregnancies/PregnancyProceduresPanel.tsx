@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import {
   canEditProcedurePayoutNotes,
@@ -132,7 +133,7 @@ export function PregnancyProceduresPanel({
 
   async function load() {
     const supabase = createClient();
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -185,7 +186,7 @@ export function PregnancyProceduresPanel({
   async function onCreateProcedure(event: FormEvent) {
     event.preventDefault();
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setNotice(null);
     const result = await createPregnancyProcedure(supabase, {
@@ -210,7 +211,7 @@ export function PregnancyProceduresPanel({
     event.preventDefault();
     if (!payoutForProcedureId) return;
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setNotice(null);
     const result = await createPregnancyProcedurePayout(supabase, {
@@ -232,7 +233,7 @@ export function PregnancyProceduresPanel({
 
   async function openPayoutDetail(payout: PregnancyProcedurePayoutRow) {
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setExpandedPayoutId(payout.id);
     setEditNotes(payout.notes ?? "");
     setEditAmount(centsToReaisInput(payout.amountCents));
@@ -248,7 +249,7 @@ export function PregnancyProceduresPanel({
 
   async function onSaveNotes(payoutId: string) {
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     const err = await updatePayoutNotes(supabase, payoutId, editNotes);
     setBusy(false);
@@ -264,7 +265,7 @@ export function PregnancyProceduresPanel({
 
   async function onSaveAmount(payoutId: string) {
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     const err = await updatePayoutAmount(supabase, payoutId, editAmount);
     setBusy(false);
@@ -281,7 +282,7 @@ export function PregnancyProceduresPanel({
       return;
     }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     const err = await settlePayout(supabase, payoutId, settleDate);
     setBusy(false);
@@ -306,7 +307,7 @@ export function PregnancyProceduresPanel({
       return;
     }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     const err = await cancelPayout(supabase, payoutId, cancelReason);
     setBusy(false);

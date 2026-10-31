@@ -60,7 +60,12 @@ ok("panel-preferences localStorage", prefs.includes("cf.panel.prefs.v1:") && pre
 ok("LocacoesSubnav Locações", locacoes.includes('label: "Locações"'));
 ok("LocacoesSubnav Contratos", locacoes.includes('label: "Contratos"') && !locacoes.includes("Contratos de locação"));
 
-ok("Provision script existe", provision.includes("provision-owner-physicians") || provision.includes("C070-C7"));
+ok(
+  "Provision script existe",
+  provision.includes("provision-owner-physicians") ||
+    provision.includes("C070-C7") ||
+    provision.includes("C073"),
+);
 ok("Provision Samara email", provision.includes("saribeiroromao@gmail.com"));
 ok("Provision Thais email", provision.includes("thaissmolina@hotmail.com"));
 ok("Provision owner+physician", provision.includes('"owner"') && provision.includes('"physician"'));
@@ -70,6 +75,10 @@ ok(
   !provision.includes("password:") &&
     provision.includes("CF_PHYSICIAN_1_PASSWORD") &&
     !/CF_PHYSICIAN_1_PASSWORD\s*=\s*['\"][^'\"]+['\"]/.test(provision),
+);
+ok(
+  "Provision modelo B duas practices",
+  provision.includes("CF_PRACTICE_ID_SAMARA") && provision.includes("CF_PRACTICE_ID_THAIS"),
 );
 
 ok("PATH records physician preservado", access.includes('prefix: "/app/records"') && access.includes('hasStaffRole(auth, "physician")'));

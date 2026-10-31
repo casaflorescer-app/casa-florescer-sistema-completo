@@ -3,6 +3,7 @@
 ## 2026-10-31 — C088 sem gravação HTTP
 
 - O SSH desta máquina para `root@2.25.151.136` voltou `Permission denied (publickey,password)` com `BatchMode`. A prova SQL e as contagens desta etapa não rodaram. Não repetir por outro caminho.
+- Depois da reconexão, o agente local não tinha chave carregada e uma nova sessão deste processo recebeu a mesma recusa. Uma sessão interativa para o mesmo host já estava aberta e não foi usada. A prova continua não executada.
 - Não há backup restaurável confirmado. Login, CRUD pela aplicação, upload e um processo Next apontado ao banco gravariam sessão, linha ou arquivo que outra conexão não desfaz. Essas ações ficam fora.
 - A linha do tempo, o vínculo de gestação na tela, o vínculo de prática e as organizações passam ao servidor só com a policy já existente. A gravação de organização depende de `organizations_system_admin`. A conversão que cria gestação nova continua no cliente.
 - `CASA_DATABASE_URL`, `NEXT_PUBLIC_CASA_AUTH`, `CASA_SESSION_SECRET` e `CASA_FILES_ROOT` estavam ausentes neste processo. Onze testes locais passaram. O build passou sem a URL da casa. A etapa segue bloqueada.
@@ -100,6 +101,7 @@ A tentativa de SSH para `2.25.151.136` não abriu sessão. Não repetir esse ace
 
 ## Histórico
 
+- 2026-10-31 — C088, nova tentativa: SSH deste processo recusado de novo, sem chave no agente. A sessão interativa já aberta não foi usada. Prova e contagens continuam não executadas. A etapa segue bloqueada.
 - 2026-10-31 — C088: SSH recusado e sem backup confirmado. Linha do tempo, vínculo de gestação, vínculo de prática e organizações passaram ao servidor. Sem gravação HTTP. A etapa segue bloqueada.
 - 2026-10-31 — C087.1 ligou ao servidor o que já tinha função ou policy. A linha do tempo, o vínculo de gestação na tela, a edição de vínculo de prática e as organizações ficaram no cliente. O CRUD no BancoFlorescerPP não rodou. A etapa segue bloqueada.
 - 2026-10-31 — a prova C084 passou no BancoFlorescerPP com `ROLLBACK` e organizações em 0. A C087 não liga a aplicação publicada. Contratos, salas, especialidades, políticas e plataforma seguem no cliente.

@@ -329,10 +329,11 @@ Nada disso foi criado nem usado.
 
 ## C088 — conferência recusada, sem gravação HTTP
 
-Em 2026-10-31 a sessão SSH para o BancoFlorescerPP foi recusada (`Permission denied (publickey,password)`). A conferência de `casa_login`, a contagem de organizações e a repetição da prova que termina em `ROLLBACK` ficaram não executadas. Não houve nova tentativa por outro caminho. Não há backup restaurável confirmado. Por isso não houve login, CRUD pela aplicação, upload, download nem processo Next apontando para o banco. A porta 5432 não foi publicada. O Florescer Web e `NEXT_PUBLIC_CASA_AUTH` não mudaram. A API `api.thvp.cloud` permanece.
+Em 2026-10-31 a sessão SSH para o BancoFlorescerPP foi recusada (`Permission denied (publickey,password)`). Depois da reconexão, uma nova sessão deste processo recebeu a mesma recusa. A conferência de `casa_login`, a contagem de organizações e a repetição da prova que termina em `ROLLBACK` ficaram não executadas. Não houve tentativa por outro caminho. Não há backup restaurável confirmado. Por isso não houve login, CRUD pela aplicação, upload, download nem processo Next apontando para o banco. A porta 5432 não foi publicada. O Florescer Web e `NEXT_PUBLIC_CASA_AUTH` não mudaram. A API `api.thvp.cloud` permanece.
 
 ## Histórico
 
+- 2026-10-31 — C088, nova tentativa: SSH deste processo recusado de novo. Prova SQL não executada. Sem gravação HTTP, sem porta 5432 e sem variável da casa no Florescer Web.
 - 2026-10-31 — C088: SSH recusado. Prova SQL desta etapa não executada. Sem gravação HTTP, sem porta 5432 e sem variável da casa no Florescer Web.
 - 2026-10-31 — C087.1: homologação descrita e não criada. Sem variável da casa no Florescer Web.
 - 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP, com `ROLLBACK` e organizações em 0. O corte e a cópia de arquivos ficaram escritos e não foram executados.

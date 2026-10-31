@@ -43,7 +43,7 @@ A tela `/app/finance` lista fatura, pagamento, rateio e despesa pelo que a polic
 
 Com o modo da casa ligado, estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames chamam as funções SQL já existentes. A gravação lê o áudio no volume privado e só segue se o caminho pedido for o caminho gravado. O PDF do documento segue o mesmo volume. Pedidos de exame, itens de modelo de receita, busca de paciente para audiência e o painel de resultados também leem pelo servidor. O anexo do resultado entra por `POST /api/casa/files` e a abertura usa o identificador gravado.
 
-A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação terminou em `ROLLBACK` e a contagem de organizações ficou 0. Em 2026-10-31 a C088 tentou repetir essa conferência por SSH e a sessão foi recusada. A prova desta etapa não rodou de novo. Não houve login, CRUD pela aplicação, upload nem processo apontando para o banco. A aplicação publicada continua na API antiga. O corte não foi executado.
+A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação terminou em `ROLLBACK` e a contagem de organizações ficou 0. A repetição pedida na C088, depois da reconexão, voltou a ser recusada neste processo (`Permission denied (publickey,password)`). Papel, contagens e `ROLLBACK` desta etapa não foram obtidos. Não houve login, CRUD pela aplicação, upload nem processo apontando para o banco. A aplicação publicada continua na API antiga. O corte não foi executado.
 
 Dependências do Supabase:
 
@@ -54,6 +54,7 @@ Dependências do Supabase:
 
 ## Histórico
 
+- 2026-10-31 — C088, nova tentativa: o SSH deste processo foi recusado de novo. A prova SQL não rodou. Sem gravação HTTP e sem corte.
 - 2026-10-31 — C088: linha do tempo, vínculo de gestação na tela, vínculo de prática e organizações no ramo do servidor. A conferência por SSH foi recusada. Sem gravação HTTP e sem corte.
 - 2026-10-31 — C087.1: queixa, anamnese, exame físico, retorno, feedback, gravação, auxílio de IA, contratos, salas, especialidades, políticas e auditoria no ramo do servidor. Sem migration e sem corte.
 - 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP. Busca de estoque, orientações e documentos do atendimento entram no ramo do servidor. O corte não foi executado.

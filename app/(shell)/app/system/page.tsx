@@ -6,7 +6,6 @@ const LINKS = [
   { href: "/app/system/organizations", label: "Organizações" },
   { href: "/app/system/users", label: "Usuários da plataforma" },
   { href: "/app/system/audit", label: "Auditoria técnica" },
-  { href: "/app/system/settings", label: "Configurações do sistema" },
 ];
 
 export default function SystemHomePage() {

@@ -52,7 +52,13 @@ Produção sobe o app e o Supabase na mesma VPS, atrás de Caddy, com HTTPS no d
 
 - `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` entram no build da imagem.
 - As migrations não criam clínica nem usuário.
-- Domínio real, provedor de e-mail e tamanho da VPS: `a definir` na hora da hospedagem.
+- Domínios de produção (Hosped.1): `sistema.thvp.cloud` (app), `api.thvp.cloud` (Auth/REST/Storage).
+- Orquestração observada: EasyPanel projeto `cap-romao` — `florescerweb`, `florescerapi` (Compose), `bancoflorescer` (PostgreSQL candidato). Proxy: Traefik EasyPanel (doc) + Caddy + Envoy (headers). Domínio API histórico: serviço Compose `porta-api`:80.
+- Paridade migrations `0001–0055` no Postgres (`bancoflorescer` candidato): confirmar em cada ciclo (`docs/system-state.md`). Sem acesso SQL = BLOCKED.
+- Co-hospedados no mesmo EasyPanel (n8n, Chatwoot, Evolution): não assumir integração com o app sem prova no código/rede.
+- Vercel / GitHub Pages: legado ou paralelo — não são o domínio oficial da clínica.
+- GESTÃO ≠ ACESSO CLÍNICO: papel `admin`/`owner` não implica prontuário; clínica exige `physician` + RLS/RPC.
+- Não aplicar `scripts/grant-dev-full-access-admin-gestao.sql` sem autorização (concede physician = god-mode clínico).
 
 ## Regras de negócio
 
@@ -81,11 +87,14 @@ Sem fluxo local além da regra global do Cursor.
 ## Ordem obrigatória de leitura
 
 1. `AGENTS.md`
-2. `docs/Infraestrutura.md` (quando a tarefa for hospedagem)
-3. `docs/Auth.md`
-4. `docs/Arquitetura.md`
-5. `supabase/migrations/` quando a tarefa mexer em dados
+2. `docs/system-state.md` (fotografia atual)
+3. `docs/Infraestrutura.md` (quando a tarefa for hospedagem)
+4. `docs/Auth.md`
+5. `docs/Arquitetura.md`
+6. `docs/infrastructure-history.md` (contexto Vercel → VPS)
+7. `supabase/migrations/` quando a tarefa mexer em dados
 
 ## Histórico
 
+- 2026-10-30 — Hosped.1: baseline produção thvp.cloud / EasyPanel; system-state e infrastructure-history.
 - 2026-10-21 — criado para a hospedagem self-hosted na VPS.

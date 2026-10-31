@@ -1,7 +1,9 @@
 # Arquitetura — Sistema Casa Florescer
 
-> **C063:** shell oficial `/app`; produção em Vercel; migrations até `0055` no código (`0054` aplicada no remoto até db push).
-> Homologação: `docs/c063-final-homologation.md`. O corpo abaixo é auditoria histórica (ago/2026) e pode estar desatualizado em detalhes.
+> **ATENÇÃO (Hosped.1 / 2026-10-30):** este arquivo é **histórico** (auditoria ago/2026 + notas C063).
+> Produção atual: **Hostinger VPS + EasyPanel** (`sistema.thvp.cloud` / `api.thvp.cloud`), Supabase self-hosted.
+> Fonte de verdade: `AGENTS.md`, `docs/Arquitetura.md`, `docs/Infraestrutura.md`, `docs/system-state.md`.
+> O corpo abaixo pode citar Vercel/Pages como produção — tratar como **legado**.
 
 Documento de auditoria. Data de referência original: 22 de agosto de 2026.
 

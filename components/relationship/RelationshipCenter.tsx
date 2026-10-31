@@ -486,15 +486,17 @@ export function RelationshipCenter({
           <h1 className="page-title mt-1">Central de Relacionamentos</h1>
           <p className="page-sub mt-2 max-w-3xl">
             Ferramenta operacional da Secretaria e da Gestão. Sem acesso a prontuário, SOAP, exames,
-            orientações ou receitas.
+            orientações ou receitas. Contato individual:{" "}
+            <strong className="font-medium text-lotus-800">WhatsApp Web</strong> (abre a conversa; o
+            envio é manual). Não há API de WhatsApp nem status de entrega.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={ghostButtonClass} disabled={busy} onClick={() => void onRefreshOpportunities()}>
+          <button type="button" className={buttonClass} disabled={busy} onClick={() => void onRefreshOpportunities()}>
             Atualizar oportunidades
           </button>
-          <button type="button" className={buttonClass} disabled={busy} onClick={() => setTab("campaigns")}>
-            Nova campanha
+          <button type="button" className={ghostButtonClass} disabled={busy} onClick={() => setTab("campaigns")}>
+            Campanhas (simulação)
           </button>
         </div>
       </header>
@@ -560,13 +562,11 @@ export function RelationshipCenter({
         ))}
       </div>
 
-      {!channelInfo.configured ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-950">
-          Lotes em massa: <strong>StubProvider — SIMULAÇÃO — NÃO ENVIADO</strong> (sem API WhatsApp/e-mail/push).
-          Contato individual: use <strong>WhatsApp Web</strong> na fila — o sistema só abre a conversa; o envio é
-          manual no WhatsApp.
-        </p>
-      ) : null}
+      <p className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-950">
+        Contato individual: <strong>WhatsApp Web</strong> — o sistema só abre a conversa; o envio é manual.
+        Lotes em massa: <strong>simulação — NÃO ENVIADO</strong> (sem API WhatsApp, e-mail ou push). Não há
+        status SENT, DELIVERED ou READ.
+      </p>
 
       {tab === "dashboard" && stats ? (
         <section className="space-y-4">

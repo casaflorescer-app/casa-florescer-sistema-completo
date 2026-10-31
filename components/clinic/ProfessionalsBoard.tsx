@@ -123,8 +123,10 @@ export function ProfessionalsBoard() {
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Gestão Clínica</p>
       <h1 className="page-title mt-1">Profissionais</h1>
       <p className="page-sub mt-2">
-        Profissionais de saúde (casa ou locatários). Locatário com contrato de sala não é funcionário —
-        veja Funcionários para RH/prestadores e Especialidades para o catálogo.
+        Consulta dos profissionais de saúde (casa ou locatários).{" "}
+        <strong className="font-medium text-lotus-800">Somente leitura nesta versão</strong> — cadastro e
+        edição entram em ciclo posterior. Locatário com contrato de sala não é funcionário; veja
+        Funcionários para RH/prestadores e Especialidades para o catálogo.
       </p>
       <StatusMessage error={error} />
       {loading ? <p className="mt-6 text-sm text-lotus-600">Carregando profissionais…</p> : null}

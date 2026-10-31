@@ -1,9 +1,11 @@
 # Roadmap — Sistema Casa Florescer
 
 > **Atualização C063 (homologação final):** o sistema operacional em `/app` está **CONCLUÍDO COM RESSALVAS**.
-> Ciclos C040–C062 publicados. Homologação: `docs/c063-final-homologation.md`.
-> **C064:** modernização UX/UI (ações, RowActions, PageHeader) — `docs/c064-ux-modernization.md`.
-> **C065:** WhatsApp Web operacional (wa.me, sem API) — `docs/c065-whatsapp-web.md`.
+> Homologação: `docs/c063-final-homologation.md`.
+> **C064:** modernização UX/UI — `docs/c064-ux-modernization.md`.
+> **C065:** WhatsApp Web (`wa.me`) — `docs/c065-whatsapp-web.md`.
+> **C066:** polish V1 (landing, menu Gestão, settings fora do menu) — `docs/c066-polish-v1.md`.
+> Produção oficial: `sistema.thvp.cloud` / `api.thvp.cloud` (EasyPanel). Vercel = legado/paralelo.
 > O texto histórico abaixo (Fase 0–N de ago/2026) permanece como arquivo de auditoria inicial — **não** descreve o estado atual dos módulos (já entregues).
 
 Documento de auditoria. Data de referência original: 22 de agosto de 2026.

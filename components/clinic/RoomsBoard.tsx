@@ -105,12 +105,14 @@ export function RoomsBoard() {
 
   return (
     <div className="min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Gestão Clínica</p>
-      <h1 className="page-title mt-1">Gestão de Salas</h1>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
+        Gestão Clínica · Salas e locações
+      </p>
+      <h1 className="page-title mt-1">Salas</h1>
       <p className="page-sub mt-2">
-        Cadastro operacional de salas. Locação permanece em{" "}
-        <Link className="underline" href="/app/rentals">
-          Aluguéis
+        Cadastro e disponibilidade das salas. Contratos de locação ficam em{" "}
+        <Link className="font-medium text-lotus-800 underline underline-offset-2" href="/app/rentals">
+          Aluguéis e contratos
         </Link>
         . Locatário ≠ funcionário.
       </p>

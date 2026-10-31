@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   StatusMessage,
@@ -414,12 +415,16 @@ export function RentalsModule({
   return (
     <div className="min-w-0">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Gestão Clínica
+        Gestão Clínica · Salas e locações
       </p>
-      <h1 className="page-title mt-1">Aluguéis e Contratos</h1>
+      <h1 className="page-title mt-1">Aluguéis e contratos</h1>
       <p className="page-sub mt-2 max-w-3xl">
-        Relação administrativa/comercial de locação de consultórios. A agenda clínica
-        permanece independente — o contrato não bloqueia agendamentos automaticamente.
+        Relação administrativa/comercial de locação de consultórios. Cadastro de salas em{" "}
+        <Link className="font-medium text-lotus-800 underline underline-offset-2" href="/app/rooms">
+          Salas
+        </Link>
+        . Contratos clínicos (paciente/procedimento) ficam em outro menu. A agenda clínica permanece
+        independente — o contrato não bloqueia agendamentos automaticamente.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">

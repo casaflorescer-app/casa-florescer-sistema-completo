@@ -31,8 +31,9 @@ jobs:
       - name: Install
         run: npm install
 
-      # Produção operacional é Vercel (SSR). O export estático do Pages falha com
-      # rotas force-dynamic — não deve falhar o check nem bloquear o pipeline.
+      # LEGADO: produção operacional atual é EasyPanel/VPS (sistema.thvp.cloud).
+      # Este workflow só publica preview estático no GitHub Pages (best-effort).
+      # O export estático falha com rotas force-dynamic — não deve falhar o pipeline.
       - name: Build static export (Pages preview; best-effort)
         id: static_build
         continue-on-error: true

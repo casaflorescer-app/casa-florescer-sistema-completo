@@ -1,5 +1,6 @@
-import { SettingsPanel } from "@/components/platform/SettingsPanel";
+import { redirect } from "next/navigation";
 
+/** C066 — placeholder D: não expor na V1; rota redireciona. */
 export default function SystemSettingsPage() {
-  return <SettingsPanel />;
+  redirect("/app/system");
 }

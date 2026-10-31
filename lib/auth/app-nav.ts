@@ -86,22 +86,17 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     id: "gestao_clinica",
     title: "Gestão Clínica",
     items: [
+      // C066 — Salas + aluguéis/contratos de locação (ecossistema; sem misturar contratos clínicos)
       {
         id: "rooms",
-        label: "Salas",
+        label: "Salas e locações",
         href: "/app/rooms",
         visible: clinicManagement,
       },
       {
         id: "rentals",
-        label: "Aluguéis e locação",
+        label: "Aluguéis e contratos",
         href: "/app/rentals",
-        visible: clinicManagement,
-      },
-      {
-        id: "rental-contracts",
-        label: "Contratos de locação",
-        href: "/app/rentals?tab=contracts",
         visible: clinicManagement,
       },
       {
@@ -138,7 +133,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
       },
       {
         id: "reports",
-        label: "Relatórios e indicadores",
+        label: "Relatórios",
         href: "/app/reports",
         visible: clinicManagement,
       },
@@ -178,12 +173,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         href: "/app/admin/audit",
         visible: clinicManagement,
       },
-      {
-        id: "clinic-settings",
-        label: "Configurações da clínica",
-        href: "/app/admin/settings",
-        visible: clinicManagement,
-      },
+      // C066: Configurações (placeholder D) removidas do menu — rotas redirecionam.
     ],
   },
   {
@@ -226,12 +216,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         href: "/app/system/audit",
         visible: (auth) => auth.isSystemAdmin,
       },
-      {
-        id: "system-settings",
-        label: "Configurações do sistema",
-        href: "/app/system/settings",
-        visible: (auth) => auth.isSystemAdmin,
-      },
+      // C066: system settings placeholder D removido do menu.
     ],
   },
 ];

@@ -15,7 +15,7 @@ O sistema é **operacional** no shell `/app`, com módulos essenciais publicados
 | HEAD pré-C063 | `9e1fef8` (Commit 062) |
 | Migration código | `0055` (storage own_encounters; usa `requested_by` / `exam_order_professional_id`) |
 | Migration remota | **`0055` aplicada** (db push autorizado) |
-| Deploy Production | READY — `casa-florescer-sistema-completo-kdazccw5w.vercel.app` |
+| Deploy Production (histórico C063) | Vercel alias legado — produção oficial atual: `sistema.thvp.cloud` (EasyPanel/VPS; ver `docs/system-state.md`) |
 
 ## Baseline conhecido (C054–C062)
 
@@ -76,9 +76,11 @@ Marcador: `UAT_C063_`. Cleanup deve deixar `uat_left = 0`.
 
 ## Produção
 
-URL: https://casa-florescer-sistema-completo.vercel.app
+**Oficial (Hosped.1+):** https://sistema.thvp.cloud · API https://api.thvp.cloud (Hostinger VPS + EasyPanel).
 
-Deploy deve corresponder a `origin/main` após Commit 063.
+**Legado / paralelo:** https://casa-florescer-sistema-completo.vercel.app — não é o domínio da clínica.
+
+Deploy oficial deve corresponder a `origin/main` via EasyPanel (`florescerweb`). Paridade de migrations na VPS: ver `docs/system-state.md`.
 
 ## db push
 

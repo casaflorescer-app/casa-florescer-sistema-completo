@@ -2,7 +2,10 @@
 
 Documento de auditoria. Data de referência: 22 de agosto de 2026.
 
-Infraestrutura atual: **Supabase** (PostgreSQL + Auth). Fontes: `supabase/migrations/` (0001 a 0007) e tipos em `lib/types/database.ts`.
+Infraestrutura atual (Hosped.1): **Supabase self-hosted** na VPS (PostgreSQL + Auth + Storage), API em `api.thvp.cloud`.
+Fontes de schema: `supabase/migrations/` (**0001 a 0055** no Git). Tipos: `lib/types/database.ts`.
+Paridade VPS: ver `docs/system-state.md` (não assumir que todas as migrations estão aplicadas sem conferência).
+O texto abaixo pode estar defasado em detalhes de colunas — preferir as migrations.
 
 Não migrar o banco. Não recriar tabelas. Não alterar policies nesta etapa.
 

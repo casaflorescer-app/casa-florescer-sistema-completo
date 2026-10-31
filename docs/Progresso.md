@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP, com `ROLLBACK` e organizações em 0. Busca de estoque, orientações e documentos do atendimento no ramo do servidor. Nove testes locais passaram. Build sem `CASA_DATABASE_URL`. Corte escrito e não executado. Deploy não feito. Status bloqueada.
 - 2026-10-31 — C086: conferência local da autenticação. Nove testes passaram. As quatro variáveis da casa estavam ausentes neste processo. A saída do console da prova C084 não chegou. Organizações residuais sem prova. Deploy não feito. Status bloqueada.
 - 2026-10-31 — C086: pedidos de exame, itens de modelo, busca de audiência e painel de resultados no ramo do servidor. Testes locais: 4 passaram. Build do Next passou sem `CASA_DATABASE_URL`. A saída do console da prova C084 não chegou. Deploy não feito. Status bloqueado.
 - 2026-10-31 — C086: estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames no ramo do servidor. Testes locais: 4 passaram. Build do Next passou sem `CASA_DATABASE_URL`. A saída do console da prova C084 não chegou. Deploy não feito. Status bloqueado.

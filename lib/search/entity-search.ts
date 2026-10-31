@@ -3,6 +3,8 @@
  * Preferir estas helpers a carregar tabelas inteiras no navegador.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listItemsCasa } from "@/lib/casa/module-data";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
   maskCpf,
@@ -210,7 +212,37 @@ export async function searchInventoryItemOptions(
     limit?: number;
   },
 ): Promise<EntitySearchOption[]> {
-  if (!supabase) return [];
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const q = query.trim();
+    if (q.length < 2) return [];
+    const data = await listItemsCasa({
+      organizationId: options.organizationId,
+      search: q,
+      itemClass: options.itemClass,
+      activeOnly: options.activeOnly !== false,
+      limit: clampLimit(options.limit),
+    });
+    return data.flatMap((item) => {
+      const id = typeof item.id === "string" ? item.id : null;
+      const name = typeof item.name === "string" ? item.name.trim() : "";
+      if (!id || !name) return [];
+      const sku = typeof item.sku === "string" ? item.sku.trim() : "";
+      const itemClass = typeof item.item_class === "string" ? item.item_class : "";
+      const classLabel =
+        itemClass && itemClass in ITEM_CLASS_LABEL
+          ? ITEM_CLASS_LABEL[itemClass as ItemClass]
+          : itemClass;
+      return [
+        {
+          id,
+          label: name,
+          description: [sku, classLabel].filter(Boolean).join(" — ") || undefined,
+          keywords: sku,
+        },
+      ];
+    });
+  }
   const q = escapeIlike(query);
   if (q.length < 2) return [];
   const limit = clampLimit(options.limit);

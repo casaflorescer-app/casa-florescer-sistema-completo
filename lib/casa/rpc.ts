@@ -26,6 +26,7 @@ const ALLOWED: Record<string, number> = {
   exam_mark_analyzed: 1,
   clinical_document_issue_from_prescription: 4,
   clinical_document_issue_from_exam_request: 5,
+  clinical_document_issue_from_orientation: 4,
   clinical_document_attach_pdf: 3,
   clinical_document_list_for_encounter: 1,
   clinical_document_mark_viewed: 1,
@@ -70,7 +71,16 @@ const ALLOWED: Record<string, number> = {
   clinical_exam_catalog_upsert: 8,
   clinical_exam_group_upsert: 7,
   encounter_recording_save_transcription_result: 6,
+  clinical_orientation_create: 1,
   clinical_orientation_save_draft: 1,
+  clinical_orientation_publish: 1,
+  clinical_orientation_new_version: 1,
+  clinical_orientation_cancel_draft: 1,
+  clinical_orientation_versions_list: 1,
+  clinical_orientation_mark_viewed: 1,
+  clinical_orientation_mark_audio_played: 1,
+  clinical_orientation_link_exams: 2,
+  orientation_feedback_submit: 1,
 };
 
 function assertName(name: string, args: unknown[]) {

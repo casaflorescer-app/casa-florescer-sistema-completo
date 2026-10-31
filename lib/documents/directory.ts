@@ -285,7 +285,7 @@ export async function issueDocumentFromExamRequest(
 }
 
 export async function issueDocumentFromOrientation(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     orientationId: string;
     shareWithPatient?: boolean;
@@ -293,6 +293,16 @@ export async function issueDocumentFromOrientation(
     correctionReason?: string | null;
   },
 ): Promise<{ row: ClinicalDocumentRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    const data = await callCasaRpc("clinical_document_issue_from_orientation", [
+      input.orientationId,
+      input.shareWithPatient ?? false,
+      input.supersedesId ?? null,
+      input.correctionReason ?? null,
+    ]);
+    return { row: mapDocument(data as Record<string, unknown>), error: null };
+  }
   const { data, error } = await supabase.rpc("clinical_document_issue_from_orientation", {
     p_orientation_id: input.orientationId,
     p_share_with_patient: input.shareWithPatient ?? false,
@@ -340,9 +350,14 @@ export async function markDocumentViewed(
 }
 
 export async function auditDocumentDownload(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   documentId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    await callCasaRpc("clinical_document_audit_download", [documentId]);
+    return { error: null };
+  }
   const { error } = await supabase.rpc("clinical_document_audit_download", {
     p_document_id: documentId,
   });

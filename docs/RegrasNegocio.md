@@ -41,19 +41,19 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 - **Status:** `confirmada`
 - **Enunciado:** A secretária pode operar as duas agendas com `can_schedule_any_practice`. Não lê prontuário nem fatura. Continua vendo o cadastro, porque a agenda é das duas.
-- **Rastreio:** `can_schedule_in_org` em `0001`, sem alteração. `patients_house_select` em `0056` mantém `secretary` e tira `physician`.
+- **Rastreio:** `can_schedule_in_org` em `0001`, sem alteração. `patients_house_select` em `0056` mantém `secretary` e tira `physician`. A prova `supabase/tests/c084_module_isolation.sql` rodou no BancoFlorescerPP em 2026-10-31, terminou em `ROLLBACK` e deixou organizações em 0.
 
 ### RN-CASA-004 — Administradora sem prontuário
 
 - **Status:** `confirmada`
 - **Enunciado:** A administradora central é `admin`. Vê o financeiro consolidado, inclusive o repasse das duas práticas. Não entra em `can_read_clinical`. `SYSTEM_ADMIN` não é essa conta e não ganha prontuário.
-- **Rastreio:** `0056` não cria policy clínica para `admin` nem para `system_admins`. `can_read_pregnancy_procedure_payout` em `0057`.
+- **Rastreio:** `0056` não cria policy clínica para `admin` nem para `system_admins`. `can_read_pregnancy_procedure_payout` em `0057`. A prova `supabase/tests/c084_module_isolation.sql` rodou no BancoFlorescerPP em 2026-10-31, terminou em `ROLLBACK` e deixou organizações em 0.
 
 ### RN-CASA-005 — Despesa compartilhada e particular
 
 - **Status:** `confirmada`
 - **Enunciado:** Despesa com centro `is_shared` e sem `practice_id` aparece para as duas médicas e para a administradora. Despesa com `practice_id` aparece só para a médica daquela prática e para a administradora. Não há rateio novo.
-- **Rastreio:** `public.can_read_cost_allocation` em `0056`.
+- **Rastreio:** `public.can_read_cost_allocation` em `0056`. A prova `supabase/tests/c084_module_isolation.sql` rodou no BancoFlorescerPP em 2026-10-31, terminou em `ROLLBACK` e deixou organizações em 0.
 
 ### RN-CASA-006 — Ficha e evolução
 
@@ -101,17 +101,18 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 ### RN-CASA-013 — Telas no servidor só com o modo da casa
 
 - **Status:** `⚠ inferida`
-- **Enunciado:** Enquanto `NEXT_PUBLIC_CASA_AUTH` não for exatamente `1`, o login e as telas continuam no Auth e no cliente Supabase. Com esse valor e com `CASA_DATABASE_URL` no processo, pacientes, agenda, prontuário, gestação, exame, receita, repasse, relatórios, a lista de usuários, estoque, locação, relacionamento, portal, gravação, compositor de receitas, catálogo de exames e o painel de resultados chamam o servidor. O servidor grava `app.user_id` e usa `SET LOCAL ROLE authenticated`. A criação de usuário dessa tela só aparece para o administrador principal e chama `POST /api/casa/staff`. Foto, exame, PDF e áudio usam o volume privado e as funções de leitura já existentes. A produção não tem essas variáveis. A prova `supabase/tests/c084_module_isolation.sql` ainda não rodou no BancoFlorescerPP.
+- **Enunciado:** Enquanto `NEXT_PUBLIC_CASA_AUTH` não for exatamente `1`, o login e as telas continuam no Auth e no cliente Supabase. Com esse valor e com `CASA_DATABASE_URL` no processo, pacientes, agenda, prontuário, gestação, exame, receita, repasse, relatórios, a lista de usuários, estoque, locação, relacionamento, portal, gravação, compositor de receitas, catálogo de exames e o painel de resultados chamam o servidor. O servidor grava `app.user_id` e usa `SET LOCAL ROLE authenticated`. A criação de usuário dessa tela só aparece para o administrador principal e chama `POST /api/casa/staff`. Foto, exame, PDF e áudio usam o volume privado e as funções de leitura já existentes. A produção não tem essas variáveis. A prova `supabase/tests/c084_module_isolation.sql` rodou no BancoFlorescerPP em 2026-10-31, terminou em `ROLLBACK` e deixou organizações em 0. A aplicação publicada não foi ligada a esse banco.
 - **Rastreio:** `lib/auth/casa-mode.ts`, `lib/casa/actions.ts`, `lib/casa/rpc.ts`, `lib/casa/module-data.ts`, `app/api/casa/files/route.ts`, `components/clinic-admin/ClinicUsersPanel.tsx`.
 
 ### RN-CASA-014 — Financeiro na tela, sem percentual novo
 
 - **Status:** `⚠ inferida`
 - **Enunciado:** A tela lista o que a policy já devolve. Fatura e pagamento gravam só onde `invoices_write` e `payments_via_invoice` já permitem. O rateio é somente leitura e mostra `amount_cents` já gravado. Nenhum percentual é calculado. Despesa compartilhada é centro `is_shared` com `practice_id` nulo. Despesa particular leva `practice_id`. A administradora grava. A médica lê a compartilhada e a particular da própria prática. A secretária não lê. Se a policy recusar, a tela mostra a recusa.
-- **Rastreio:** `components/finance/FinanceDesk.tsx`, `lib/casa/writes.ts`, `0056` e `0057`. A prova SQL da C084 ainda não rodou.
+- **Rastreio:** `components/finance/FinanceDesk.tsx`, `lib/casa/writes.ts`, `0056` e `0057`. A prova `supabase/tests/c084_module_isolation.sql` rodou no BancoFlorescerPP em 2026-10-31, terminou em `ROLLBACK` e deixou organizações em 0. A tela publicada não foi ligada a esse banco.
 
 ## Histórico
 
+- 2026-10-31 — a prova C084 rodou no BancoFlorescerPP, terminou em `ROLLBACK` e deixou organizações em 0. RN-CASA-003, RN-CASA-004, RN-CASA-005 e RN-CASA-009 ganharam esse rastreio. RN-CASA-013 e RN-CASA-014 seguem inferidas. A aplicação publicada não foi ligada.
 - 2026-10-31 — RN-CASA-013 segue inferida e passou a incluir pedidos de exame, itens de modelo, busca de audiência e painel de resultados. A prova C084 ainda não rodou. Nenhum percentual novo.
 - 2026-10-31 — RN-CASA-013 segue inferida e passou a incluir estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames. A prova C084 ainda não rodou. Nenhum percentual novo.
 - 2026-10-31 — RN-CASA-014 inferida: tela de financeiro sobre as policies já existentes, sem percentual novo. RN-CASA-013 passou a incluir gravações e arquivos. A prova C084 ainda não rodou.

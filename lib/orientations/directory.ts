@@ -1,4 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import {
+  listLinkedOrientationExamsCasa,
+  listOpenOrientationFeedbackCasa,
+  listOrientationsCasa,
+  listPublishedOrientationVersionsCasa,
+} from "@/lib/casa/module-data";
 import {
   CLINICAL_ORIENTATION_BUCKET,
   type ClinicalOrientationRow,
@@ -190,9 +198,16 @@ export function orientationAudioPath(input: {
 }
 
 export async function listOrientationsForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<ClinicalOrientationRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listOrientationsCasa({ patientId });
+    return data
+      .map((raw) => toOrientationRow(raw))
+      .filter((item): item is ClinicalOrientationRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("clinical_orientations")
     .select(
@@ -207,9 +222,16 @@ export async function listOrientationsForPatient(
 }
 
 export async function listOrientationsForEncounter(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<ClinicalOrientationRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listOrientationsCasa({ encounterId });
+    return data
+      .map((raw) => toOrientationRow(raw))
+      .filter((item): item is ClinicalOrientationRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("clinical_orientations")
     .select(
@@ -225,9 +247,17 @@ export async function listOrientationsForEncounter(
 
 /** Staff: all versions (incl. transcrição) via RPC — paciente sem GRANT nas colunas de transcrição. */
 export async function listOrientationVersions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   orientationId: string,
 ): Promise<ClinicalOrientationVersionRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await callCasaRpc("clinical_orientation_versions_list", [orientationId]);
+    const rows = Array.isArray(data) ? data : [];
+    return rows
+      .map((raw) => toVersionRow(raw as Record<string, unknown>))
+      .filter((item): item is ClinicalOrientationVersionRow => Boolean(item));
+  }
   const { data, error } = await supabase.rpc("clinical_orientation_versions_list", {
     p_orientation_id: orientationId,
   });
@@ -239,7 +269,7 @@ export async function listOrientationVersions(
 
 /** Patient: published projection only (no transcription_text selected). */
 export async function listPublishedOrientationsForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<
   Array<{
@@ -247,6 +277,55 @@ export async function listPublishedOrientationsForPatient(
     version: ClinicalOrientationVersionRow;
   }>
 > {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listPublishedOrientationVersionsCasa(patientId);
+    return data.flatMap((raw) => {
+      const orientation = toOrientationRow({
+        id: raw.orientation_id,
+        organization_id: raw.organization_id,
+        practice_id: raw.practice_id,
+        patient_id: raw.patient_id,
+        professional_id: raw.professional_id,
+        encounter_id: raw.encounter_id,
+        appointment_id: raw.appointment_id,
+        title: raw.title,
+        current_published_version_id: raw.current_published_version_id,
+        created_by: raw.created_by,
+        created_at: raw.created_at,
+        updated_at: raw.updated_at,
+      });
+      const version = toVersionRow({
+        id: raw.version_id,
+        orientation_id: raw.orientation_id,
+        organization_id: raw.organization_id,
+        practice_id: raw.practice_id,
+        patient_id: raw.patient_id,
+        professional_id: raw.professional_id,
+        version: raw.version,
+        status: raw.status,
+        audio_storage_path: raw.audio_storage_path,
+        audio_mime_type: raw.audio_mime_type,
+        audio_duration_seconds: raw.audio_duration_seconds,
+        transcription_status: raw.transcription_status,
+        final_text: raw.final_text,
+        delivery_mode: raw.delivery_mode,
+        reviewed_confirmed: raw.reviewed_confirmed,
+        created_by: raw.created_by,
+        created_at: raw.version_created_at,
+        published_at: raw.published_at,
+        published_by: raw.published_by,
+        viewed_at: raw.viewed_at,
+        audio_played_at: raw.audio_played_at,
+      });
+      if (!orientation || !version || version.status !== "published") return [];
+      const safeVersion =
+        version.deliveryMode === "TEXT_AND_AUDIO" || version.deliveryMode === "AUDIO_ONLY"
+          ? version
+          : { ...version, audioStoragePath: null, audioMimeType: null };
+      return [{ orientation, version: safeVersion }];
+    });
+  }
   const { data, error } = await supabase
     .from("clinical_orientations")
     .select(
@@ -283,7 +362,7 @@ export async function listPublishedOrientationsForPatient(
 }
 
 export async function createClinicalOrientation(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     organizationId: string;
     practiceId: string;
@@ -298,32 +377,52 @@ export async function createClinicalOrientation(
   version: ClinicalOrientationVersionRow | null;
   error: string | null;
 }> {
+  const payload = {
+    organization_id: input.organizationId,
+    practice_id: input.practiceId,
+    patient_id: input.patientId,
+    professional_id: input.professionalId,
+    encounter_id: input.encounterId ?? null,
+    appointment_id: input.appointmentId ?? null,
+    title: input.title ?? "Orientação clínica",
+  };
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) {
+      return { orientation: null, version: null, error: "Autenticação não configurada neste ambiente." };
+    }
+    const data = (await callCasaRpc("clinical_orientation_create", [payload])) as {
+      orientation?: Record<string, unknown>;
+      version?: Record<string, unknown>;
+    };
+    return {
+      orientation: data.orientation ? toOrientationRow(data.orientation) : null,
+      version: data.version ? toVersionRow(data.version) : null,
+      error: null,
+    };
+  }
   const { data, error } = await supabase.rpc("clinical_orientation_create", {
-    p_payload: {
-      organization_id: input.organizationId,
-      practice_id: input.practiceId,
-      patient_id: input.patientId,
-      professional_id: input.professionalId,
-      encounter_id: input.encounterId ?? null,
-      appointment_id: input.appointmentId ?? null,
-      title: input.title ?? "Orientação clínica",
-    },
+    p_payload: payload,
   });
   if (error) {
     return { orientation: null, version: null, error: mapOrientationRpcError(error) };
   }
-  const payload = data as { orientation?: Record<string, unknown>; version?: Record<string, unknown> };
+  const created = data as { orientation?: Record<string, unknown>; version?: Record<string, unknown> };
   return {
-    orientation: payload.orientation ? toOrientationRow(payload.orientation) : null,
-    version: payload.version ? toVersionRow(payload.version) : null,
+    orientation: created.orientation ? toOrientationRow(created.orientation) : null,
+    version: created.version ? toVersionRow(created.version) : null,
     error: null,
   };
 }
 
 export async function saveOrientationDraft(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ version: ClinicalOrientationVersionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { version: null, error: "Autenticação não configurada neste ambiente." };
+    const data = await callCasaRpc("clinical_orientation_save_draft", [payload]);
+    return { version: data ? toVersionRow(data as Record<string, unknown>) : null, error: null };
+  }
   const { data, error } = await supabase.rpc("clinical_orientation_save_draft", {
     p_payload: payload,
   });
@@ -335,9 +434,14 @@ export async function saveOrientationDraft(
 }
 
 export async function publishOrientation(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   versionId: string,
 ): Promise<{ version: ClinicalOrientationVersionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { version: null, error: "Autenticação não configurada neste ambiente." };
+    const data = await callCasaRpc("clinical_orientation_publish", [versionId]);
+    return { version: data ? toVersionRow(data as Record<string, unknown>) : null, error: null };
+  }
   const { data, error } = await supabase.rpc("clinical_orientation_publish", {
     p_version_id: versionId,
   });
@@ -349,9 +453,14 @@ export async function publishOrientation(
 }
 
 export async function createOrientationNewVersion(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   orientationId: string,
 ): Promise<{ version: ClinicalOrientationVersionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { version: null, error: "Autenticação não configurada neste ambiente." };
+    const data = await callCasaRpc("clinical_orientation_new_version", [orientationId]);
+    return { version: data ? toVersionRow(data as Record<string, unknown>) : null, error: null };
+  }
   const { data, error } = await supabase.rpc("clinical_orientation_new_version", {
     p_orientation_id: orientationId,
   });
@@ -364,9 +473,14 @@ export async function createOrientationNewVersion(
 
 /** Cancels a draft version (status → archived). Never touches published history. */
 export async function cancelOrientationDraft(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   versionId: string,
 ): Promise<{ version: ClinicalOrientationVersionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { version: null, error: "Autenticação não configurada neste ambiente." };
+    const data = await callCasaRpc("clinical_orientation_cancel_draft", [versionId]);
+    return { version: data ? toVersionRow(data as Record<string, unknown>) : null, error: null };
+  }
   const { data, error } = await supabase.rpc("clinical_orientation_cancel_draft", {
     p_version_id: versionId,
   });
@@ -378,7 +492,7 @@ export async function cancelOrientationDraft(
 }
 
 export async function uploadOrientationAudio(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     organizationId: string;
     patientId: string;
@@ -390,6 +504,21 @@ export async function uploadOrientationAudio(
   },
 ): Promise<{ path: string | null; error: string | null }> {
   const path = orientationAudioPath(input);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { path: null, error: "Autenticação não configurada neste ambiente." };
+    const body = new FormData();
+    body.set("kind", "orientation");
+    body.set("organizationId", input.organizationId);
+    body.set("patientId", input.patientId);
+    body.set("orientationId", input.orientationId);
+    body.set("versionId", input.versionId);
+    if (input.durationSeconds != null) body.set("durationSeconds", String(input.durationSeconds));
+    body.set("file", input.blob, "orientation.webm");
+    const response = await fetch("/api/casa/files", { method: "POST", body });
+    if (!response.ok) return { path: null, error: "Não foi possível guardar o áudio." };
+    const saved = (await response.json()) as { path?: string };
+    return { path: saved.path ?? path, error: null };
+  }
   const { error: uploadError } = await supabase.storage
     .from(CLINICAL_ORIENTATION_BUCKET)
     .upload(path, input.blob, {
@@ -409,10 +538,16 @@ export async function uploadOrientationAudio(
 }
 
 export async function createSignedOrientationAudioUrl(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   path: string,
   expiresIn = 120,
 ): Promise<string | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const versionId = path.split("/")[3] ?? "";
+    if (!versionId) return null;
+    return `/api/casa/files?kind=orientation&id=${versionId}`;
+  }
   const { data, error } = await supabase.storage
     .from(CLINICAL_ORIENTATION_BUCKET)
     .createSignedUrl(path, expiresIn);
@@ -505,10 +640,15 @@ export async function markPatientNotificationRead(
 }
 
 export async function linkOrientationExams(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   orientationId: string,
   examOrderIds: string[],
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    await callCasaRpc("clinical_orientation_link_exams", [orientationId, examOrderIds]);
+    return { error: null };
+  }
   const { error } = await supabase.rpc("clinical_orientation_link_exams", {
     p_orientation_id: orientationId,
     p_exam_order_ids: examOrderIds,
@@ -546,9 +686,22 @@ export type OrientationFeedbackRow = {
 };
 
 export async function listOpenFeedbackForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<OrientationFeedbackRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listOpenOrientationFeedbackCasa(patientId);
+    return data.flatMap((value) => {
+      const id = asString(value.id);
+      const orientationId = asString(value.orientation_id);
+      const kind = asString(value.kind);
+      const status = asString(value.status);
+      const createdAt = asString(value.created_at);
+      if (!id || !orientationId || !kind || !status || !createdAt) return [];
+      return [{ id, orientationId, kind, message: asString(value.message), status, createdAt }];
+    });
+  }
   const { data, error } = await supabase
     .from("orientation_feedback")
     .select("id, orientation_id, kind, message, status, created_at")
@@ -578,9 +731,14 @@ export async function listOpenFeedbackForPatient(
 }
 
 export async function listLinkedExamIds(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   orientationId: string,
 ): Promise<string[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listLinkedOrientationExamsCasa(orientationId);
+    return data.flatMap((row) => (typeof row.exam_order_id === "string" ? [row.exam_order_id] : []));
+  }
   const { data, error } = await supabase
     .from("clinical_orientation_exams")
     .select("exam_order_id")

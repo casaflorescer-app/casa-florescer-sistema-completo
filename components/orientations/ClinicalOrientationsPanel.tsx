@@ -45,7 +45,7 @@ export function ClinicalOrientationsPanel({
   professionalName,
   canManage,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   organizationId: string;
   practiceId: string;
   patientId: string;

@@ -21,7 +21,7 @@ export function EncounterDocumentsPanel({
   encounterId,
   locked,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   encounterId: string;
   locked: boolean;
 }) {

@@ -438,6 +438,52 @@ export async function listExamOrdersCasa(patientId: string) {
   );
 }
 
+export async function listOrientationsCasa(input: { patientId?: string; encounterId?: string }) {
+  return rows(
+    `select id, organization_id, practice_id, patient_id, professional_id, encounter_id, appointment_id,
+            title, current_published_version_id, created_by, created_at, updated_at
+     from public.clinical_orientations
+     where ($1::uuid is null or patient_id = $1)
+       and ($2::uuid is null or encounter_id = $2)
+     order by updated_at desc`,
+    [input.patientId ?? null, input.encounterId ?? null],
+  );
+}
+
+export async function listPublishedOrientationVersionsCasa(patientId: string) {
+  return rows(
+    `select o.id as orientation_id, o.organization_id, o.practice_id, o.patient_id, o.professional_id,
+            o.encounter_id, o.appointment_id, o.title, o.current_published_version_id, o.created_by,
+            o.created_at, o.updated_at,
+            v.id as version_id, v.version, v.status, v.audio_storage_path, v.audio_mime_type,
+            v.audio_duration_seconds, v.transcription_status, v.final_text, v.delivery_mode,
+            v.reviewed_confirmed, v.published_at, v.published_by, v.viewed_at, v.audio_played_at,
+            v.created_at as version_created_at
+     from public.clinical_orientations o
+     join public.clinical_orientation_versions v on v.id = o.current_published_version_id
+     where o.patient_id = $1 and v.status = 'published'
+     order by o.updated_at desc`,
+    [patientId],
+  );
+}
+
+export async function listOpenOrientationFeedbackCasa(patientId: string) {
+  return rows(
+    `select id, orientation_id, kind, message, status, created_at
+     from public.orientation_feedback
+     where patient_id = $1 and status = 'open'
+     order by created_at desc`,
+    [patientId],
+  );
+}
+
+export async function listLinkedOrientationExamsCasa(orientationId: string) {
+  return rows(
+    `select exam_order_id from public.clinical_orientation_exams where orientation_id = $1`,
+    [orientationId],
+  );
+}
+
 export async function listExamUploadsCasa(examOrderId: string) {
   return rows(
     `select id, exam_order_id, storage_path, original_name, mime_type, uploaded_at

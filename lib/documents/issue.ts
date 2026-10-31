@@ -57,7 +57,7 @@ export async function issueExamRequestDocumentWithPdf(
 }
 
 export async function issueOrientationDocumentWithPdf(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     orientationId: string;
     shareWithPatient?: boolean;

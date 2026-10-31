@@ -1155,7 +1155,6 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
               canManage={viewerIsEncounterProfessional(authorization, encounter)}
             />
           </div>
-          {supabase ? (
           <div id="orientacao" className="scroll-mt-16">
             <ClinicalOrientationsPanel
               supabase={supabase}
@@ -1170,7 +1169,6 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
               canManage={viewerIsEncounterProfessional(authorization, encounter)}
             />
           </div>
-          ) : null}
         </>
       ) : null}
 
@@ -1183,7 +1181,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         />
       ) : null}
 
-      {supabase ? (
+      {(supabase || isCasaBrowserAuth()) ? (
         <EncounterDocumentsPanel
           supabase={supabase}
           encounterId={encounter.id}

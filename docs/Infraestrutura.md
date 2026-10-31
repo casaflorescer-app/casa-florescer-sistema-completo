@@ -293,12 +293,30 @@ O primeiro resultado precisa ser `BancoFlorescerPP`. O arquivo abre `BEGIN` e te
 
 `CASA_DATABASE_URL`, `CASA_SESSION_SECRET`, `CASA_FILES_ROOT` e `NEXT_PUBLIC_CASA_AUTH` continuam ausentes no Florescer Web. A porta 5432 não foi publicada. Não houve deploy. A ordem futura, ainda bloqueada, é: prova com organizações em 0, testes de arquivo já aprovados neste repositório, imagem nova só com autorização, e só então as variáveis no processo. `CASA_DATABASE_URL` usa `casa_login`. `CASA_FILES_ROOT` fica fora da pasta pública. `NEXT_PUBLIC_CASA_AUTH=1` entra no build seguinte. A API antiga permanece até esse corte.
 
-## C086 — a saída do console não chegou
+## C086 — a prova passou
 
-A prova da C084 continua sem execução. Desta máquina a sessão não foi tentada de novo. Neste processo, `CASA_DATABASE_URL`, `CASA_SESSION_SECRET`, `CASA_FILES_ROOT` e `NEXT_PUBLIC_CASA_AUTH` estão ausentes. Sem `ROLLBACK` e sem a contagem final 0, o corte permanece bloqueado. A quantidade de organizações residuais fica sem prova até essa contagem voltar. As variáveis da casa continuam ausentes. A porta 5432 continua fechada. Não houve deploy e a API `api.thvp.cloud` permanece. A ordem ainda bloqueada, depois de uma saída boa, é: backup restaurável do BancoFlorescerPP, rollback da imagem, variáveis só no processo, Postgres sem porta pública e o build seguinte com `NEXT_PUBLIC_CASA_AUTH=1`. A API antiga só sai com autorização expressa.
+A prova da C084 rodou no BancoFlorescerPP em 2026-10-31. O banco confirmado foi `BancoFlorescerPP`. A transação terminou em `ROLLBACK`. A contagem de organizações ficou 0. Nenhum cadastro de teste permaneceu.
+
+`CASA_DATABASE_URL`, `CASA_SESSION_SECRET`, `CASA_FILES_ROOT` e `NEXT_PUBLIC_CASA_AUTH` continuam ausentes no Florescer Web. A porta 5432 continua fechada. Não houve deploy. A API `api.thvp.cloud` permanece.
+
+## C087 — corte escrito, sem executar
+
+A ordem continua bloqueada até autorização expressa:
+
+1. Backup restaurável do BancoFlorescerPP e uma restauração de prova, fora do banco de uso.
+2. Conferência de que as migrations `0000`–`0059` e a C074 já estão aplicadas. Não reaplicar.
+3. Inventário dos arquivos do Storage, cópia para `CASA_FILES_ROOT` fora de `public/`, conferência do caminho gravado e reversão possível. A origem não é apagada nesta etapa.
+4. Variáveis só no processo: conexão com `casa_login`, sem superusuário e sem `BYPASSRLS`; segredo de sessão; volume privado. Nenhuma delas entra no texto nem no Florescer Web agora.
+5. Build seguinte com `NEXT_PUBLIC_CASA_AUTH=1`.
+6. Postgres sem porta pública.
+7. Depois da autorização, acompanhar o login e um fluxo de cada módulo. Se falhar, voltar a imagem anterior e manter a API antiga.
+8. A API antiga só sai depois dessa autorização.
+
+O procedimento de arquivos não foi executado. O bucket de origem permanece.
 
 ## Histórico
 
+- 2026-10-31 — C087: a prova C084 passou no BancoFlorescerPP, com `ROLLBACK` e organizações em 0. O corte e a cópia de arquivos ficaram escritos e não foram executados.
 - 2026-10-31 — C086: conferência local da autenticação, sem valores de variável. A saída do console da prova C084 não chegou. Organizações residuais sem prova. Deploy não feito.
 - 2026-10-31 — C086: a saída do console da prova C084 de novo não chegou. Variáveis da casa ausentes, porta 5432 fechada, deploy não feito.
 - 2026-10-31 — C086: a saída do console da prova C084 não chegou. Variáveis da casa ausentes, porta 5432 fechada, deploy não feito.

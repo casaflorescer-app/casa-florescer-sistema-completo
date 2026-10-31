@@ -93,6 +93,7 @@ A tentativa de SSH para `2.25.151.136` não abriu sessão. Não repetir esse ace
 
 ## Histórico
 
+- 2026-10-31 — a prova C084 passou no BancoFlorescerPP com `ROLLBACK` e organizações em 0. A C087 não liga a aplicação publicada. Contratos, salas, especialidades, políticas e plataforma seguem no cliente.
 - 2026-10-31 — a autenticação própria foi conferida só no processo local; sem a saída do console a C086 permanece bloqueada e o SSH não se repete.
 - 2026-10-31 — a saída do console da C084 de novo não chegou; o status permanece bloqueado e o SSH desta máquina não se repete.
 - 2026-10-31 — a saída do console da C084 não chegou; o status da C086 fica bloqueado e o SSH desta máquina não se repete.

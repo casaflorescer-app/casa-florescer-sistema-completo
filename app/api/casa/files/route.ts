@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const kind = url.searchParams.get("kind");
   const id = url.searchParams.get("id") ?? "";
-  if (!UUID.test(id) || (kind !== "photo" && kind !== "exam" && kind !== "document")) {
+  if (!UUID.test(id) || (kind !== "photo" && kind !== "exam" && kind !== "document" && kind !== "orientation")) {
     return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
   }
   const located = await withCasaUser(user.userId, async (client) => {
@@ -62,6 +62,30 @@ export async function GET(request: Request) {
       return {
         path: file.storage_path,
         type: file.mime_type || "application/octet-stream",
+        practiceId: file.practice_id,
+        patientId: file.patient_id,
+        organizationId: file.organization_id,
+      };
+    }
+    if (kind === "orientation") {
+      const row = await client.query<{
+        audio_storage_path: string | null;
+        audio_mime_type: string | null;
+        practice_id: string;
+        patient_id: string;
+        organization_id: string;
+      }>(
+        `select v.audio_storage_path, v.audio_mime_type, o.practice_id, o.patient_id, o.organization_id
+         from public.clinical_orientation_versions v
+         join public.clinical_orientations o on o.id = v.orientation_id
+         where v.id = $1`,
+        [id],
+      );
+      const file = row.rows[0];
+      if (!file?.audio_storage_path) return null;
+      return {
+        path: file.audio_storage_path,
+        type: file.audio_mime_type || "audio/webm",
         practiceId: file.practice_id,
         patientId: file.patient_id,
         organizationId: file.organization_id,
@@ -117,11 +141,12 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const kind = String(form.get("kind") ?? "");
   const file = form.get("file");
-  if (!(file instanceof File) || (kind !== "photo" && kind !== "exam" && kind !== "document")) {
+  if (!(file instanceof File) || (kind !== "photo" && kind !== "exam" && kind !== "document" && kind !== "orientation")) {
     return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
   }
-  const type = file.type || (kind === "document" ? "application/pdf" : "");
-  if (!acceptCasaUpload({ kind: kind === "photo" ? "photo" : "document", type, size: file.size })) {
+  const type = file.type || (kind === "document" ? "application/pdf" : kind === "orientation" ? "audio/webm" : "");
+  const acceptKind = kind === "photo" ? "photo" : kind === "orientation" ? "audio" : "document";
+  if (!acceptCasaUpload({ kind: acceptKind, type, size: file.size })) {
     return NextResponse.json({ error: "Arquivo recusado." }, { status: 400 });
   }
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -178,6 +203,46 @@ export async function POST(request: Request) {
     } catch {
       await removePrivateFile(relative);
       return NextResponse.json({ error: "Não foi possível guardar o documento." }, { status: 400 });
+    }
+    return NextResponse.json({ path: relative });
+  }
+  if (kind === "orientation") {
+    const organizationId = String(form.get("organizationId") ?? "");
+    const patientId = String(form.get("patientId") ?? "");
+    const orientationId = String(form.get("orientationId") ?? "");
+    const versionId = String(form.get("versionId") ?? "");
+    if (!UUID.test(organizationId) || !UUID.test(patientId) || !UUID.test(orientationId) || !UUID.test(versionId)) {
+      return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
+    }
+    const meta = await withCasaUser(user.userId, async (client) => {
+      const result = await client.query<{ practice_id: string }>(
+        `select o.practice_id
+         from public.clinical_orientations o
+         join public.clinical_orientation_versions v on v.orientation_id = o.id
+         where o.id = $1 and v.id = $2 and o.organization_id = $3 and o.patient_id = $4`,
+        [orientationId, versionId, organizationId, patientId],
+      );
+      return result.rows[0] ?? null;
+    });
+    if (!meta) return NextResponse.json({ error: "Pedido recusado." }, { status: 404 });
+    const allowed = await canReadExamFile(user.userId, meta.practice_id, patientId, organizationId);
+    if (!allowed) return NextResponse.json({ error: "Pedido recusado." }, { status: 403 });
+    const relative = `${organizationId}/${patientId}/${orientationId}/${versionId}/audio`;
+    if (!safeRelativePath(relative)) return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
+    try {
+      await writePrivateFile(relative, bytes);
+      const duration = String(form.get("durationSeconds") ?? "");
+      await callCasaRpc("clinical_orientation_save_draft", [
+        {
+          version_id: versionId,
+          audio_storage_path: relative,
+          audio_mime_type: type.split(";")[0] || "audio/webm",
+          audio_duration_seconds: duration ? Number(duration) : null,
+        },
+      ]);
+    } catch {
+      await removePrivateFile(relative);
+      return NextResponse.json({ error: "Não foi possível guardar o áudio." }, { status: 400 });
     }
     return NextResponse.json({ path: relative });
   }

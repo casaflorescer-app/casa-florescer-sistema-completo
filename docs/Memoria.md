@@ -6,7 +6,7 @@
 - A `0059` entrou. A C074 entrou com profissionais e organizações em 0. `CREATE OR REPLACE` da view `professional_labels` falha porque `category` ocuparia o lugar de `full_name`. O arquivo agora faz `DROP VIEW` antes de criar.
 - Colar um script longo no console do EasyPanel corta o meio e pode deixar a transação aberta (`*`) ou abortada (`!`). Nesse prompt, o próximo comando é só `rollback` se houver `!`. Blocos curtos, cada um com ponto e vírgula, gravaram.
 - A senha de `casa_login` foi definida e a prova em `127.0.0.1` devolveu `casa_login|false|false`. Não colocar `PGPASSWORD` no texto colado: o console deformou esse nome e o valor apareceu no erro. O arquivo `/tmp/casa-login.secret` fica no container, modo 600, e some se o container for recriado. O valor não vai para o Git nem para o chat.
-- `CASA_DATABASE_URL` e `NEXT_PUBLIC_CASA_AUTH` continuam desligados. O teste `c083_login_and_staff.sql` ainda não rodou.
+- `CASA_DATABASE_URL` e `NEXT_PUBLIC_CASA_AUTH` continuam desligados. O teste `c083_login_and_staff.sql` rodou por arquivo no container, devolveu `DO` e `ROLLBACK`, e `organizations` ficou em 0. O arquivo do teste pode ser apagado. A senha continua só em `/tmp/casa-login.secret`.
 
 ## 2026-10-31 — C083 o Terminal local recebeu o comando
 

@@ -275,11 +275,11 @@ A `0059` cria a redefinição de senha e a função que só o administrador prin
 
 Em 2026-10-31 o Bash do container do serviço `bancoflorescer` aplicou a `0059` e a C074 no `BancoFlorescerPP`, com o usuário de console `postgre`. A função `casa_staff_create(text,text,text,uuid,jsonb)` existe. A coluna `professionals.display_name` e a função `professional_upsert(jsonb)` existem. Organizações e profissionais continuam em 0. A view `professional_labels` precisou ser apagada e criada de novo: o `CREATE OR REPLACE` recusou trocar a coluna `full_name` por `category`. O arquivo da migration ficou com esse `DROP VIEW`.
 
-A senha de `casa_login` foi definida. A prova em `127.0.0.1` devolveu `casa_login|false|false`. O valor não está no Git. Um valor gerado antes apareceu no console, porque o comando de teste foi deformado, e foi substituído. `CASA_DATABASE_URL` e `NEXT_PUBLIC_CASA_AUTH` não foram gravados. Não houve deploy. O teste `supabase/tests/c083_login_and_staff.sql` ainda não rodou.
+A senha de `casa_login` foi definida. A prova em `127.0.0.1` devolveu `casa_login|false|false`. O valor não está no Git. Um valor gerado antes apareceu no console, porque o comando de teste foi deformado, e foi substituído. `CASA_DATABASE_URL` e `NEXT_PUBLIC_CASA_AUTH` não foram gravados. Não houve deploy. O teste `supabase/tests/c083_login_and_staff.sql` rodou e terminou em `ROLLBACK`. A contagem de organizações depois dele foi 0.
 
 ## Histórico
 
-- 2026-10-31 — C083 no Bash do BancoFlorescerPP: `0059` e C074 aplicadas. `casa_login` provado sem superusuário e sem `BYPASSRLS`. Sem `CASA_DATABASE_URL`, sem deploy e sem o teste SQL da C083.
+- 2026-10-31 — C083 no Bash do BancoFlorescerPP: `0059` e C074 aplicadas. `casa_login` provado sem superusuário e sem `BYPASSRLS`. O teste SQL rodou e foi desfeito. Organizações 0. Sem `CASA_DATABASE_URL` e sem deploy.
 - 2026-10-31 — C083 complemento: o prompt selecionado continuou o do Mac. A `0059` e a senha de `casa_login` não foram aplicadas. Build e testes locais de cookie e redefinição passaram. Sem deploy.
 - 2026-10-31 — C082: schema `0000`–`0058`, papéis e `GRANT` no BancoFlorescerPP. Testes C077 e C082 desfeitos. 102 tabelas, 0 organizações. Sem backup, sem database temporário, sem troca da API e sem deploy.
 - 2026-10-31 — catálogo do BancoFlorescerPP lido: extensões disponíveis e não instaladas, schemas `auth`, `storage` e `extensions` ausentes, 0 tabelas. Backup, ordem e rollback escritos. Sem apply.

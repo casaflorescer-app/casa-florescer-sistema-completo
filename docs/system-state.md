@@ -213,4 +213,4 @@ Aplicação pelo Bash do container do serviço `bancoflorescer`, usuário de con
 | `public.organizations` | 0 linhas, depois da C074 | COMPROVADO |
 | `casa_login` | login em `127.0.0.1`, `rolsuper` falso, `rolbypassrls` falso. Saída `casa_login\|false\|false` | COMPROVADO |
 | Senha de `casa_login` | definida no papel. O valor não está no Git. Um valor anterior apareceu no console e foi substituído | CONFIRMADO |
-| Teste `supabase/tests/c083_login_and_staff.sql` | ainda não executado | CONFIRMADO |
+| Teste `supabase/tests/c083_login_and_staff.sql` | executado e desfeito. Saída `BEGIN` … `DO` `ROLLBACK`. Organizações 0 | COMPROVADO |

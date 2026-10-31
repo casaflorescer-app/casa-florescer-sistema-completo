@@ -249,7 +249,7 @@ function PriorSummary({ prior }: { prior: PriorEncounterContext }) {
         <p className="text-lotus-600">Sem SOAP registrado no atendimento anterior.</p>
       )}
       <p className="text-xs text-lotus-600">
-        Receitas neste encounter: {prior.prescriptionsCount} · Pedidos de exame:{" "}
+        Receitas neste atendimento: {prior.prescriptionsCount} · Pedidos de exame:{" "}
         {prior.examRequestsCount} · Orientações: {prior.orientationsCount}
       </p>
       <p className="text-xs text-lotus-500">

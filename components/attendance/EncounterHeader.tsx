@@ -93,7 +93,7 @@ export function EncounterHeader({
           Prontuário da paciente
         </Link>
         <Link href="/app/records" className="text-lotus-800 underline-offset-2 hover:underline">
-          Índice do prontuário
+          Buscar no prontuário
         </Link>
       </p>
     </header>

@@ -3,7 +3,7 @@
  * Preferir estas helpers a carregar tabelas inteiras no navegador.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { formatPhone } from "@/lib/patients/format";
+import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import {
   maskCpf,
   searchPatients,
@@ -29,6 +29,7 @@ function clampLimit(limit: number | undefined, fallback = 30): number {
 
 export function patientToSearchOption(row: PatientListRow): EntitySearchOption {
   const bits = [
+    row.birthDate ? `Nascimento: ${formatIsoDateBr(row.birthDate)}` : null,
     row.cpf ? `CPF: ${maskCpf(row.cpf)}` : null,
     row.phone ? `Telefone: ${formatPhone(row.phone)}` : null,
   ].filter(Boolean);
@@ -36,7 +37,9 @@ export function patientToSearchOption(row: PatientListRow): EntitySearchOption {
     id: row.id,
     label: row.fullName,
     description: bits.length > 0 ? bits.join(" · ") : undefined,
-    keywords: [row.cpf, row.phone, row.email, row.socialName].filter(Boolean).join(" "),
+    keywords: [row.cpf, row.phone, row.email, row.socialName, row.birthDate]
+      .filter(Boolean)
+      .join(" "),
   };
 }
 

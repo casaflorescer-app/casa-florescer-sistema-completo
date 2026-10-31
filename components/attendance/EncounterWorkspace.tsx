@@ -668,7 +668,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
       return;
     }
     await markEncounterAuditEvent(supabase, encounter.id, "clinical_document_finalized");
-    setNotice("Atendimento assinado. Registros clínicos deste encounter ficam somente leitura.");
+    setNotice("Atendimento assinado. Os registros clínicos deste atendimento ficam somente leitura.");
     await load(true);
   }
 

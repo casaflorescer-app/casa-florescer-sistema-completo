@@ -47,6 +47,8 @@ import { describeChannelAvailability } from "@/lib/relationship/providers";
 import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { searchPatientOptions } from "@/lib/search/entity-search";
 
 type Tab =
   | "dashboard"
@@ -115,6 +117,7 @@ export function RelationshipCenter({
     "Olá, {{primeiro_nome}}! A Casa Florescer gostaria de lembrar que já faz algum tempo desde seu último atendimento.",
   );
   const [prefPatientId, setPrefPatientId] = useState("");
+  const [prefPatientLabel, setPrefPatientLabel] = useState("");
 
   const reload = useCallback(async () => {
     if (!supabase || !canManage) return;
@@ -431,9 +434,15 @@ export function RelationshipCenter({
     else setAudience(await listCampaignAudience(supabase, activeCampaign.id));
   }
 
+  const searchPrefPatients = useCallback(
+    (query: string) =>
+      supabase ? searchPatientOptions(supabase, query, { limit: 30 }) : Promise.resolve([]),
+    [supabase],
+  );
+
   async function onOptOut() {
     if (!supabase || !prefPatientId.trim()) {
-      setError("Informe o ID da paciente para registrar opt-out de campanhas.");
+      setError("Selecione a paciente para registrar o opt-out de contato promocional.");
       return;
     }
     setBusy(true);
@@ -447,7 +456,13 @@ export function RelationshipCenter({
       });
       if (result.error) setError(result.error);
       else {
-        setNotice("Opt-out de campanhas registrado.");
+        setNotice(
+          prefPatientLabel
+            ? `Opt-out registrado para ${prefPatientLabel}.`
+            : "Opt-out de contato promocional registrado.",
+        );
+        setPrefPatientId("");
+        setPrefPatientLabel("");
         await reload();
       }
     } finally {
@@ -931,18 +946,32 @@ export function RelationshipCenter({
         <section className="card space-y-3">
           <h2 className="text-base font-semibold text-lotus-900">Preferências e opt-out</h2>
           <p className="text-sm text-lotus-700">
-            Opt-out de campanhas não bloqueia comunicações administrativas necessárias.
+            Opt-out de contato promocional não bloqueia comunicações administrativas necessárias.
           </p>
-          <label className="block text-sm">
-            Código da paciente
-            <input
-              className={fieldClass}
-              value={prefPatientId}
-              onChange={(e) => setPrefPatientId(e.target.value)}
-              placeholder="Informado pela administração"
-            />
+          <label className="block text-sm font-medium text-lotus-800">
+            Paciente
+            <div className="mt-1">
+              <EntityCombobox
+                value={prefPatientId}
+                selectedLabel={prefPatientLabel}
+                onChange={(id, option) => {
+                  setPrefPatientId(id);
+                  setPrefPatientLabel(option?.label ?? "");
+                }}
+                onSearch={searchPrefPatients}
+                minChars={2}
+                placeholder="Pesquisar paciente por nome, CPF ou telefone…"
+                emptyLabel="Nenhuma paciente encontrada."
+                aria-label="Pesquisar paciente para opt-out"
+              />
+            </div>
           </label>
-          <button type="button" className={buttonClass} disabled={busy} onClick={() => void onOptOut()}>
+          <button
+            type="button"
+            className={buttonClass}
+            disabled={busy || !prefPatientId}
+            onClick={() => void onOptOut()}
+          >
             Registrar opt-out de contato promocional
           </button>
         </section>

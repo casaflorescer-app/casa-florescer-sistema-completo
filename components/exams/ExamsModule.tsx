@@ -41,6 +41,7 @@ import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platf
 import { formatDateTime } from "@/lib/platform/format";
 import { RowActions } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { PatientQuickView } from "@/components/patients/PatientQuickView";
 import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildDocumentAvailableMessage } from "@/lib/whatsapp/messages";
 
@@ -67,6 +68,7 @@ export function ExamsModule() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(!initialPatientId);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [busyPdf, setBusyPdf] = useState(false);
 
   const physicianMemberships = useMemo(
@@ -304,7 +306,14 @@ export function ExamsModule() {
                   href: patientChartHref(patient.id),
                 }}
                 secondary={
-                  [{ id: "swap", label: "Trocar paciente", onClick: clearPatient }] satisfies OverflowItem[]
+                  [
+                    {
+                      id: "quick",
+                      label: "Visão rápida",
+                      onClick: () => setQuickViewOpen(true),
+                    },
+                    { id: "swap", label: "Trocar paciente", onClick: clearPatient },
+                  ] satisfies OverflowItem[]
                 }
                 compact={false}
               />
@@ -465,6 +474,13 @@ export function ExamsModule() {
           attachSource="secretaria"
         />
       ) : null}
+
+      <PatientQuickView
+        patientId={patient?.id ?? null}
+        open={quickViewOpen && Boolean(patient)}
+        onClose={() => setQuickViewOpen(false)}
+        practiceId={practiceId || null}
+      />
     </div>
   );
 }

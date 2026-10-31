@@ -30,9 +30,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RowActions } from "@/components/ui/RowActions";
 import { ActionLinkBar } from "@/components/ui/ActionLinkBar";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { Patient360Overview } from "@/components/patients/Patient360Overview";
+import {
+  loadPatient360Snapshot,
+  type Patient360Snapshot,
+} from "@/lib/patients/patient-360";
 import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 import { isValidWhatsAppPhone } from "@/lib/whatsapp/phone";
+import { usePracticeUi } from "@/components/layout/PracticeUi";
 
 export function PatientDetail({
   patientId,
@@ -44,13 +50,16 @@ export function PatientDetail({
   updated?: boolean;
 }) {
   const { authorization } = useAuth();
+  const { selectedPracticeId } = usePracticeUi();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [row, setRow] = useState<PatientDetailRow | null>(null);
+  const [overview, setOverview] = useState<Patient360Snapshot | null>(null);
   const supabase = createClient();
   const physicianMembership =
     authorization?.memberships.find(
       (item) => item.role === "physician" && item.professional?.id,
     ) ?? null;
+  const canClinical = Boolean(physicianMembership);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(
@@ -84,6 +93,16 @@ export function PatientDetail({
     }
     setRow(data);
     setError(null);
+
+    if (supabase) {
+      void loadPatient360Snapshot(supabase, {
+        patientId,
+        practiceId: selectedPracticeId || physicianMembership?.practiceId || null,
+        includeClinical: canClinical,
+      })
+        .then(setOverview)
+        .catch(() => setOverview(null));
+    }
 
     if (!data.photoPath) {
       setPhotoUrl(null);
@@ -159,9 +178,13 @@ export function PatientDetail({
   return (
     <div>
       <PageHeader
-        eyebrow="Clínica"
+        eyebrow="Cadastro da paciente"
         title={row?.fullName ?? "Paciente"}
-        description="Cadastro administrativo. Sem dados clínicos nesta tela."
+        description={
+          canClinical
+            ? "Dados cadastrais e administrativos. O histórico clínico fica no prontuário."
+            : "Cadastro e agenda. O prontuário clínico fica restrito à médica."
+        }
         actions={
           <div className="flex flex-row flex-wrap items-center gap-2">
             <Link href="/app/patients" className={ghostButtonClass}>
@@ -200,22 +223,24 @@ export function PatientDetail({
                 }
                 compact={false}
               />
-            ) : (
+            ) : row ? (
               <RowActions
-                primary={
-                  row
-                    ? {
-                        id: "edit",
-                        label: "Editar cadastro",
-                        href: `/app/patients/${patientId}/edit`,
-                        variant: "secondary",
-                      }
-                    : null
-                }
-                secondary={[{ id: "new", label: "Nova paciente", href: "/app/patients/new" }]}
+                primary={{
+                  id: "agenda",
+                  label: "Agendar",
+                  href: `/app/agenda?patientId=${patientId}`,
+                }}
+                secondary={[
+                  {
+                    id: "edit",
+                    label: "Editar cadastro",
+                    href: `/app/patients/${patientId}/edit`,
+                  },
+                  { id: "new", label: "Nova paciente", href: "/app/patients/new" },
+                ]}
                 compact={false}
               />
-            )}
+            ) : null}
           </div>
         }
       />
@@ -234,12 +259,19 @@ export function PatientDetail({
                   ? [{ id: "chart", label: "Prontuário", href: patientChartHref(patientId) }]
                   : []),
                 { id: "agenda", label: "Agendar", href: `/app/agenda?patientId=${patientId}` },
-                { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${patientId}` },
-                { id: "exams", label: "Exames", href: `/app/exams?patientId=${patientId}` },
+                ...(physicianMembership
+                  ? [
+                      { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${patientId}` },
+                      { id: "exams", label: "Exames", href: `/app/exams?patientId=${patientId}` },
+                    ]
+                  : []),
                 { id: "edit", label: "Editar cadastro", href: `/app/patients/${patientId}/edit` },
               ]}
             />
           </div>
+
+          <Patient360Overview snapshot={overview} loading={loading && !overview} />
+
           <section className="card mt-6" aria-labelledby="patient-photo-title">
             <h2 id="patient-photo-title" className="font-semibold text-lotus-900">
               Fotografia

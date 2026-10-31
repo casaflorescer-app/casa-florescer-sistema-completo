@@ -17,6 +17,7 @@ import { parseReturnOfNote } from "@/lib/attendance/return-link";
 import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PatientQuickView } from "@/components/patients/PatientQuickView";
 import { WhatsAppComposeDialog } from "@/components/whatsapp/WhatsAppComposeDialog";
 import { buildAppointmentConfirmationMessage } from "@/lib/whatsapp/messages";
 
@@ -46,6 +47,7 @@ export function AppointmentCard({
   onRecordArrival?: (appointmentId: string) => void;
 }) {
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   function cancel() {
     setCancelOpen(true);
@@ -129,6 +131,7 @@ export function AppointmentCard({
         onContinueEncounter={onContinueEncounter}
         onRecordArrival={onRecordArrival}
         onCancel={cancel}
+        onOpenPatient={() => setQuickViewOpen(true)}
       />
       <ConfirmDialog
         open={cancelOpen}
@@ -144,6 +147,14 @@ export function AppointmentCard({
           onSetStatus(row.id, "cancelled");
         }}
       />
+      {row.patientId ? (
+        <PatientQuickView
+          patientId={row.patientId}
+          open={quickViewOpen}
+          onClose={() => setQuickViewOpen(false)}
+          practiceId={row.practiceId}
+        />
+      ) : null}
     </article>
   );
 }
@@ -160,6 +171,7 @@ function AppointmentCardActions({
   onContinueEncounter,
   onRecordArrival,
   onCancel,
+  onOpenPatient,
 }: {
   row: AppointmentRow;
   busy: boolean;
@@ -172,6 +184,7 @@ function AppointmentCardActions({
   onContinueEncounter?: (appointmentId: string) => void;
   onRecordArrival?: (appointmentId: string) => void;
   onCancel: () => void;
+  onOpenPatient: () => void;
 }) {
   const [waOpen, setWaOpen] = useState(false);
   const [waPhone, setWaPhone] = useState<string | null>(null);
@@ -258,6 +271,11 @@ function AppointmentCardActions({
 
   const secondary: OverflowItem[] = [];
   if (row.patientId) {
+    secondary.push({
+      id: "patient",
+      label: "Ver paciente",
+      onClick: onOpenPatient,
+    });
     if (primary?.id !== "chart") {
       secondary.push({
         id: "chart",
@@ -266,6 +284,7 @@ function AppointmentCardActions({
       });
     }
     secondary.push(
+      { id: "detail", label: "Cadastro da paciente", href: `/app/patients/${row.patientId}` },
       { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${row.patientId}` },
       { id: "exams", label: "Exames", href: `/app/exams?patientId=${row.patientId}` },
       {

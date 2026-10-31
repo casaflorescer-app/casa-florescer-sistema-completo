@@ -15,7 +15,7 @@ export function WorkspaceComingSoon({
         <div>
           <h2 className="text-base font-semibold text-lotus-900">{title}</h2>
           <p className="mt-1 text-sm text-lotus-600">
-            Espaço reservado no Workspace Médico. Implementação em {stage}.
+            Espaço reservado nesta área de atendimento. Implementação em {stage}.
           </p>
         </div>
         <span className="inline-flex rounded-full border border-lotus-200 bg-lotus-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-lotus-700">

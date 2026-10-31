@@ -27,6 +27,7 @@ import { WhatsAppComposeDialog } from "@/components/whatsapp/WhatsAppComposeDial
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 import { isValidWhatsAppPhone } from "@/lib/whatsapp/phone";
 import { friendlyError } from "@/lib/ui/friendly-error";
+import { PatientQuickView } from "@/components/patients/PatientQuickView";
 import { Plus } from "lucide-react";
 
 const FILTER_LABEL: Record<CareSpecialty | "all", string> = {
@@ -38,12 +39,15 @@ const FILTER_LABEL: Record<CareSpecialty | "all", string> = {
 function PatientRowActions({
   row,
   canOpenChart,
+  onQuickView,
 }: {
   row: PatientListRow;
   canOpenChart: boolean;
+  onQuickView: (patientId: string) => void;
 }) {
   const [waOpen, setWaOpen] = useState(false);
   const secondary: OverflowItem[] = [
+    { id: "quick", label: "Visão rápida", onClick: () => onQuickView(row.id) },
     { id: "detail", label: "Visualizar", href: `/app/patients/${row.id}` },
     { id: "agenda", label: "Agendar", href: `/app/agenda?patientId=${row.id}` },
   ];
@@ -105,6 +109,7 @@ export function PatientList() {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quickViewId, setQuickViewId] = useState<string | null>(null);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(query.trim()), 280);
@@ -308,7 +313,11 @@ export function PatientList() {
                         </div>
                       </dl>
                       <div className="mt-3">
-                        <PatientRowActions row={row} canOpenChart={canOpenChart} />
+                        <PatientRowActions
+                          row={row}
+                          canOpenChart={canOpenChart}
+                          onQuickView={setQuickViewId}
+                        />
                       </div>
                     </div>
                   </div>
@@ -361,7 +370,11 @@ export function PatientList() {
                       {formatDateTime(row.createdAt)}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-right">
-                      <PatientRowActions row={row} canOpenChart={canOpenChart} />
+                      <PatientRowActions
+                        row={row}
+                        canOpenChart={canOpenChart}
+                        onQuickView={setQuickViewId}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -370,6 +383,12 @@ export function PatientList() {
           </div>
         </>
       ) : null}
+
+      <PatientQuickView
+        patientId={quickViewId}
+        open={Boolean(quickViewId)}
+        onClose={() => setQuickViewId(null)}
+      />
     </div>
   );
 }

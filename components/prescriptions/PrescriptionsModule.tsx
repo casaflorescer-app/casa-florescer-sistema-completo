@@ -25,6 +25,7 @@ import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPr
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { RowActions } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { PatientQuickView } from "@/components/patients/PatientQuickView";
 import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildDocumentAvailableMessage } from "@/lib/whatsapp/messages";
 
@@ -40,6 +41,7 @@ export function PrescriptionsModule() {
   const [loadingPatient, setLoadingPatient] = useState(Boolean(initialPatientId));
   const [error, setError] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(!initialPatientId);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   const physicianMemberships = useMemo(
     () =>
@@ -238,6 +240,11 @@ export function PrescriptionsModule() {
                 secondary={
                   [
                     {
+                      id: "quick",
+                      label: "Visão rápida",
+                      onClick: () => setQuickViewOpen(true),
+                    },
+                    {
                       id: "swap",
                       label: "Trocar paciente",
                       onClick: clearPatient,
@@ -283,6 +290,13 @@ export function PrescriptionsModule() {
           Modo visualização: emissão de receita é exclusiva da médica.
         </p>
       ) : null}
+
+      <PatientQuickView
+        patientId={patient?.id ?? null}
+        open={quickViewOpen && Boolean(patient)}
+        onClose={() => setQuickViewOpen(false)}
+        practiceId={practiceId || null}
+      />
     </div>
   );
 }

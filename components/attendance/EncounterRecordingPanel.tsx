@@ -717,8 +717,7 @@ export function EncounterRecordingPanel({
       ) : null}
 
       <p className="mt-4 text-xs text-lotus-500">
-        Próximas etapas (não nesta entrega): IA clínica, SOAP sugerido, canais externos. C040.4 não
-        iniciado.
+        Próximas etapas (não nesta entrega): auxílio clínico, SOAP sugerido e canais externos.
       </p>
     </section>
   );

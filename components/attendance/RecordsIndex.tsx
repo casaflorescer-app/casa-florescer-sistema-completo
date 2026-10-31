@@ -100,12 +100,12 @@ export function RecordsIndex() {
     <div className="overflow-x-hidden">
       <header className="card">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-          Workspace médico
+          Área clínica
         </p>
         <h1 className="page-title mt-1">Prontuário</h1>
         <p className="mt-2 max-w-2xl text-sm text-lotus-700">
           Pesquisar uma paciente abre o prontuário centrado nela — sem depender da agenda. Atendimentos
-          abertos e recentes continuam disponíveis abaixo.
+          em andamento e recentes continuam disponíveis abaixo.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/app/agenda" className={buttonClass}>
@@ -149,7 +149,7 @@ export function RecordsIndex() {
       <section className="card mt-4">
         <h2 className="text-base font-semibold text-lotus-900">Atendimentos em aberto</h2>
         <p className="mt-1 text-sm text-lotus-600">
-          Encounters com status aberto nesta prática. Encounters assinados não são reabertos por
+          Atendimentos em andamento nesta prática. Atendimentos já assinados não são reabertos por
           aqui.
         </p>
         {openRows.length === 0 ? (

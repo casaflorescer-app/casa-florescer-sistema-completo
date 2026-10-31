@@ -195,7 +195,7 @@ export function EncounterFinalReview({
             <li>Situação documental: {summary.documentaryStatus}</li>
           </ul>
           <p className="mt-2 text-xs text-emerald-900">
-            Conteúdo clínico, gravação e documentos deste encounter permanecem preservados em modo leitura.
+            Conteúdo clínico, gravação e documentos deste atendimento permanecem preservados em modo leitura.
           </p>
         </div>
       ) : null}

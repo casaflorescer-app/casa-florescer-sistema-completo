@@ -42,7 +42,12 @@ import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
-
+import { RowActions } from "@/components/ui/RowActions";
+import { Patient360Overview } from "@/components/patients/Patient360Overview";
+import {
+  loadPatient360Snapshot,
+  type Patient360Snapshot,
+} from "@/lib/patients/patient-360";
 type TabId = "resumo" | "historico" | "receitas" | "exames" | "orientacoes";
 
 export function PatientChart({ patientId }: { patientId: string }) {
@@ -67,6 +72,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
   const [tab, setTab] = useState<TabId>("resumo");
   const [showSearch, setShowSearch] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "signed">("all");
+  const [overview, setOverview] = useState<Patient360Snapshot | null>(null);
 
   const physicianMemberships = useMemo(
     () =>
@@ -117,7 +123,7 @@ export function PatientChart({ patientId }: { patientId: string }) {
       }
       setPatient(detail);
 
-      const [sum, enc, rx, examRows, examReqs, ori] = await Promise.all([
+      const [sum, enc, rx, examRows, examReqs, ori, snap] = await Promise.all([
         loadPatientClinicalSummary(supabase, {
           practiceId: membership.practiceId,
           patientId,
@@ -127,8 +133,14 @@ export function PatientChart({ patientId }: { patientId: string }) {
         listExamOrdersForPatient(supabase, patientId).catch(() => []),
         listExamRequestsForPatient(supabase, patientId).catch(() => []),
         listOrientationsForPatient(supabase, patientId).catch(() => []),
+        loadPatient360Snapshot(supabase, {
+          patientId,
+          practiceId: membership.practiceId,
+          includeClinical: true,
+        }).catch(() => null),
       ]);
       setSummary(sum);
+      setOverview(snap);
       setEncounters(enc);
       setPrescriptions(
         rx.slice(0, 40).map((item) => ({
@@ -188,50 +200,66 @@ export function PatientChart({ patientId }: { patientId: string }) {
 
   return (
     <div className="overflow-x-hidden">
-      <header className="card">
+      <header className="card" data-patient-360="true">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-          Prontuário · paciente
+          Prontuário
         </p>
-        <h1 className="page-title mt-1">{patient?.fullName ?? "Paciente"}</h1>
-        {patient ? (
-          <p className="mt-2 text-sm text-lotus-700">
-            {patient.birthDate ? `Nasc. ${formatIsoDateBr(patient.birthDate)}` : "Nascimento —"}
-            {" · "}
-            CPF {maskCpf(patient.cpf)}
-            {patient.phone ? ` · ${formatPhone(patient.phone)}` : ""}
-          </p>
-        ) : null}
-        <p className="mt-2 max-w-2xl text-sm text-lotus-600">
-          Visão clínica longitudinal. Cadastro administrativo permanece em Pacientes. Atendimento
-          individual abre o Workspace oficial do encounter.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/app/records" className={ghostButtonClass}>
-            Índice do prontuário
-          </Link>
+        <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="page-title">{patient?.fullName ?? "Paciente"}</h1>
+            {patient ? (
+              <p className="mt-2 text-sm text-lotus-700">
+                {patient.birthDate ? `Nascimento ${formatIsoDateBr(patient.birthDate)}` : "Nascimento —"}
+                {" · "}
+                CPF {maskCpf(patient.cpf)}
+                {patient.phone ? ` · ${formatPhone(patient.phone)}` : ""}
+              </p>
+            ) : null}
+            <p className="mt-2 max-w-2xl text-sm text-lotus-600">
+              Histórico clínico e assistencial desta paciente. Para dados cadastrais (telefone,
+              endereço, foto), use o cadastro. Para registrar a consulta do dia, use a agenda.
+            </p>
+          </div>
           {patient ? (
-            <Link href={`/app/patients/${patient.id}`} className={ghostButtonClass}>
-              Ver cadastro
-            </Link>
+            <RowActions
+              compact={false}
+              primary={{
+                id: "agenda",
+                label: "Agendar",
+                href: `/app/agenda?patientId=${patient.id}`,
+              }}
+              secondary={[
+                {
+                  id: "new-encounter",
+                  label: "Novo atendimento (via agenda)",
+                  href: `/app/agenda?patientId=${patient.id}`,
+                },
+                {
+                  id: "cadastro",
+                  label: "Abrir cadastro",
+                  href: `/app/patients/${patient.id}`,
+                },
+                { id: "records", label: "Buscar no prontuário", href: "/app/records" },
+                {
+                  id: "search",
+                  label: showSearch ? "Ocultar pesquisa" : "Pesquisar outra paciente",
+                  onClick: () => setShowSearch((open) => !open),
+                },
+                { id: "reload", label: "Atualizar", onClick: () => void load() },
+              ]}
+            />
           ) : null}
-          {patient ? (
+        </div>
+        {patient ? (
+          <div className="mt-3">
             <WhatsAppAction
               phone={patient.phone}
               recipientName={patient.fullName}
               message={buildAdministrativeHelloMessage(patient.fullName)}
+              compact
             />
-          ) : null}
-          <button
-            type="button"
-            className={showSearch ? buttonClass : ghostButtonClass}
-            onClick={() => setShowSearch((open) => !open)}
-          >
-            {showSearch ? "Ocultar pesquisa" : "Pesquisar outra paciente"}
-          </button>
-          <button type="button" className={ghostButtonClass} onClick={() => void load()}>
-            Atualizar
-          </button>
-        </div>
+          </div>
+        ) : null}
         {physicianMemberships.length > 1 ? (
           <label className="mt-4 block text-sm text-lotus-800">
             Prática
@@ -292,7 +320,10 @@ export function PatientChart({ patientId }: { patientId: string }) {
           </nav>
 
           {tab === "resumo" ? (
-            <PatientClinicalSummary summary={summary} pregnancy={null} loading={loading} />
+            <>
+              <Patient360Overview snapshot={overview} loading={loading && !overview} />
+              <PatientClinicalSummary summary={summary} pregnancy={null} loading={loading} />
+            </>
           ) : null}
 
           {tab === "historico" ? (
@@ -302,7 +333,8 @@ export function PatientChart({ patientId }: { patientId: string }) {
                   Histórico de atendimentos
                 </h2>
                 <p className="mt-1 text-sm text-lotus-600">
-                  Encounters autorizados nesta prática. Abrir usa o EncounterWorkspace existente.
+                  Atendimentos desta paciente nesta prática. Abrir continua o registro clínico
+                  correspondente.
                 </p>
                 <label className="mt-3 block text-sm text-lotus-800">
                   Status
@@ -428,8 +460,8 @@ export function PatientChart({ patientId }: { patientId: string }) {
                   <div>
                     <h2 className="text-base font-semibold text-lotus-900">Exames</h2>
                     <p className="mt-1 text-sm text-lotus-600">
-                      Pedido clínico ≠ resultado/anexo. Novo pedido usa o módulo Exames (exige
-                      atendimento aberto — regra C040.9).
+                      Pedido clínico é diferente do resultado/anexo. Para solicitar um exame,
+                      primeiro abra o atendimento da paciente.
                     </p>
                   </div>
                   <Link href={`/app/exams?patientId=${patientId}`} className={buttonClass}>

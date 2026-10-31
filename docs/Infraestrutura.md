@@ -295,10 +295,11 @@ O primeiro resultado precisa ser `BancoFlorescerPP`. O arquivo abre `BEGIN` e te
 
 ## C086 — a saída do console não chegou
 
-A prova da C084 continua sem execução. Desta máquina a sessão não foi tentada de novo. Sem `ROLLBACK` e sem a contagem final 0, o corte permanece bloqueado. As variáveis da casa continuam ausentes. A porta 5432 continua fechada. Não houve deploy e a API `api.thvp.cloud` permanece. A ordem ainda bloqueada, depois de uma saída boa, é: backup restaurável do BancoFlorescerPP, rollback da imagem, variáveis só no processo, Postgres sem porta pública e o build seguinte com `NEXT_PUBLIC_CASA_AUTH=1`. A API antiga só sai com autorização expressa.
+A prova da C084 continua sem execução. Desta máquina a sessão não foi tentada de novo. Neste processo, `CASA_DATABASE_URL`, `CASA_SESSION_SECRET`, `CASA_FILES_ROOT` e `NEXT_PUBLIC_CASA_AUTH` estão ausentes. Sem `ROLLBACK` e sem a contagem final 0, o corte permanece bloqueado. A quantidade de organizações residuais fica sem prova até essa contagem voltar. As variáveis da casa continuam ausentes. A porta 5432 continua fechada. Não houve deploy e a API `api.thvp.cloud` permanece. A ordem ainda bloqueada, depois de uma saída boa, é: backup restaurável do BancoFlorescerPP, rollback da imagem, variáveis só no processo, Postgres sem porta pública e o build seguinte com `NEXT_PUBLIC_CASA_AUTH=1`. A API antiga só sai com autorização expressa.
 
 ## Histórico
 
+- 2026-10-31 — C086: conferência local da autenticação, sem valores de variável. A saída do console da prova C084 não chegou. Organizações residuais sem prova. Deploy não feito.
 - 2026-10-31 — C086: a saída do console da prova C084 de novo não chegou. Variáveis da casa ausentes, porta 5432 fechada, deploy não feito.
 - 2026-10-31 — C086: a saída do console da prova C084 não chegou. Variáveis da casa ausentes, porta 5432 fechada, deploy não feito.
 - 2026-10-31 — C085: a prova SQL da C084 continua no console do BancoFlorescerPP. Desta máquina a sessão não abriu. Nenhuma variável da casa entrou no Florescer Web. Sem deploy.

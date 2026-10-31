@@ -332,7 +332,7 @@ export function RelationshipCenter({
         setNotice(
           `${built.summary?.selected ?? patientIds.length} selecionadas · ${built.summary?.eligible ?? 0} elegíveis · ${built.summary?.ineligible ?? 0} não elegíveis.`,
         );
-        setTab("campaigns");
+        setTab("contact");
         await reload();
       }
     } finally {
@@ -379,7 +379,7 @@ export function RelationshipCenter({
         setNotice(
           `${built.summary?.selected ?? 0} selecionadas · ${built.summary?.eligible ?? 0} elegíveis · ${built.summary?.ineligible ?? 0} não elegíveis${reasons ? ` (${reasons})` : ""}.`,
         );
-        setTab("campaigns");
+        setTab("contact");
         await reload();
       }
     } finally {
@@ -495,9 +495,6 @@ export function RelationshipCenter({
           <button type="button" className={buttonClass} disabled={busy} onClick={() => void onRefreshOpportunities()}>
             Atualizar oportunidades
           </button>
-          <button type="button" className={ghostButtonClass} disabled={busy} onClick={() => setTab("campaigns")}>
-            Campanhas (simulação)
-          </button>
         </div>
       </header>
 
@@ -517,7 +514,6 @@ export function RelationshipCenter({
                 <li>{stats.birthdayWeek} aniversariantes</li>
                 <li>{stats.noUpcoming} sem agendamento futuro</li>
                 <li>{stats.opportunitiesPending} oportunidades pendentes</li>
-                <li>{stats.campaignsDraft} campanhas em rascunho</li>
               </ul>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -542,10 +538,10 @@ export function RelationshipCenter({
       <div className="flex flex-wrap gap-2">
         {(
           [
+            // C068: campanhas ocultas na V1 (envio em massa ainda é simulação).
             ["dashboard", "Painel"],
             ["contact", "Para contatar"],
             ["opportunities", "Oportunidades"],
-            ["campaigns", "Campanhas"],
             ["templates", "Modelos"],
             ["history", "Histórico"],
             ["preferences", "Preferências"],
@@ -562,10 +558,10 @@ export function RelationshipCenter({
         ))}
       </div>
 
-      <p className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-950">
-        Contato individual: <strong>WhatsApp Web</strong> — o sistema só abre a conversa; o envio é manual.
-        Lotes em massa: <strong>simulação — NÃO ENVIADO</strong> (sem API WhatsApp, e-mail ou push). Não há
-        status SENT, DELIVERED ou READ.
+      <p className="rounded-xl border border-lotus-200 bg-lotus-50/70 px-4 py-3 text-sm text-lotus-800">
+        Contato individual: use <strong>WhatsApp Web</strong> na fila — o sistema abre a conversa com
+        mensagem pré-preenchida; o envio é manual no WhatsApp. Não há confirmação de enviado, entregue
+        ou lido.
       </p>
 
       {tab === "dashboard" && stats ? (
@@ -577,11 +573,6 @@ export function RelationshipCenter({
               ["Sem consulta ≥ 12 meses", stats.inactive12m],
               ["Aniversários próximos", stats.birthdayWeek],
               ["Sem agendamento futuro", stats.noUpcoming],
-              ["Campanhas em rascunho", stats.campaignsDraft],
-              ["Campanhas prontas", stats.campaignsReady],
-              ["Lotes preparados", stats.dispatchesPrepared],
-              ["Mensagens pendentes", stats.messagesPending],
-              ["Falhas reais", stats.messagesFailed],
               ["Opt-outs recentes", stats.optOutsRecent],
             ].map(([label, value]) => (
               <div key={String(label)} className="rounded-xl border border-lotus-100 bg-white px-4 py-3">
@@ -590,10 +581,7 @@ export function RelationshipCenter({
               </div>
             ))}
           </div>
-          <p className="text-xs text-lotus-600">
-            Indicadores de entrega/conversão não são exibidos enquanto não houver provider real.
-            Mensagens com status SENT: {stats.messagesSent} (deve permanecer 0 sem provider).
-          </p>
+
         </section>
       ) : null}
 
@@ -904,10 +892,13 @@ export function RelationshipCenter({
                   onClick={() => {
                     setDraftBody(tpl.body);
                     setDraftChannel(tpl.channel);
-                    setTab("campaigns");
+                    setNotice(
+                      "Texto do modelo copiado para uso no WhatsApp Web (contato individual). Campanhas em massa ficam para uma versão futura.",
+                    );
+                    setTab("contact");
                   }}
                 >
-                  Usar modelo
+                  Usar no WhatsApp Web
                 </button>
               </li>
             ))}
@@ -916,273 +907,15 @@ export function RelationshipCenter({
       ) : null}
 
       {tab === "campaigns" ? (
-        <section className="space-y-4">
-          <div className="card space-y-3">
-            <h2 className="text-base font-semibold text-lotus-900">Criar / preparar campanha</h2>
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="text-sm">
-                Nome
-                <input className={fieldClass} value={draftName} onChange={(e) => setDraftName(e.target.value)} />
-              </label>
-              <label className="text-sm">
-                Objetivo
-                <select className={fieldClass} value={draftObjective} onChange={(e) => setDraftObjective(e.target.value)}>
-                  <option value="relationship">Relacionamento</option>
-                  <option value="birthday">Aniversário</option>
-                  <option value="return">Retorno</option>
-                  <option value="campaign">Divulgação</option>
-                  <option value="procedure_promo">Procedimento</option>
-                  <option value="event">Evento</option>
-                  <option value="course">Curso</option>
-                  <option value="institutional">Institucional</option>
-                  <option value="administrative">Administrativo</option>
-                </select>
-              </label>
-              <label className="text-sm">
-                Canal
-                <select
-                  className={fieldClass}
-                  value={draftChannel}
-                  onChange={(e) => setDraftChannel(e.target.value as RelationshipChannel)}
-                >
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="email">E-mail</option>
-                  <option value="push">Push</option>
-                </select>
-              </label>
-              <label className="text-sm">
-                Público
-                <select
-                  className={fieldClass}
-                  value={draftFilter}
-                  onChange={(e) => setDraftFilter(e.target.value as AudienceFilter)}
-                >
-                  {Object.entries(AUDIENCE_FILTER_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {draftFilter === "combined" ? (
-                <div className="grid gap-2 sm:grid-cols-2 md:col-span-2">
-                  {(
-                    [
-                      ["inactive_12m", "Sem consulta ≥ 12 meses"],
-                      ["birthday", "Aniversário"],
-                      ["no_upcoming", "Sem agendamento futuro"],
-                      ["opportunity_pending", "Oportunidade pendente"],
-                      ["has_phone", "Tem WhatsApp/telefone"],
-                      ["opt_in", "Sem opt-out"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(combinedFilters[key])}
-                        onChange={(e) =>
-                          setCombinedFilters((prev) => ({ ...prev, [key]: e.target.checked }))
-                        }
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              ) : null}
-              <label className="text-sm md:col-span-2">
-                Mensagem
-                <textarea className={fieldClass} rows={5} value={draftBody} onChange={(e) => setDraftBody(e.target.value)} />
-              </label>
-            </div>
-            <button type="button" className={buttonClass} disabled={busy} onClick={() => void onCreateCampaign()}>
-              Criar e montar audiência
-            </button>
-          </div>
-
-          {activeCampaign ? (
-            <div className="card space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-base font-semibold text-lotus-900">{activeCampaign.name}</h3>
-                  <p className="text-sm text-lotus-600">
-                    {CAMPAIGN_STATUS_LABEL[activeCampaign.status]} · {activeCampaign.channel}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    disabled={busy}
-                    onClick={() =>
-                      void duplicateCampaign(supabase, activeCampaign.id).then(async (result) => {
-                        if (result.error) setError(result.error);
-                        else {
-                          setNotice("Campanha duplicada em rascunho.");
-                          await reload();
-                          if (result.campaign) setActiveCampaign(result.campaign);
-                        }
-                      })
-                    }
-                  >
-                    Duplicar
-                  </button>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    disabled={busy || activeCampaign.status === "CANCELLED"}
-                    onClick={() => void cancelCampaign(supabase, activeCampaign.id).then(reload)}
-                  >
-                    Cancelar rascunho
-                  </button>
-                </div>
-              </div>
-
-              {audienceSummary ? (
-                <p className="text-sm text-lotus-800">
-                  {String(audienceSummary.selected)} selecionadas · {String(audienceSummary.eligible)} elegíveis ·{" "}
-                  {String(audienceSummary.ineligible)} não elegíveis
-                  {audienceSummary.ineligible_reasons
-                    ? ` (${summarizeIneligibleReasons(audienceSummary.ineligible_reasons as Record<string, unknown>)})`
-                    : ""}
-                </p>
-              ) : null}
-              {overlapNotice ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                  Paciente já incluída em campanha semelhante. {overlapNotice}
-                </p>
-              ) : null}
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-lotus-800">
-                    Audiência · {eligibleCount} elegíveis · {blockedCount} bloqueadas
-                  </p>
-                  <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-lotus-100">
-                    <table className="min-w-full text-left text-sm">
-                      <thead className="bg-lotus-50 text-lotus-600">
-                        <tr>
-                          <th className="px-3 py-2">Paciente</th>
-                          <th className="px-3 py-2">Status</th>
-                          <th className="px-3 py-2" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {audience.map((row) => (
-                          <tr key={row.patientId} className="border-t border-lotus-50">
-                            <td className="px-3 py-2">{row.patientName || row.patientId}</td>
-                            <td className="px-3 py-2">
-                              {row.eligibilityStatus === "eligible"
-                                ? "Elegível"
-                                : row.exclusionReason || "Inelegível"}
-                            </td>
-                            <td className="px-3 py-2">
-                              <button
-                                type="button"
-                                className={ghostButtonClass}
-                                onClick={() => void onRemovePatient(row.patientId)}
-                              >
-                                Remover
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <input
-                      className={fieldClass}
-                      placeholder="Buscar paciente"
-                      value={patientQuery}
-                      onChange={(e) => setPatientQuery(e.target.value)}
-                    />
-                    <button type="button" className={ghostButtonClass} onClick={() => void onSearchPatients()}>
-                      Buscar
-                    </button>
-                  </div>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    {patientHits.map((hit) => (
-                      <li key={hit.id} className="flex flex-wrap items-center justify-between gap-2">
-                        <span>
-                          {hit.fullName}
-                          {hit.phone ? ` · ${hit.phone}` : ""}
-                        </span>
-                        <button type="button" className={ghostButtonClass} onClick={() => void onAddPatient(hit.id)}>
-                          Adicionar
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-lotus-800">Prévia personalizada</p>
-                  {preview ? (
-                    <div className="mt-2 space-y-2 rounded-xl border border-lotus-100 bg-lotus-50/50 px-4 py-3 text-sm text-lotus-900">
-                      <p>
-                        Paciente: <strong>{preview.patientName}</strong>
-                      </p>
-                      <p>Canal: {preview.channel}</p>
-                      <p className="whitespace-pre-wrap">{preview.renderedMessage}</p>
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        <button
-                          type="button"
-                          className={ghostButtonClass}
-                          disabled={previewOffset <= 0}
-                          onClick={() => void onShiftPreview(-1)}
-                        >
-                          Anterior
-                        </button>
-                        <button
-                          type="button"
-                          className={ghostButtonClass}
-                          disabled={previewOffset >= previewTotal - 1}
-                          onClick={() => void onShiftPreview(1)}
-                        >
-                          Próxima
-                        </button>
-                        <span className="text-xs text-lotus-600">
-                          {previewTotal ? previewOffset + 1 : 0}/{previewTotal}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-lotus-600">Sem audiência para prévia.</p>
-                  )}
-                  <p className="mt-3 text-xs text-amber-900">
-                    O botão abaixo prepara o lote. Não envia WhatsApp real.
-                  </p>
-                  <button
-                    type="button"
-                    className={`${buttonClass} mt-3`}
-                    disabled={busy || eligibleCount === 0 || Boolean(activeCampaign.audienceFrozenAt)}
-                    onClick={() => void onConfirmPrepare()}
-                  >
-                    Preparar lote (SIMULAÇÃO — NÃO ENVIADO)
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="card">
-            <h3 className="text-base font-semibold text-lotus-900">Campanhas recentes</h3>
-            <ul className="mt-3 space-y-2 text-sm">
-              {campaigns.map((camp) => (
-                <li key={camp.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-lotus-100 px-3 py-2">
-                  <div>
-                    <p className="font-semibold text-lotus-900">{camp.name}</p>
-                    <p className="text-lotus-600">
-                      {CAMPAIGN_STATUS_LABEL[camp.status]} · {formatDateTime(camp.createdAt)}
-                    </p>
-                  </div>
-                  <button type="button" className={ghostButtonClass} onClick={() => setActiveCampaign(camp)}>
-                    Abrir
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <section className="card space-y-3 text-sm text-lotus-800">
+          <h2 className="text-base font-semibold text-lotus-900">Campanhas</h2>
+          <p>
+            Campanhas em massa não fazem parte da V1 apresentada aos clientes. Use a fila{" "}
+            <strong>Para contatar</strong> com WhatsApp Web para contatos individuais.
+          </p>
+          <button type="button" className={buttonClass} onClick={() => setTab("contact")}>
+            Ir para contatos
+          </button>
         </section>
       ) : null}
 
@@ -1216,11 +949,16 @@ export function RelationshipCenter({
             Opt-out de campanhas não bloqueia comunicações administrativas necessárias.
           </p>
           <label className="block text-sm">
-            Patient ID
-            <input className={fieldClass} value={prefPatientId} onChange={(e) => setPrefPatientId(e.target.value)} />
+            Código da paciente
+            <input
+              className={fieldClass}
+              value={prefPatientId}
+              onChange={(e) => setPrefPatientId(e.target.value)}
+              placeholder="Informado pela administração"
+            />
           </label>
           <button type="button" className={buttonClass} disabled={busy} onClick={() => void onOptOut()}>
-            Registrar opt-out de campanhas
+            Registrar opt-out de contato promocional
           </button>
         </section>
       ) : null}

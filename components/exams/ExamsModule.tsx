@@ -231,9 +231,9 @@ export function ExamsModule() {
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Médico</p>
         <h1 className="page-title mt-1">Exames</h1>
         <p className="page-sub mt-2">
-          Pedidos clínicos e resultados/anexos são objetos distintos. Novo pedido exige atendimento
-          aberto (RPC C040.9 — sem encounter artificial nesta tela). SNCR e ICP-Brasil não fazem
-          parte deste módulo.
+          Pedidos e resultados/anexos são coisas distintas. Para um <strong>novo pedido</strong>,
+          abra primeiro o atendimento da paciente na Agenda ou no prontuário. Receita digital
+          regulatória (SNCR) e assinatura ICP-Brasil não fazem parte desta versão.
         </p>
       </header>
 
@@ -398,10 +398,10 @@ export function ExamsModule() {
         <section className="card mt-4">
           <h2 className="text-base font-semibold text-lotus-900">Novo pedido</h2>
           {openEncounters.length === 0 ? (
-            <div className="mt-3 space-y-2 text-sm text-lotus-700">
+            <div className="mt-3 space-y-3 text-sm text-lotus-700">
               <p>
-                Não há atendimento aberto para esta paciente. O pedido de exames da arquitetura
-                atual exige encounter aberto — sem criar encounter artificial nesta tela.
+                Não há atendimento em andamento para esta paciente. Inicie ou abra o atendimento
+                na Agenda (ou no prontuário) e volte aqui para montar o pedido.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link href="/app/agenda" className={buttonClass}>

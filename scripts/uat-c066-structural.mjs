@@ -72,10 +72,18 @@ ok("resolveAuthenticatedPath evita legado", paths.includes("isLegacyPortalPath(p
 
 // WhatsApp / Central
 ok("wa.me URL builder", waUrl.includes("wa.me"));
-ok("Central sem SENT/DELIVERED/READ como status real", relationship.includes("SENT, DELIVERED ou READ") || relationship.includes("SENT") && relationship.includes("NÃO ENVIADO"));
 ok("Central declara WhatsApp Web", /WhatsApp Web/i.test(relationship));
-ok("Central campanhas como simulação", /simulação|SIMULAÇÃO|NÃO ENVIADO/i.test(relationship));
-ok("Botão campanha marcado simulação", relationship.includes("Campanhas (simulação)"));
+ok(
+  "Central sem status de entrega falso na UI V1",
+  !/SENT|DELIVERED|READ/.test(relationship) ||
+    /não há confirmação de enviado|não fazem parte da V1/i.test(relationship),
+);
+// C068 ocultou campanhas da navegação V1; aceitar ocultas OU marcadas simulação.
+ok(
+  "Campanhas não aparentam envio real na V1",
+  !/\["campaigns", "Campanhas"\]/.test(relationship) ||
+    /simulação|SIMULAÇÃO|NÃO ENVIADO|não fazem parte da V1/i.test(relationship),
+);
 
 // Docs produção
 ok("C063 docs aponta thvp oficial", c063.includes("sistema.thvp.cloud") && /legado|paralelo/i.test(c063));

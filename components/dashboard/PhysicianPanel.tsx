@@ -57,8 +57,8 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
       setLoading(false);
       setError(
         !practiceId || !professionalId
-          ? "Vínculo profissional não encontrado para montar o painel do dia."
-          : "Autenticação não configurada.",
+          ? "Seu perfil profissional ainda não está configurado. Peça à administração da clínica para vincular você como profissional nesta unidade."
+          : "Não foi possível conectar ao sistema. Tente entrar novamente.",
       );
       return;
     }

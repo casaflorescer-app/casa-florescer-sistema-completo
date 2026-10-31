@@ -66,8 +66,38 @@ Troca a senha da conta da sessão. Exige cookie válido e linha ativa.
 - 200 `{ "ok": true }` grava um hash Argon2id novo, apaga todas as sessões daquela conta e apaga o cookie. A senha não volta na resposta.
 - 400 pedido inválido. 401 sessão ausente ou senha atual recusada, com a mesma mensagem nos dois casos de senha. 503 sessão da casa desligada. 500 falha interna, sem detalhe do banco.
 
+### `POST /api/casa/password/recover`
+
+Pede a redefinição. Não revela se o e-mail existe.
+
+- Body: `{ "email": "..." }`
+- 200 com a mesma mensagem para qualquer e-mail válido. Sem envio de e-mail, nenhum token é gravado.
+- 400 e-mail inválido. 503 sessão da casa desligada.
+
+### `POST /api/casa/password/reset`
+
+Conclui a redefinição com o token recebido por e-mail, quando o envio existir.
+
+- Body: `{ "token": "...", "newPassword": "..." }`. A nova senha tem no mínimo 8 caracteres.
+- 200 `{ "ok": true }` grava Argon2id e apaga as sessões da conta. A senha não volta na resposta.
+- 400 pedido inválido. 401 token recusado ou expirado. 503 sessão da casa desligada.
+
+### `GET /api/casa/authorization`
+
+Lê o perfil, os papéis e a organização da sessão, com RLS.
+
+- 200 com o contexto de autorização. 401 sem sessão ativa. 503 sessão da casa desligada.
+
+### `POST /api/casa/staff`
+
+Cria um usuário da casa. Só o administrador principal passa. A rota não devolve a senha.
+
+- Body: `email`, `fullName`, `password` (mínimo 8), `organizationId` e `memberships` com `practiceId` e `role` (`admin`, `physician` ou `secretary`).
+- 200 `{ "id": "<uuid>" }`. 400 pedido inválido. 401 sem sessão. 403 a criação foi recusada. 503 sessão da casa desligada.
+
 ## Histórico
 
+- 2026-10-31 — redefinição de senha, leitura de autorização e criação de staff. A `0059` ainda não foi aplicada no BancoFlorescerPP.
 - 2026-10-31 — o cookie da sessão da casa passou a ter identificador. `DELETE` revoga a linha. `POST /api/casa/password` revoga todas as sessões da conta. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.
 - 2026-10-31 — sessão da casa em `/api/casa/session`. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.
 - 2026-10-22 — as duas rotas de transcrição passam a recusar um caminho de áudio que não seja o do registro autenticado.

@@ -58,9 +58,9 @@ Preencha `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_ADMIN_EMAIL`
 
 Com `NEXT_PUBLIC_CASA_AUTH=1`, o login deixa o GoTrue. A senha é conferida com Argon2id em `public.staff_credentials`. O cookie `casa_session` é httpOnly, assinado com `CASA_SESSION_SECRET`, e dura 12 horas. O payload traz a versão, o usuário, o identificador da linha em `public.casa_sessions` e a expiração. Sem esse identificador, o cookie não abre sessão. O middleware aceita a assinatura e não chama o Auth nem o Postgres. A linha é conferida no Node: `getAuthUser` e o layout da equipe recusam o cookie quando a linha foi revogada e `CASA_DATABASE_URL` existe. Sem essa variável, a produção segue no Auth e o layout não manda `/app` para o login só porque a sessão da casa está ausente.
 
-Sair chama `DELETE /api/casa/session`, que revoga aquela linha e apaga o cookie. Trocar a senha em `POST /api/casa/password` confere a senha atual, grava um hash Argon2id novo, apaga todas as linhas daquela conta e apaga o cookie. Cadastro público continua fechado. Redefinição por e-mail fica para quando o envio existir.
+Sair chama `DELETE /api/casa/session`, que revoga aquela linha e apaga o cookie, e em seguida encerra a sessão do Auth. Trocar a senha em `POST /api/casa/password` confere a senha atual, grava um hash Argon2id novo, apaga todas as linhas daquela conta e apaga o cookie. O pedido de nova senha, com o modo da casa ligado, responde sempre a mesma frase e não grava token enquanto não houver envio de e-mail. Cadastro público continua fechado.
 
-A conexão prevista é o papel `casa_login`: login, sem superusuário e sem `BYPASSRLS`, membro de `casa_app` e de `authenticated`. Cada pedido faz `SET LOCAL ROLE authenticated` e, ao devolver a conexão, `RESET ROLE`. `staff_credentials` e `casa_sessions` não ficam legíveis para `authenticated`.
+A conexão prevista é o papel `casa_login`: login, sem superusuário e sem `BYPASSRLS`, membro de `casa_app` e de `authenticated`. Cada pedido grava `app.user_id`, faz `SET LOCAL ROLE authenticated` e, ao devolver a conexão, `RESET ROLE`. `staff_credentials` e `casa_sessions` não ficam legíveis para `authenticated`. A senha desse papel ainda não foi definida. Com `CASA_DATABASE_URL`, uma sessão inválida da casa não cai no Auth. Com `NEXT_PUBLIC_CASA_AUTH=1`, o browser deixa de abrir o cliente Supabase. Só o administrador principal cria usuário. O script `scripts/c083-bootstrap.sql` recusa a execução e não contém senha.
 
 Sem a variável pública, a produção segue no Auth. A variável não foi ligada. `CASA_DATABASE_URL` também não foi gravada no processo de produção.
 
@@ -70,6 +70,7 @@ O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -
 
 ## Histórico
 
+- 2026-10-31 — logout também revoga o cookie da casa. Com o banco da casa configurado, a sessão não volta para o Auth. A senha de `casa_login` ainda não foi definida.
 - 2026-10-31 — o cookie da casa passou a carregar o identificador da linha. Logout e troca de senha revogam essa linha. A produção continua no Auth.
 - 2026-10-31 — sessão da casa no Next, desligada por padrão. O Auth de produção não muda.
 - 2026-10-22 — a casca saiu de `app/template.tsx`, que recriava `<html>` e `<body>` a cada navegação, e foi para `app/(shell)/layout.tsx` (`data-casa="layout-9"`). Sem sessão, ou se a sessão não responde em 8 segundos, a troca para o login é um carregamento inteiro.

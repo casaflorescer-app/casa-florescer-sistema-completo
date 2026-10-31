@@ -34,3 +34,7 @@ revoke all on function public.casa_session_revoke(uuid) from authenticated;
 revoke all on function public.casa_sessions_revoke_user(uuid) from authenticated;
 revoke all on function public.casa_staff_hash(uuid) from authenticated;
 revoke all on function public.casa_password_replace(uuid, text) from authenticated;
+revoke all on function public.casa_password_reset_store(text, text, timestamptz) from authenticated;
+revoke all on function public.casa_password_reset_finish(text, text) from authenticated;
+revoke all on function public.casa_staff_create(text, text, text, uuid, jsonb) from authenticated;
+revoke all on table public.casa_password_resets from authenticated;

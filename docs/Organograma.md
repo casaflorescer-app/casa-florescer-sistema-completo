@@ -16,10 +16,11 @@ Fora desse desenho: funções de borda, pooler, analytics e vector.
 
 ## C076 — schema no banco, produção ainda no desenho acima
 
-O schema está no BancoFlorescerPP. O navegador de produção continua no Caddy e na API. Quando a conexão for autorizada, o Next abre esse database como `casa_login`, que herda `casa_app`. Arquivo clínico fica em volume da VPS e a rota confere `can_read_exam_file` antes de ler. Esse desenho não substitui o organograma de produção.
+O schema `0000`–`0058` está no BancoFlorescerPP. O navegador de produção continua no Caddy e na API. Quando a conexão for autorizada, o Next abre esse database como `casa_login`, que herda `casa_app`, e deixa de chamar a API antiga. Arquivo clínico fica em volume da VPS e a rota confere `can_read_exam_file` antes de ler. A `0059` e a senha de `casa_login` ainda não entraram. Esse desenho não substitui o organograma de produção.
 
 ## Histórico
 
+- 2026-10-31 — com a URL da casa, o Next deixa a API antiga. A URL e a `0059` ainda não foram aplicadas.
 - 2026-10-31 — o papel de conexão previsto passou a ser `casa_login`. O schema está no BancoFlorescerPP e a API de produção não mudou.
 - 2026-10-31 — organograma da casa no Postgres próprio, sem deploy e sem troca da API.
 - 2026-10-21 — organograma da VPS com app, gateway, Auth, API e Storage.

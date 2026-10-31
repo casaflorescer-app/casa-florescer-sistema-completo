@@ -15,8 +15,7 @@ async function casaAuthUser(): Promise<AuthUser | null> {
 }
 
 export async function getAuthUser(): Promise<AuthUser | null> {
-  const casa = await casaAuthUser();
-  if (casa) return casa;
+  if (isCasaDatabaseConfigured()) return casaAuthUser();
 
   const supabase = await createServerSupabase();
   if (!supabase) return null;

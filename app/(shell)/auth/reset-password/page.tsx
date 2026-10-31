@@ -17,12 +17,37 @@ export default function ResetPasswordPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
-    if (password.length < 6) {
-      setError("A senha precisa ter pelo menos 6 caracteres.");
+    if (password.length < 6 || (process.env.NEXT_PUBLIC_CASA_AUTH === "1" && password.length < 8)) {
+      setError(
+        process.env.NEXT_PUBLIC_CASA_AUTH === "1"
+          ? "A senha precisa ter pelo menos 8 caracteres."
+          : "A senha precisa ter pelo menos 6 caracteres.",
+      );
       return;
     }
     if (password !== confirm) {
       setError("As senhas não coincidem.");
+      return;
+    }
+    if (process.env.NEXT_PUBLIC_CASA_AUTH === "1") {
+      const token = new URLSearchParams(window.location.search).get("token") ?? "";
+      setBusy(true);
+      try {
+        const response = await fetch("/api/casa/password/reset", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ token, newPassword: password }),
+        });
+        if (!response.ok) {
+          setError("Não foi possível redefinir a senha.");
+          setBusy(false);
+          return;
+        }
+        router.replace("/login");
+      } catch (err) {
+        setError(mapAuthError(err, "Não foi possível redefinir a senha."));
+        setBusy(false);
+      }
       return;
     }
     if (!isSupabaseConfigured()) {

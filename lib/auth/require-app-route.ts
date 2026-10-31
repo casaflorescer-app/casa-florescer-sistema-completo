@@ -1,12 +1,15 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { canAccessAppPath } from "@/lib/auth/access";
+import { loadCasaAuthorization } from "@/lib/auth/casa-authorization";
 import { loadAuthorizationContext } from "@/lib/auth/authorization";
+import { getAuthUser } from "@/lib/auth/session";
 import {
   APP_PATHNAME_HEADER,
   isProtectedPath,
   isPublicPath,
 } from "@/lib/auth/paths";
+import { isCasaDatabaseConfigured } from "@/lib/db/casa";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 function normalizePath(pathname: string) {
@@ -37,6 +40,15 @@ export async function requireAppRouteAccess(pathnameFromCaller?: string) {
   // /unauthorized não passa por este layout; defesa contra loop se reutilizado.
   if (pathname === "/unauthorized") {
     return null;
+  }
+
+  if (isCasaDatabaseConfigured()) {
+    const casaUser = await getAuthUser();
+    if (!casaUser) return null;
+    const loaded = await loadCasaAuthorization(casaUser.userId, casaUser.email || null);
+    if (loaded.error) return null;
+    if (!canAccessAppPath(loaded.context, pathname)) redirect("/unauthorized");
+    return loaded.context;
   }
 
   const supabase = await createServerSupabase();

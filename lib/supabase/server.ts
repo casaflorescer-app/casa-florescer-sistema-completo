@@ -12,6 +12,7 @@ type CookieToSet = {
 
 export async function createServerSupabase() {
   const jar = cookies();
+  if (process.env.CASA_DATABASE_URL) return null;
   if (!isSupabaseConfigured()) return null;
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

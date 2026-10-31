@@ -20,6 +20,27 @@ export default function EsqueciSenhaPage() {
       setError("Informe o e-mail da conta.");
       return;
     }
+    if (process.env.NEXT_PUBLIC_CASA_AUTH === "1") {
+      setBusy(true);
+      try {
+        const response = await fetch("/api/casa/password/recover", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: value }),
+        });
+        if (!response.ok) {
+          setError("Não foi possível enviar as instruções. Tente novamente.");
+          return;
+        }
+        setSent(true);
+      } catch {
+        setError("Não foi possível enviar as instruções. Tente novamente.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     if (!isSupabaseConfigured()) {
       setError("Autenticação ainda não está configurada neste ambiente.");
       return;

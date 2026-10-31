@@ -135,3 +135,66 @@ export async function replaceStaffPassword(userId: string, passwordHash: string)
     await client.query("select public.casa_password_replace($1, $2)", [userId, passwordHash]);
   });
 }
+
+export async function storePasswordReset(email: string, tokenHash: string, expiresAt: Date) {
+  await withCasaConnection(async (client) => {
+    await client.query("select public.casa_password_reset_store($1, $2, $3)", [
+      email,
+      tokenHash,
+      expiresAt.toISOString(),
+    ]);
+  });
+}
+
+export async function finishPasswordReset(tokenHash: string, passwordHash: string) {
+  await withCasaConnection(async (client) => {
+    await client.query("select public.casa_password_reset_finish($1, $2)", [
+      tokenHash,
+      passwordHash,
+    ]);
+  });
+}
+
+export type StaffMembershipInput = {
+  practiceId: string;
+  role: "admin" | "physician" | "secretary";
+  canScheduleAnyPractice?: boolean;
+};
+
+export async function createStaffAccount(
+  actorId: string,
+  input: {
+    email: string;
+    fullName: string;
+    passwordHash: string;
+    organizationId: string;
+    memberships: StaffMembershipInput[];
+  },
+) {
+  if (!UUID.test(actorId) || !UUID.test(input.organizationId)) {
+    throw new Error("Identificador inválido.");
+  }
+  if (input.memberships.some((item) => !UUID.test(item.practiceId))) {
+    throw new Error("Prática inválida.");
+  }
+  return withCasaConnection(async (client) => {
+    await client.query("select set_config('app.user_id', $1, true)", [actorId]);
+    const result = await client.query<{ casa_staff_create: string }>(
+      "select public.casa_staff_create($1, $2, $3, $4, $5::jsonb)",
+      [
+        input.email,
+        input.fullName,
+        input.passwordHash,
+        input.organizationId,
+        JSON.stringify(
+          input.memberships.map((item) => ({
+            practice_id: item.practiceId,
+            role: item.role,
+            can_schedule_any_practice: item.role === "secretary" && item.canScheduleAnyPractice === true,
+          })),
+        ),
+      ],
+    );
+    return result.rows[0]?.casa_staff_create ?? null;
+  });
+}

@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-31 — C083 no repositório: logout revoga a sessão da casa, a redefinição não revela o e-mail, e só o administrador principal cria usuário. Build do Next concluído. A `0059` não foi aplicada: o comando caiu no Terminal do Mac. Sem `CASA_DATABASE_URL`, sem senha de `casa_login`, sem cadastro real e sem deploy.
 - 2026-10-31 — C082: papéis, migrations `0000`–`0058` e `GRANT` no BancoFlorescerPP. Provas C077 e C082 desfeitas. 102 tabelas em `public`, 0 organizações. `casa_login` sem superusuário e sem `BYPASSRLS`. Sem `CASA_DATABASE_URL`, sem deploy e sem cadastro real. A API `api.thvp.cloud` não foi trocada.
 - 2026-10-31 — C081: catálogo do BancoFlorescerPP lido. `citext`, `btree_gist` e `pgcrypto` disponíveis e não instaladas. Schemas `auth`, `storage` e `extensions` ausentes. 0 tabelas em `public`. Backup, ordem e rollback escritos. Nada foi aplicado.
 - 2026-10-31 — C080: SSH com chave para `deploy` e `root` em `2.25.151.136` recusado (`Permission denied (publickey,password)`). Consultas não rodaram. Extensões seguem sem lista. Nada foi aplicado.

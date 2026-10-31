@@ -269,8 +269,15 @@ Leitura depois dos testes: `citext` 1.8, `btree_gist` 1.8 e `pgcrypto` 1.4 insta
 
 Não houve `CASA_DATABASE_URL`, deploy, organização real, usuário real nem reinício da VPS. `florescerweb`, `florescerapi` e os serviços vizinhos não foram alterados.
 
+## C083 — código pronto, apply ainda não
+
+A `0059` cria a redefinição de senha e a função que só o administrador principal usa para criar usuário. O teste `supabase/tests/c083_login_and_staff.sql` desfaz a transação. O script `scripts/c083-bootstrap.sql` recusa a execução e não tem senha nem pessoa real.
+
+Em 2026-10-31 a tentativa de aplicar isso pelo Terminal caiu na aba local do Mac, não na sessão `root@srv2083061`. A migration não entrou. A senha de `casa_login` não foi definida. `CASA_DATABASE_URL` não foi gravada em lugar nenhum. Nenhuma credencial foi impressa. A produção não mudou.
+
 ## Histórico
 
+- 2026-10-31 — C083 no repositório: criação de staff, redefinição e o Next deixando o cliente antigo quando a casa estiver ligada. Apply no BancoFlorescerPP não ocorreu. Sem senha de `casa_login`, sem `CASA_DATABASE_URL` e sem deploy.
 - 2026-10-31 — C082: schema `0000`–`0058`, papéis e `GRANT` no BancoFlorescerPP. Testes C077 e C082 desfeitos. 102 tabelas, 0 organizações. Sem backup, sem database temporário, sem troca da API e sem deploy.
 - 2026-10-31 — catálogo do BancoFlorescerPP lido: extensões disponíveis e não instaladas, schemas `auth`, `storage` e `extensions` ausentes, 0 tabelas. Backup, ordem e rollback escritos. Sem apply.
 - 2026-10-31 — SSH com chave para `deploy` e `root` na VPS recusado de novo. Consultas do BancoFlorescerPP não rodaram. Sem apply.

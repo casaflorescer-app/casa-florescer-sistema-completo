@@ -19,6 +19,8 @@ import {
   type AuthorizationLoadError,
 } from "@/lib/auth/authorization";
 
+const casaAuth = process.env.NEXT_PUBLIC_CASA_AUTH === "1";
+
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
@@ -39,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authorizationError, setAuthorizationError] =
     useState<AuthorizationLoadError | null>(null);
   const loadSeq = useRef(0);
-  const configured = isSupabaseConfigured();
+  const configured = casaAuth || isSupabaseConfigured();
 
   const clearAuthorization = useCallback(() => {
     loadSeq.current += 1;
@@ -84,6 +86,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (casaAuth) {
+      let cancelled = false;
+      void (async () => {
+        try {
+          const response = await fetch("/api/casa/authorization");
+          if (cancelled) return;
+          if (!response.ok) {
+            setUser(null);
+            clearAuthorization();
+            return;
+          }
+          const body = (await response.json()) as {
+            context?: AuthorizationContext;
+            error?: AuthorizationLoadError | null;
+          };
+          if (cancelled) return;
+          const context = body.context ?? null;
+          setUser(
+            context
+              ? {
+                  userId: context.user.id,
+                  email: context.user.email ?? "",
+                  fullName: context.profile?.fullName || context.user.email || "Usuária",
+                }
+              : null,
+          );
+          setAuthorization(context);
+          setAuthorizationError(body.error ?? null);
+        } catch {
+          if (cancelled) return;
+          setUser(null);
+          clearAuthorization();
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const supabase = createClient();
     if (!supabase) {
       setUser(null);

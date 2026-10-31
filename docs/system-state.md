@@ -116,3 +116,18 @@ n8n · Chatwoot · Evolution — **NÃO INTEGRADOS** no TypeScript da Casa Flore
 1. Operador: Terminal EasyPanel ou SSH → fechar lacunas 1–6.
 2. Atualizar este arquivo só com evidência.
 3. UAT autenticado produção (C069) **após** Hosped.1d PASS.
+
+---
+
+## C076 — leitura do BancoFlorescerPP (2026-10-31)
+
+| Item | Valor | Confiança |
+|---|---|---|
+| Database no serviço `bancoflorescer` | `postgres` e `BancoFlorescerPP` | COMPROVADO (leitura anterior, sem gravação) |
+| `public.organizations` | ausente nos dois databases | COMPROVADO |
+| Tabela com `practice` ou `organ` no nome | nenhuma em `BancoFlorescerPP` | COMPROVADO |
+| `api.thvp.cloud` usa esse database | não | COMPROVADO pela ausência do schema da clínica |
+| Schemas `auth`, `storage`, `extensions` | não listados por nome nesta sessão | INCONCLUSIVO |
+| Apply, usuário, conexão, deploy | não feitos | CONFIRMADO nesta tarefa |
+
+O código da casa está no repositório. A produção continua na API atual.

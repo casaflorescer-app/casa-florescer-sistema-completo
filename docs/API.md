@@ -41,6 +41,24 @@ Transcreve o áudio de uma versão de orientação.
 - O caminho precisa ser exatamente o `audio_storage_path` dessa versão. A gravação do rascunho precisa ser autorizada antes do download.
 - 200, 400, 401, 403, 422 ou 500.
 
+### `POST /api/casa/session`
+
+Entra na sessão da casa quando `CASA_DATABASE_URL` e `CASA_SESSION_SECRET` existem. Sem essas variáveis responde 503 e o login de produção não usa esta rota.
+
+- Body: `{ "email": "...", "password": "..." }`
+- 200 grava o cookie `casa_session`. A senha não volta na resposta.
+- 400 pedido inválido. 401 e-mail ou senha não conferem, com a mesma mensagem nos dois casos. 503 sessão da casa desligada. 500 falha interna, sem detalhe do banco.
+
+### `GET /api/casa/session`
+
+- 200 `{ "id": "<uuid>" }` se o cookie for válido.
+- 401 sem sessão.
+
+### `DELETE /api/casa/session`
+
+Apaga o cookie. 200.
+
 ## Histórico
 
+- 2026-10-31 — sessão da casa em `/api/casa/session`. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.
 - 2026-10-22 — as duas rotas de transcrição passam a recusar um caminho de áudio que não seja o do registro autenticado.

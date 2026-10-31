@@ -33,6 +33,30 @@ export function LoginForm() {
       setError("Informe sua senha.");
       return;
     }
+    if (process.env.NEXT_PUBLIC_CASA_AUTH === "1") {
+      setBusy(true);
+      try {
+        const response = await fetch("/api/casa/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!response.ok) {
+          setError("Não foi possível entrar. Tente novamente.");
+          setBusy(false);
+          return;
+        }
+        const destination = resolveAuthenticatedPath(
+          new URLSearchParams(window.location.search).get("next"),
+        );
+        window.location.assign(destination);
+      } catch (err) {
+        setError(mapAuthError(err, "Não foi possível entrar. Tente novamente."));
+        setBusy(false);
+      }
+      return;
+    }
+
     if (!isSupabaseConfigured()) {
       setError("Autenticação ainda não está configurada neste ambiente.");
       return;

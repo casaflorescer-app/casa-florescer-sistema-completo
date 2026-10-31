@@ -234,7 +234,16 @@ O Next sobe com o usuário `node`. Várias imagens oficiais do Supabase ainda ro
 
 O `npm run build` avisa que `next@14.2.15` tem uma atualização de segurança publicada. A imagem usa a versão que já está no `package.json`. Trocar o Next fica para uma tarefa própria, com teste do app.
 
+## C076 — BancoFlorescerPP
+
+O banco de destino é o nome `BancoFlorescerPP` no serviço EasyPanel `bancoflorescer`. A API `api.thvp.cloud` não usa esse banco: a leitura anterior não encontrou `public.organizations` nem tabela com `practice` ou `organ` no nome. Os schemas `auth`, `storage` e `extensions` não foram listados por nome. O prelúdio os cria se faltarem.
+
+Ainda não há apply, usuário, troca de `CASA_DATABASE_URL` nem deploy. `deploy/apply-migrations.sh` não serve para esse banco: ele entra no container `supabase-db` e abre transação, e `CREATE ROLE` não aceita transação. Os papéis estão em `scripts/c076-roles.sql`.
+
+Variáveis do processo, quando a ligação for autorizada: `CASA_DATABASE_URL` (papel que herda `casa_app`, sem superusuário), `CASA_SESSION_SECRET` (32 caracteres ou mais), `CASA_FILES_ROOT` e, no build, `NEXT_PUBLIC_CASA_AUTH=1`. Nenhuma delas foi gravada no ambiente de produção.
+
 ## Histórico
 
+- 2026-10-31 — prelúdio, papéis e isolamento preparados para o BancoFlorescerPP. Sem apply e sem troca da API.
 - 2026-10-21 — guia da VPS com Caddy, Supabase pinado e bootstrap do primeiro administrador.
 - 2026-10-21 — passo só do banco em `deploy/up-db.sh`, com `sistema.thvp.cloud` e `api.thvp.cloud`.

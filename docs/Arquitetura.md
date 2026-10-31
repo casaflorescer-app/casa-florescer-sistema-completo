@@ -23,6 +23,13 @@ As migrations em `supabase/migrations/` criam o schema e não inserem organizaç
 
 A chave anon vai no browser. A chave `service_role` fica só no `deploy/.env` da VPS e no bootstrap. O container do Next não recebe `service_role`.
 
+## C076 — Postgres próprio, ainda sem troca
+
+O desenho seguinte está no repositório e não está no ar. O browser de produção continua em `api.thvp.cloud`.
+
+O Next passa a ser o único processo com conexão no BancoFlorescerPP, no papel `casa_app`, sem superusuário. Cada pedido grava `app.user_id` e faz `SET ROLE authenticated`. O prelúdio `0000` cria `auth.uid()`, `storage.objects` e `extensions` para as migrations `0001`–`0055` seguirem iguais. `0056` aperta o isolamento das duas práticas. Nada disso foi aplicado.
+
 ## Histórico
 
+- 2026-10-31 — caminho da casa no Next, com prelúdio e isolamento no repositório. Produção segue no Auth e na API.
 - 2026-10-21 — produção definida como Next standalone e Supabase self-hosted atrás do Caddy.

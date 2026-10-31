@@ -54,12 +54,19 @@ A senha é aleatória, aparece uma vez no terminal e não é gravada. Se o Auth 
 
 Preencha `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` e `SMTP_ADMIN_EMAIL` em `deploy/.env` para o e-mail de redefinição de senha. Sem SMTP o primeiro login ainda funciona. Se a senha tiver espaço ou `#`, grave o valor entre aspas simples.
 
+## Sessão da casa
+
+Com `NEXT_PUBLIC_CASA_AUTH=1`, o login deixa o GoTrue. A senha é conferida com Argon2id em `public.staff_credentials`. O cookie `casa_session` é httpOnly, assinado com `CASA_SESSION_SECRET`, e dura 12 horas. O middleware aceita esse cookie e não chama o Auth. Cadastro público continua fechado. Redefinição por e-mail fica para quando o envio existir; até lá a troca é administrativa.
+
+Sem a variável pública, a produção segue no Auth. A variável não foi ligada.
+
 ## Studio
 
 O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -L 8000:127.0.0.1:8000 usuario@2.25.151.136` e, na sua máquina, `http://127.0.0.1:8000`. O gateway pede o usuário e a senha `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD`.
 
 ## Histórico
 
+- 2026-10-31 — sessão da casa no Next, desligada por padrão. O Auth de produção não muda.
 - 2026-10-22 — a casca saiu de `app/template.tsx`, que recriava `<html>` e `<body>` a cada navegação, e foi para `app/(shell)/layout.tsx` (`data-casa="layout-9"`). Sem sessão, ou se a sessão não responde em 8 segundos, a troca para o login é um carregamento inteiro.
 - 2026-10-22 — transcrição de atendimento e de orientação só baixa o áudio cujo caminho é o do registro da sessão. Um caminho diferente responde 403 e não segue para o provedor.
 - 2026-10-22 — a navegação depois do login deixava a tela branca. `/app` passou a manter a casca, o middleware não devolve mais essa rota ao login, e o formulário entra com carregamento inteiro da página.

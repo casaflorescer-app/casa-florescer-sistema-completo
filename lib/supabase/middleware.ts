@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { APP_PATHNAME_HEADER, isPublicPath } from "@/lib/auth/paths";
+import { COOKIE_NAME, openCasaSession } from "@/lib/auth/casa-session";
 import { isSupabaseConfigured } from "./config";
 
 type CookieToSet = {
@@ -30,6 +31,10 @@ export async function updateSession(request: NextRequest): Promise<{
   }
 
   let response = nextWithPathname(request);
+  const casa = await openCasaSession(request.cookies.get(COOKIE_NAME)?.value);
+  if (casa) {
+    return { response, user: { id: casa.userId } as User };
+  }
   if (!isSupabaseConfigured()) return { response, user: null };
 
   const supabase = createServerClient(

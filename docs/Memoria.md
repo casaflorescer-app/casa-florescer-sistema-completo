@@ -1,5 +1,12 @@
 # Memória
 
+## 2026-10-31 — C076 BancoFlorescerPP
+
+- O nome `BancoFlorescerPP` é um database dentro do serviço EasyPanel `bancoflorescer`, ao lado do database `postgres`. A leitura só de `organizations` e de nomes com `practice` ou `organ` voltou vazia. A API que responde em `api.thvp.cloud` não é esse banco. Os schemas `auth`, `storage` e `extensions` não foram listados por nome: o console recusou o `SELECT` nesta sessão. Antes de aplicar, repetir essa lista.
+- `CREATE ROLE` não roda dentro de transação nem de `DO`. Por isso os papéis estão em `scripts/c076-roles.sql` (`\gexec`) e `0000` só segue se eles já existirem. `deploy/apply-migrations.sh` não aponta para este banco.
+- Superusuário ignora RLS. `withCasaUser` recusa `rolsuper` e `rolbypassrls`, grava `app.user_id` e faz `SET LOCAL ROLE authenticated`.
+- `NEXT_PUBLIC_CASA_AUTH` entra no build. Sem ela, o login de produção continua no Auth. Ligar a variável sem o schema aplicado quebra a entrada.
+
 ## 2026-10-21 — Hospedagem self-hosted
 
 - O diretório oficial `supabase/docker` no commit `9b4a47c6dc6a82cec945fc38d59477970cbe8afa` usa Envoy (`api-gw`) com alias de rede `kong`. O Studio não tem porta 54323; ele fica atrás do gateway.
@@ -25,5 +32,6 @@
 
 ## Histórico
 
+- 2026-10-31 — BancoFlorescerPP não tem o schema da clínica; a casa no Next fica no repositório até autorização de apply e de conexão.
 - 2026-10-22 — a casca do documento saiu do template, que remontava a página, e foi para o grupo `(shell)`.
 - 2026-10-21 — registros da preparação da VPS.

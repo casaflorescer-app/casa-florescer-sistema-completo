@@ -14,6 +14,11 @@ Componentes da hospedagem e quem fala com quem.
 
 Fora desse desenho: funções de borda, pooler, analytics e vector.
 
+## C076 — ainda não ligado
+
+Quando a conexão for autorizada, o navegador deixa de falar com a API. O Next abre o BancoFlorescerPP como `casa_app`. Arquivo clínico fica em volume da VPS e a rota confere `can_read_exam_file` antes de ler. Esse desenho está no código e não substitui o organograma de produção.
+
 ## Histórico
 
+- 2026-10-31 — organograma da casa no Postgres próprio, sem deploy e sem troca da API.
 - 2026-10-21 — organograma da VPS com app, gateway, Auth, API e Storage.

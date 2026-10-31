@@ -37,6 +37,11 @@ import {
   type RentalRoomOption,
 } from "@/lib/rentals/types";
 import { LocacoesSubnav } from "@/components/clinic/LocacoesSubnav";
+import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { RowActions } from "@/components/ui/RowActions";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { createClient } from "@/lib/supabase/client";
+import { searchProfessionalOptions } from "@/lib/search/entity-search";
 
 type TabId = "dashboard" | "contracts";
 type FormMode = "create" | "edit" | null;
@@ -261,12 +266,25 @@ export function RentalsModule({
     setError(null);
   }
 
-  function applyProfessional(id: string) {
+  const supabase = useMemo(() => createClient(), []);
+
+  const searchProfessionalsCb = useCallback(
+    async (query: string) => {
+      if (!supabase || !orgId) return [];
+      return searchProfessionalOptions(supabase, query, {
+        organizationId: orgId,
+        limit: 30,
+      });
+    },
+    [orgId, supabase],
+  );
+
+  function applyProfessional(id: string, label?: string) {
     const prof = professionals.find((p) => p.id === id);
     setForm((prev) => ({
       ...prev,
       professionalId: id,
-      tenantName: prof?.fullName ?? prev.tenantName,
+      tenantName: prof?.fullName ?? label ?? prev.tenantName,
       tenantSpecialty: prof?.specialty ?? prev.tenantSpecialty,
     }));
   }
@@ -708,7 +726,12 @@ export function RentalsModule({
               );
             })}
             {contracts.length === 0 ? (
-              <li className="text-sm text-lotus-600">Nenhum contrato encontrado.</li>
+              <li>
+                <EmptyState
+                  title="Ainda não há contratos de locação"
+                  description="Cadastre um contrato para vincular sala e profissional locatário."
+                />
+              </li>
             ) : null}
           </ul>
         </section>
@@ -739,50 +762,52 @@ export function RentalsModule({
             <div className="flex flex-wrap gap-2">
               {canMutate ? (
                 <>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => openEdit(selected)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => {
-                      setShowRenew(true);
-                      setRenewStarts(selected.endsOn
-                        ? (() => {
-                            const d = new Date(`${selected.endsOn}T12:00:00`);
-                            d.setDate(d.getDate() + 1);
-                            return d.toISOString().slice(0, 10);
-                          })()
-                        : "");
-                      setRenewEnds("");
+                  <RowActions
+                    primary={{
+                      id: "edit-contract",
+                      label: "Editar",
+                      onClick: () => openEdit(selected),
+                      variant: "secondary",
                     }}
-                  >
-                    Renovar
-                  </button>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => {
-                      setShowEnd(true);
-                      setActionReason("");
-                    }}
-                  >
-                    Encerrar
-                  </button>
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    onClick={() => {
-                      setShowCancel(true);
-                      setActionReason("");
-                    }}
-                  >
-                    Cancelar
-                  </button>
+                    secondary={[
+                      {
+                        id: "renew",
+                        label: "Renovar",
+                        onClick: () => {
+                          setShowRenew(true);
+                          setRenewStarts(
+                            selected.endsOn
+                              ? (() => {
+                                  const d = new Date(`${selected.endsOn}T12:00:00`);
+                                  d.setDate(d.getDate() + 1);
+                                  return d.toISOString().slice(0, 10);
+                                })()
+                              : "",
+                          );
+                          setRenewEnds("");
+                        },
+                      },
+                      {
+                        id: "end",
+                        label: "Encerrar",
+                        onClick: () => {
+                          setShowEnd(true);
+                          setActionReason("");
+                        },
+                        danger: true,
+                      },
+                      {
+                        id: "cancel",
+                        label: "Cancelar contrato",
+                        onClick: () => {
+                          setShowCancel(true);
+                          setActionReason("");
+                        },
+                        danger: true,
+                      },
+                    ]}
+                    compact={false}
+                  />
                 </>
               ) : null}
               <button
@@ -998,26 +1023,26 @@ export function RentalsModule({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="block text-sm text-lotus-800 md:col-span-2">
               Profissional (cadastro existente)
-              <select
-                className={fieldClass}
+              <EntityCombobox
                 value={form.professionalId}
-                onChange={(e) => applyProfessional(e.target.value)}
-              >
-                <option value="">— Selecionar —</option>
-                {professionals.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.fullName} · {p.specialty}
-                    {p.practiceName ? ` · ${p.practiceName}` : ""}
-                    {!p.isActive ? " (inativa)" : ""}
-                  </option>
-                ))}
-              </select>
+                selectedLabel={
+                  professionals.find((p) => p.id === form.professionalId)?.fullName ??
+                  form.tenantName
+                }
+                onChange={(id, option) => applyProfessional(id, option?.label)}
+                onSearch={searchProfessionalsCb}
+                minChars={2}
+                placeholder="Nome ou registro profissional…"
+                emptyLabel="Nenhum profissional encontrado."
+              />
             </label>
             {form.professionalId ? (
               <div className="md:col-span-2 rounded-lg border border-lotus-100 bg-lotus-50/50 px-3 py-2 text-sm text-lotus-700">
                 {(() => {
                   const p = professionals.find((x) => x.id === form.professionalId);
-                  if (!p) return null;
+                  if (!p) {
+                    return <>Profissional selecionado. Confira nome e especialidade abaixo.</>;
+                  }
                   return (
                     <>
                       Registro: {p.council} · Situação: {p.isActive ? "Ativa" : "Inativa"}
@@ -1047,18 +1072,22 @@ export function RentalsModule({
             </label>
             <label className="block text-sm text-lotus-800 md:col-span-2">
               Sala (sublet)
-              <select
-                className={fieldClass}
+              <EntityCombobox
                 value={form.roomId}
-                onChange={(e) => setForm((f) => ({ ...f, roomId: e.target.value }))}
-              >
-                <option value="">— Selecionar —</option>
-                {rooms.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.code} — {r.name}
-                  </option>
-                ))}
-              </select>
+                selectedLabel={
+                  rooms.find((r) => r.id === form.roomId)
+                    ? `${rooms.find((r) => r.id === form.roomId)!.code} — ${rooms.find((r) => r.id === form.roomId)!.name}`
+                    : undefined
+                }
+                onChange={(id) => setForm((f) => ({ ...f, roomId: id }))}
+                options={rooms.map((r) => ({
+                  id: r.id,
+                  label: `${r.code} — ${r.name}`,
+                  keywords: r.roomKind ?? undefined,
+                }))}
+                placeholder="Nome ou código da sala…"
+                emptyLabel="Nenhuma sala sublet encontrada."
+              />
             </label>
             <label className="block text-sm text-lotus-800">
               Início

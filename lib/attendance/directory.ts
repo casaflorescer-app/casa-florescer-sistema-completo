@@ -499,6 +499,18 @@ export async function listAppointments(
   if (filter.professionalId) {
     query = query.eq("professional_id", filter.professionalId);
   }
+  if (filter.patientId) {
+    query = query.eq("patient_id", filter.patientId);
+  }
+  if (filter.roomId) {
+    query = query.eq("room_id", filter.roomId);
+  }
+  if (filter.procedureId) {
+    query = query.eq("procedure_id", filter.procedureId);
+  }
+  if (filter.kind) {
+    query = query.eq("kind", filter.kind);
+  }
   if (filter.status) {
     const statuses = Array.isArray(filter.status) ? filter.status : [filter.status];
     query = query.in("status", statuses);

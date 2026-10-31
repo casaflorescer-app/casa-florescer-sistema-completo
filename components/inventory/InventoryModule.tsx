@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   StatusMessage,
@@ -10,6 +10,15 @@ import {
 } from "@/components/platform/Ui";
 import { EquipmentPanel } from "@/components/inventory/EquipmentPanel";
 import { RowActions } from "@/components/ui/RowActions";
+import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchField } from "@/components/ui/SearchField";
+import { friendlyError } from "@/lib/ui/friendly-error";
+import { createClient } from "@/lib/supabase/client";
+import {
+  searchInventoryItemOptions,
+  searchLotOptions,
+} from "@/lib/search/entity-search";
 import {
   getItem,
   listBalancesForItem,
@@ -74,8 +83,17 @@ export function InventoryModule({
   const [movements, setMovements] = useState<MovementRow[]>([]);
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [lowOnly, setLowOnly] = useState(false);
+  const [moveItemLabel, setMoveItemLabel] = useState("");
+  const [invItemLabel, setInvItemLabel] = useState("");
+  const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 280);
+    return () => window.clearTimeout(t);
+  }, [search]);
 
   const [selected, setSelected] = useState<ItemRow | null>(null);
   const [balances, setBalances] = useState<BalanceRow[]>([]);
@@ -133,7 +151,7 @@ export function InventoryModule({
         loadStockDashboard(orgId),
         listItems({
           organizationId: orgId,
-          search,
+          search: debouncedSearch || undefined,
           itemClass: classFilter,
         }),
         listWarehouses(orgId),
@@ -163,11 +181,34 @@ export function InventoryModule({
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao carregar estoque.");
+      setError(friendlyError(e, "Não foi possível carregar o estoque."));
     } finally {
       setLoading(false);
     }
-  }, [orgId, search, classFilter, lowOnly, focusItemId]);
+  }, [orgId, debouncedSearch, classFilter, lowOnly, focusItemId]);
+
+  const searchItemsCb = useCallback(
+    async (query: string) => {
+      if (!supabase || !orgId) return [];
+      return searchInventoryItemOptions(supabase, query, {
+        organizationId: orgId,
+        limit: 30,
+      });
+    },
+    [orgId, supabase],
+  );
+
+  const searchLotsCb = useCallback(
+    async (query: string) => {
+      if (!supabase || !moveForm.itemId) return [];
+      return searchLotOptions(supabase, query, {
+        itemId: moveForm.itemId,
+        warehouseId: moveForm.warehouseId || undefined,
+        limit: 30,
+      });
+    },
+    [moveForm.itemId, moveForm.warehouseId, supabase],
+  );
 
   useEffect(() => {
     void refresh();
@@ -247,7 +288,7 @@ export function InventoryModule({
       const found = await getItem(orgId, id);
       setSelected(found);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível salvar o material.");
+      setError(friendlyError(e, "Não foi possível salvar o material."));
     } finally {
       setSaving(false);
     }
@@ -275,7 +316,7 @@ export function InventoryModule({
       setWhForm({ code: "", name: "", notes: "", roomId: "" });
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível salvar o local.");
+      setError(friendlyError(e, "Não foi possível salvar o local."));
     } finally {
       setSaving(false);
     }
@@ -347,7 +388,7 @@ export function InventoryModule({
       }
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha na movimentação.");
+      setError(friendlyError(e, "Não foi possível concluir a movimentação."));
     } finally {
       setSaving(false);
     }
@@ -375,7 +416,7 @@ export function InventoryModule({
       setInvForm({ warehouseId: "", itemId: "", countedQty: "", notes: "" });
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha no inventário.");
+      setError(friendlyError(e, "Não foi possível concluir o inventário."));
     } finally {
       setSaving(false);
     }
@@ -546,15 +587,16 @@ export function InventoryModule({
           )}
 
           <div className="card grid grid-cols-1 gap-3 p-4 md:grid-cols-3">
-            <label className="block text-sm text-lotus-800">
-              Buscar
-              <input
-                className={fieldClass}
+            <div className="block text-sm text-lotus-800">
+              <span className="mb-1 block font-medium">Pesquisar</span>
+              <SearchField
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Nome ou SKU"
+                onChange={setSearch}
+                placeholder="Nome ou SKU…"
+                aria-label="Pesquisar materiais"
+                className="w-full max-w-none"
               />
-            </label>
+            </div>
             <label className="block text-sm text-lotus-800">
               Categoria
               <select
@@ -599,17 +641,54 @@ export function InventoryModule({
                       {ITEM_CLASS_LABEL[item.itemClass]} ·{" "}
                       {fmtQty(item.totalQty ?? 0, item.unit)}
                     </p>
-                    <button
-                      type="button"
-                      className={ghostButtonClass}
-                      onClick={() => setSelected(item)}
-                    >
-                      Detalhes
-                    </button>
+                    <RowActions
+                      primary={{
+                        id: `detail-m-${item.id}`,
+                        label: "Visualizar",
+                        onClick: () => setSelected(item),
+                      }}
+                      secondary={[
+                        {
+                          id: `in-${item.id}`,
+                          label: "Entrada",
+                          onClick: () => {
+                            setSelected(item);
+                            setMoveForm((f) => ({ ...f, itemId: item.id, type: "receipt" }));
+                            setTab("move");
+                          },
+                        },
+                        {
+                          id: `out-${item.id}`,
+                          label: "Saída",
+                          onClick: () => {
+                            setSelected(item);
+                            setMoveForm((f) => ({ ...f, itemId: item.id, type: "exit" }));
+                            setTab("move");
+                          },
+                        },
+                        {
+                          id: `tr-${item.id}`,
+                          label: "Transferir",
+                          onClick: () => {
+                            setSelected(item);
+                            setMoveForm((f) => ({ ...f, itemId: item.id, type: "transfer" }));
+                            setTab("move");
+                          },
+                        },
+                      ]}
+                    />
                   </article>
                 </li>
               );
             })}
+            {items.length === 0 ? (
+              <li>
+                <EmptyState
+                  title="Ainda não há materiais neste resultado"
+                  description="Cadastre um material ou ajuste a pesquisa e os filtros."
+                />
+              </li>
+            ) : null}
           </ul>
 
           <div className="hidden overflow-x-auto md:block">
@@ -621,7 +700,7 @@ export function InventoryModule({
                   <th className="px-2 py-2">Categoria</th>
                   <th className="px-2 py-2">Saldo</th>
                   <th className="px-2 py-2">Mín / Ideal</th>
-                  <th className="px-2 py-2">Ações</th>
+                  <th className="px-2 py-2 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -639,13 +718,51 @@ export function InventoryModule({
                     <td className="px-2 py-3">
                       {fmtQty(item.minQty)} / {fmtQty(item.idealQty)}
                     </td>
-                    <td className="px-2 py-3">
+                    <td className="px-2 py-3 text-right">
                       <RowActions
                         primary={{
                           id: `detail-${item.id}`,
-                          label: "Detalhes",
+                          label: "Visualizar",
                           onClick: () => setSelected(item),
                         }}
+                        secondary={[
+                          {
+                            id: `in-${item.id}`,
+                            label: "Entrada",
+                            onClick: () => {
+                              setSelected(item);
+                              setMoveForm((f) => ({ ...f, itemId: item.id, type: "receipt" }));
+                              setTab("move");
+                            },
+                          },
+                          {
+                            id: `out-${item.id}`,
+                            label: "Saída",
+                            onClick: () => {
+                              setSelected(item);
+                              setMoveForm((f) => ({ ...f, itemId: item.id, type: "exit" }));
+                              setTab("move");
+                            },
+                          },
+                          {
+                            id: `tr-${item.id}`,
+                            label: "Transferir",
+                            onClick: () => {
+                              setSelected(item);
+                              setMoveForm((f) => ({ ...f, itemId: item.id, type: "transfer" }));
+                              setTab("move");
+                            },
+                          },
+                          {
+                            id: `adj-${item.id}`,
+                            label: "Ajuste / inventário",
+                            onClick: () => {
+                              setSelected(item);
+                              setMoveForm((f) => ({ ...f, itemId: item.id, type: "adjust" }));
+                              setTab("move");
+                            },
+                          },
+                        ]}
                       />
                     </td>
                   </tr>
@@ -653,7 +770,12 @@ export function InventoryModule({
               </tbody>
             </table>
             {items.length === 0 ? (
-              <p className="mt-4 text-sm text-lotus-600">Nenhum material encontrado.</p>
+              <div className="mt-4">
+                <EmptyState
+                  title="Ainda não há materiais neste resultado"
+                  description="Cadastre um material ou ajuste a pesquisa e os filtros."
+                />
+              </div>
             ) : null}
           </div>
 
@@ -949,18 +1071,18 @@ export function InventoryModule({
             </label>
             <label className="text-sm">
               Material
-              <select
-                className={fieldClass}
+              <EntityCombobox
                 value={moveForm.itemId}
-                onChange={(e) => setMoveForm((f) => ({ ...f, itemId: e.target.value }))}
-              >
-                <option value="">—</option>
-                {items.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.sku} — {i.name}
-                  </option>
-                ))}
-              </select>
+                selectedLabel={moveItemLabel}
+                onChange={(id, option) => {
+                  setMoveForm((f) => ({ ...f, itemId: id, lotId: "", lotCode: "" }));
+                  setMoveItemLabel(option?.label ?? "");
+                }}
+                onSearch={searchItemsCb}
+                minChars={2}
+                placeholder="Nome ou SKU…"
+                emptyLabel="Nenhum item encontrado."
+              />
             </label>
             <label className="text-sm">
               Local {moveForm.type === "transfer" ? "(origem)" : ""}
@@ -1051,21 +1173,22 @@ export function InventoryModule({
             )}
             {(moveForm.type === "exit" || moveForm.type === "transfer") && (
               <label className="text-sm">
-                Lote (id, se controla lote)
-                <select
-                  className={fieldClass}
+                Lote (se controla lote)
+                <EntityCombobox
                   value={moveForm.lotId}
-                  onChange={(e) => setMoveForm((f) => ({ ...f, lotId: e.target.value }))}
-                >
-                  <option value="">— automático / N/A —</option>
-                  {lots
-                    .filter((l) => l.warehouseId === moveForm.warehouseId)
-                    .map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.lotCode} (val. {l.expiresOn ?? "—"} · {fmtQty(l.qtyOnHand)})
-                      </option>
-                    ))}
-                </select>
+                  selectedLabel={moveForm.lotCode || undefined}
+                  onChange={(id, option) =>
+                    setMoveForm((f) => ({
+                      ...f,
+                      lotId: id,
+                      lotCode: option?.label ?? "",
+                    }))
+                  }
+                  onSearch={searchLotsCb}
+                  minChars={1}
+                  placeholder="Código do lote…"
+                  emptyLabel="Nenhum lote encontrado."
+                />
               </label>
             )}
             <label className="text-sm md:col-span-2">
@@ -1125,18 +1248,18 @@ export function InventoryModule({
             </label>
             <label className="text-sm">
               Material
-              <select
-                className={fieldClass}
+              <EntityCombobox
                 value={invForm.itemId}
-                onChange={(e) => setInvForm((f) => ({ ...f, itemId: e.target.value }))}
-              >
-                <option value="">—</option>
-                {items.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.sku} — {i.name} (sistema: {fmtQty(i.totalQty ?? 0)})
-                  </option>
-                ))}
-              </select>
+                selectedLabel={invItemLabel}
+                onChange={(id, option) => {
+                  setInvForm((f) => ({ ...f, itemId: id }));
+                  setInvItemLabel(option?.label ?? "");
+                }}
+                onSearch={searchItemsCb}
+                minChars={2}
+                placeholder="Nome ou SKU…"
+                emptyLabel="Nenhum item encontrado."
+              />
             </label>
             <label className="text-sm">
               Quantidade física

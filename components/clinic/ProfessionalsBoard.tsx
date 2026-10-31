@@ -120,7 +120,9 @@ export function ProfessionalsBoard() {
 
   return (
     <div className="min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Gestão Clínica</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
+        Pessoas / Profissionais
+      </p>
       <h1 className="page-title mt-1">Profissionais</h1>
       <p className="page-sub mt-2">
         Consulta dos profissionais de saúde (casa ou locatários).{" "}
@@ -131,7 +133,9 @@ export function ProfessionalsBoard() {
       <StatusMessage error={error} />
       {loading ? <p className="mt-6 text-sm text-lotus-600">Carregando profissionais…</p> : null}
       {!loading && !error && rows.length === 0 ? (
-        <section className="card mt-6 text-sm text-lotus-700">Nenhum profissional visível.</section>
+        <section className="card mt-6 text-sm text-lotus-700">
+          Ainda não há profissionais visíveis nesta organização.
+        </section>
       ) : null}
       {!loading && rows.length > 0 ? (
         <ul className="mt-6 grid grid-cols-1 gap-3 xl:grid-cols-2">

@@ -50,7 +50,18 @@ ok("directory: profissionais existentes", directory.includes('from("professional
 ok("directory: salas sublet", directory.includes("sublet_consultorio"));
 ok("types: cents + status", types.includes("monthlyRentCents") && types.includes("scheduled") && types.includes("RENTAL_EXPIRING_SOON_DAYS"));
 ok("PATH_RULES rentals owner|admin", access.includes('prefix: "/app/rentals"') && /prefix:\s*"\/app\/rentals"[\s\S]*owner[\s\S]*admin/.test(access));
-ok("Nav Aluguéis + Contratos", nav.includes("Aluguéis") && nav.includes("Contratos") && nav.includes("/app/rentals"));
+ok(
+  "Aluguéis + Contratos via hub Salas (LocacoesSubnav)",
+  (() => {
+    const sub = read("components/clinic/LocacoesSubnav.tsx");
+    return (
+      /Salas e [Ll]ocações/.test(nav) &&
+      sub.includes("Aluguéis") &&
+      sub.includes("Contratos de locação") &&
+      sub.includes("/app/rentals")
+    );
+  })(),
+);
 ok("canAccessClinicManagement no nav gestão", nav.includes("canAccessClinicManagement") || nav.includes("clinicManagement"));
 ok("Migration 0050 presente", Boolean(mig0050));
 ok("Migration: rental_contract_events", migration.includes("rental_contract_events"));

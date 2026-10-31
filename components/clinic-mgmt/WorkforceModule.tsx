@@ -28,6 +28,7 @@ export function WorkforceModule() {
   const orgId = authorization?.profile?.organizationId ?? null;
   const [rows, setRows] = useState<ClinicWorkforceMember[]>([]);
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,19 +38,24 @@ export function WorkforceModule() {
 
   const stats = useMemo(() => workforceDashboard(rows), [rows]);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(q.trim()), 280);
+    return () => window.clearTimeout(t);
+  }, [q]);
+
   const reload = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
     setError(null);
     try {
-      setRows(await listClinicWorkforce(orgId, { q }));
+      setRows(await listClinicWorkforce(orgId, { q: debouncedQ || undefined }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível carregar funcionários.");
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [orgId, q]);
+  }, [orgId, debouncedQ]);
 
   useEffect(() => {
     void reload();
@@ -97,7 +103,9 @@ export function WorkforceModule() {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Gestão Clínica</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
+        Pessoas / Funcionários
+      </p>
       <h1 className="page-title mt-1">Funcionários e prestadores</h1>
       <p className="page-sub mt-2">
         Pessoas que trabalham ou prestam serviço à clínica. Médicos locatários permanecem em{" "}
@@ -125,7 +133,7 @@ export function WorkforceModule() {
           <div className="flex flex-wrap gap-2">
             <input
               className={fieldClass}
-              placeholder="Pesquisar por nome"
+              placeholder="Nome, função, e-mail ou telefone…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               aria-label="Pesquisar funcionário"

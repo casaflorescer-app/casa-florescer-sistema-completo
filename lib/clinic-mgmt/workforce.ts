@@ -45,7 +45,14 @@ export async function listClinicWorkforce(
     .order("full_name");
   if (opts?.status) query = query.eq("status", opts.status);
   if (opts?.engagementKind) query = query.eq("engagement_kind", opts.engagementKind);
-  if (opts?.q?.trim()) query = query.ilike("full_name", `%${opts.q.trim()}%`);
+  if (opts?.q?.trim()) {
+    const q = opts.q.trim().replace(/[%_\\]/g, "");
+    if (q) {
+      query = query.or(
+        `full_name.ilike.%${q}%,role_title.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`,
+      );
+    }
+  }
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => mapMember(row as Record<string, unknown>));

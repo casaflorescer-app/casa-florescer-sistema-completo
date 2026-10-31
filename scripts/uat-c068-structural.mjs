@@ -36,8 +36,20 @@ ok("Dashboard gestão sem SYSTEM_ADMIN", !dash.includes("SYSTEM_ADMIN"));
 ok("Dashboard gestão sem dump Práticas:", !dash.includes("Práticas:"));
 ok("Dashboard gestão título Gestão da clínica", dash.includes("Gestão da clínica"));
 ok("Dashboard secretaria título Secretaria", dash.includes(">Secretaria<") || dash.includes("Secretaria"));
-ok("Dashboard gestão atalho Relacionamentos", dash.includes("/app/relationship"));
-ok("Dashboard gestão salas/aluguéis", dash.includes("/app/rooms") && dash.includes("/app/rentals"));
+ok("Dashboard gestão atalho Central de Relacionamentos", dash.includes("/app/relationship") && dash.includes("Central de Relacionamentos"));
+ok(
+  "Dashboard gestão Salas e Locações único (sem card Aluguéis separado)",
+  dash.includes("/app/rooms") &&
+    dash.includes("Salas e Locações") &&
+    !dash.includes("Aluguéis e contratos"),
+);
+ok(
+  "Dashboard gestão Pessoas hub (sem Profissionais/Funcionários flat)",
+  dash.includes("/app/people") &&
+    dash.includes('title="Pessoas"') &&
+    !dash.includes('title="Profissionais"') &&
+    !dash.includes('title="Funcionários"'),
+);
 
 ok(
   "PhysicianPanel mensagem amigável sem vínculo",

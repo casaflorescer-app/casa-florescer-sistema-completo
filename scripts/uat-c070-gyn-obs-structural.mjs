@@ -1,5 +1,5 @@
 /**
- * C070 B6 — Gin→Obs estrutural (ação + RPC link pregnancy).
+ * C070 B6 / C2 — Gin→Obs estrutural (ação + conversão obstétrica).
  * Marcador: UAT_C070_GYN_OBS_
  */
 import { readFileSync, existsSync } from "node:fs";
@@ -26,20 +26,38 @@ function read(rel) {
 }
 
 const workspace = read("components/attendance/EncounterWorkspace.tsx");
+const dialog = read("components/attendance/ObstetricConversionDialog.tsx");
+const conversion = read("lib/attendance/obstetric-conversion.ts");
 const directory = read("lib/attendance/directory.ts");
 const classify = read("lib/attendance/assistential-classify.ts");
 
 ok(
   "Ação Alterar para atendimento obstétrico",
-  workspace.includes("Alterar para atendimento obstétrico") &&
-    workspace.includes("convertToObstetricAttendance"),
+  workspace.includes("Alterar para atendimento obstétrico") ||
+    (workspace.includes("openObstetricConversion") &&
+      dialog.includes("Continuar como obstétrico")),
 );
-ok("Confirmação antes de converter", workspace.includes("window.confirm"));
-ok("Atualiza care_specialties obstetrics", workspace.includes('"obstetrics"') && workspace.includes("updatePatient"));
-ok("Usa linkEncounterToPregnancy", workspace.includes("linkEncounterToPregnancy"));
+ok(
+  "Confirmação antes de converter",
+  workspace.includes("ObstetricConversionDialog") &&
+    dialog.includes("onConfirmContinue"),
+);
+ok(
+  "Atualiza care_specialties obstetrics",
+  conversion.includes('"obstetrics"') && conversion.includes("updatePatient"),
+);
+ok(
+  "Usa linkEncounterToPregnancy",
+  conversion.includes("linkEncounterToPregnancy") ||
+    workspace.includes("linkEncounterToPregnancy"),
+);
 ok("RPC link_encounter_to_pregnancy no directory", directory.includes("link_encounter_to_pregnancy"));
-ok("Classificação prioriza obstetrics", classify.includes("if (hasObs) return \"obstetrics\""));
-ok("Não recria appointment na conversão", !/createAppointment/.test(workspace.split("convertToObstetricAttendance")[1]?.slice(0, 1200) ?? "createAppointment"));
+ok("Classificação prioriza obstetrics", classify.includes('if (hasObs) return "obstetrics"'));
+ok(
+  "Não recria appointment na conversão",
+  !conversion.includes("createAppointment") &&
+    !dialog.includes("createAppointment"),
+);
 
 console.log(`\nUAT_C070_GYN_OBS_: ${pass}/${pass + fail}`);
 if (fail > 0) {

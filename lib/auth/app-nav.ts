@@ -32,8 +32,8 @@ const physician = (auth: AuthorizationContext) => hasStaffRole(auth, "physician"
 const clinicManagement = (auth: AuthorizationContext) => canAccessClinicManagement(auth);
 
 /**
- * C041 — ordem fixa: PAINEL → MÉDICO → CENTRAL → GESTÃO CLÍNICA.
- * Gestão Clínica nunca usa só role=physician.
+ * C070-C4.2 — PAINEL → CLÍNICO → RELACIONAMENTOS → GESTÃO → PLATAFORMA.
+ * Hubs: Pessoas, Administração, Plataforma, Salas e Locações, Central.
  */
 export const APP_NAV_SECTIONS: AppNavSection[] = [
   {
@@ -50,7 +50,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   },
   {
     id: "medico",
-    title: "Médico",
+    title: "Clínico",
     items: [
       { id: "agenda", label: "Agenda", href: "/app/agenda", visible: clinicStaff },
       { id: "patients", label: "Pacientes", href: "/app/patients", visible: clinicStaff },
@@ -74,6 +74,7 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
     id: "relacionamentos",
     title: "Relacionamentos",
     items: [
+      // C070-C4.1 — único item da seção.
       {
         id: "relationship-central",
         label: "Central de Relacionamentos",
@@ -84,27 +85,15 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
           hasStaffRole(auth, "admin") ||
           hasStaffRole(auth, "physician"),
       },
-      {
-        id: "relationship-contact",
-        label: "Relacionamentos",
-        href: "/app/relationship?tab=contact",
-        // Mesmo módulo; atalho para a fila operacional.
-        visible: (auth) =>
-          hasStaffRole(auth, "secretary") ||
-          hasStaffRole(auth, "owner") ||
-          hasStaffRole(auth, "admin") ||
-          hasStaffRole(auth, "physician"),
-      },
     ],
   },
   {
     id: "gestao_clinica",
-    title: "Gestão Clínica",
+    title: "Gestão",
     items: [
-      // C070 — um item de menu; subnav Salas | Aluguéis | Contratos de locação nas páginas.
       {
         id: "rooms",
-        label: "Salas e locações",
+        label: "Salas e Locações",
         href: "/app/rooms",
         visible: clinicManagement,
       },
@@ -114,22 +103,11 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
         href: "/app/clinical-contracts",
         visible: clinicManagement,
       },
+      // C070-C4.2 — hub Pessoas (profissionais + especialidades + funcionários).
       {
-        id: "professionals",
-        label: "Profissionais",
-        href: "/app/professionals",
-        visible: clinicManagement,
-      },
-      {
-        id: "specialties",
-        label: "Especialidades",
-        href: "/app/specialties",
-        visible: clinicManagement,
-      },
-      {
-        id: "workforce",
-        label: "Funcionários",
-        href: "/app/workforce",
+        id: "people",
+        label: "Pessoas",
+        href: "/app/people",
         visible: clinicManagement,
       },
       {
@@ -172,33 +150,15 @@ export const APP_NAV_SECTIONS: AppNavSection[] = [
   },
   {
     id: "sistema",
-    title: "Administração da plataforma",
+    title: "Plataforma",
     items: [
+      // C070-C4.2 — único item; orgs/users/audit ficam no hub /app/system.
       {
         id: "system-home",
         label: "Plataforma",
         href: "/app/system",
         visible: (auth) => auth.isSystemAdmin,
       },
-      {
-        id: "system-orgs",
-        label: "Organizações",
-        href: "/app/system/organizations",
-        visible: (auth) => auth.isSystemAdmin,
-      },
-      {
-        id: "system-users",
-        label: "Usuários da plataforma",
-        href: "/app/system/users",
-        visible: (auth) => auth.isSystemAdmin,
-      },
-      {
-        id: "system-audit",
-        label: "Auditoria técnica",
-        href: "/app/system/audit",
-        visible: (auth) => auth.isSystemAdmin,
-      },
-      // C066: system settings placeholder D removido do menu.
     ],
   },
 ];

@@ -28,8 +28,10 @@ import {
   type PrescriptionTemplateRow,
 } from "@/lib/attendance/clinical-support-directory";
 import { buttonClass, ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
+import { EntityCombobox } from "@/components/ui/EntityCombobox";
 import { formatDateTime } from "@/lib/platform/format";
 import { CLINICAL_DOCUMENT_FEATURES } from "@/lib/regulatory/clinical-document-features";
+import { searchInventoryItemOptions } from "@/lib/search/entity-search";
 
 const STATUS_LABEL: Record<PrescriptionRow["status"], string> = {
   draft: "Rascunho",
@@ -64,8 +66,19 @@ export function ClinicalPrescriptionPanel({
   const [templateQuery, setTemplateQuery] = useState("");
   const [showArchivedTemplates, setShowArchivedTemplates] = useState(false);
   const [copyFromId, setCopyFromId] = useState("");
+  const [medicationCatalogId, setMedicationCatalogId] = useState("");
   const [medicationName, setMedicationName] = useState("");
   const [presentation, setPresentation] = useState("");
+
+  const searchMedicationsCb = useCallback(
+    (query: string) =>
+      searchInventoryItemOptions(supabase, query, {
+        organizationId,
+        itemClass: "clinical_lot_controlled",
+        limit: 30,
+      }),
+    [organizationId, supabase],
+  );
   const [quantity, setQuantity] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
@@ -129,6 +142,7 @@ export function ClinicalPrescriptionPanel({
   }, [reload]);
 
   function clearItemForm() {
+    setMedicationCatalogId("");
     setMedicationName("");
     setPresentation("");
     setQuantity("");
@@ -620,7 +634,30 @@ export function ClinicalPrescriptionPanel({
           {isDraft ? (
             <>
               <div className="grid gap-2 sm:grid-cols-2">
-                <input className="rounded-md border border-lotus-200 px-3 py-2 text-sm" placeholder="Medicamento *" value={medicationName} onChange={(e) => setMedicationName(e.target.value)} />
+                <div className="sm:col-span-2">
+                  <EntityCombobox
+                    value={medicationCatalogId}
+                    selectedLabel={medicationName || undefined}
+                    onChange={(id, option) => {
+                      setMedicationCatalogId(id);
+                      if (option?.label) setMedicationName(option.label);
+                      if (option?.description && !presentation.trim()) {
+                        setPresentation(option.description);
+                      }
+                    }}
+                    onSearch={searchMedicationsCb}
+                    minChars={2}
+                    placeholder="Buscar medicamento no estoque (nome ou SKU)…"
+                    emptyLabel="Nenhum medicamento encontrado no estoque."
+                    aria-label="Medicamento"
+                  />
+                </div>
+                <input
+                  className="rounded-md border border-lotus-200 px-3 py-2 text-sm"
+                  placeholder="Medicamento * (ajuste livre se necessário)"
+                  value={medicationName}
+                  onChange={(e) => setMedicationName(e.target.value)}
+                />
                 <input className="rounded-md border border-lotus-200 px-3 py-2 text-sm" placeholder="Apresentação / concentração" value={presentation} onChange={(e) => setPresentation(e.target.value)} />
                 <input className="rounded-md border border-lotus-200 px-3 py-2 text-sm" placeholder="Dose" value={dosage} onChange={(e) => setDosage(e.target.value)} />
                 <input className="rounded-md border border-lotus-200 px-3 py-2 text-sm" placeholder="Via" value={route} onChange={(e) => setRoute(e.target.value)} />

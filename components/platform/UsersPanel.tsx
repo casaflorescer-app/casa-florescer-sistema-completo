@@ -141,7 +141,7 @@ export function UsersPanel() {
     <div>
       <PlatformBanner
         title="Usuários da plataforma"
-        description="Contas de profiles. Sem criação de Auth, sem senha e sem dados clínicos. SYSTEM_ADMIN só por RPC."
+        description="Contas de perfil da plataforma. Sem criação de login, sem senha e sem dados clínicos. Elevação a administrador da plataforma apenas por operação técnica autorizada."
       />
       <StatusMessage error={error} notice={notice} />
 

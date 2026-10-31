@@ -6,7 +6,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { hasStaffRole } from "@/lib/auth/access";
 import { usePracticeUi } from "@/components/layout/PracticeUi";
-import { StatusMessage, buttonClass } from "@/components/platform/Ui";
+import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   appointmentRecordArrival,
@@ -26,13 +27,12 @@ import {
   type OperationalAppointmentStatus,
 } from "@/lib/attendance/directory";
 import { parseReturnOfNote } from "@/lib/attendance/return-link";
-import { listPatients, type PatientListRow } from "@/lib/patients/directory";
 import { listProfessionalLabels, type ProfessionalLabel } from "@/lib/pregnancies/directory";
-import type { AppointmentStatus } from "@/lib/types/database";
+import type { AppointmentKind, AppointmentStatus } from "@/lib/types/database";
 import { dateRangeBoundsIso, todayInputDate } from "@/components/attendance/agenda-display";
 import { AgendaDayBoard } from "@/components/attendance/AgendaDayBoard";
 import { AgendaFilters } from "@/components/attendance/AgendaFilters";
-import { AppointmentForm, type AgendaProcedureOption, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
+import { AppointmentForm, type AgendaRoomOption } from "@/components/attendance/AppointmentForm";
 import { EditAppointmentForm } from "@/components/attendance/EditAppointmentForm";
 import { AgendaBlockForm } from "@/components/attendance/AgendaBlockForm";
 import { AgendaBlockBanner } from "@/components/attendance/AgendaBlockBanner";
@@ -64,19 +64,27 @@ export function AgendaPage() {
   const today = todayInputDate();
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
+  const [patientFilterId, setPatientFilterId] = useState("");
+  const [patientFilterLabel, setPatientFilterLabel] = useState("");
   const [professionalId, setProfessionalId] = useState("");
+  const [professionalLabel, setProfessionalLabel] = useState("");
+  const [roomFilterId, setRoomFilterId] = useState("");
+  const [roomFilterLabel, setRoomFilterLabel] = useState("");
+  const [procedureFilterId, setProcedureFilterId] = useState("");
+  const [procedureFilterLabel, setProcedureFilterLabel] = useState("");
+  const [kindFilter, setKindFilter] = useState<AppointmentKind | "">("");
   const [status, setStatus] = useState<AppointmentStatus | "">("");
   const [rows, setRows] = useState<AppointmentRow[]>([]);
   const [predictions, setPredictions] = useState<Map<string, AppointmentPredictionView>>(
     () => new Map(),
   );
   const [blocks, setBlocks] = useState<AgendaBlockRow[]>([]);
-  const [patients, setPatients] = useState<PatientListRow[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalLabel[]>([]);
   const [rooms, setRooms] = useState<AgendaRoomOption[]>([]);
-  const [procedures, setProcedures] = useState<AgendaProcedureOption[]>([]);
   const [occupancy, setOccupancy] = useState<RoomOccupancy[]>([]);
   const [procedureNames, setProcedureNames] = useState<Map<string, string>>(new Map());
+  const [patientNames, setPatientNames] = useState<Map<string, string>>(() => new Map());
+  const [seedPatientLabel, setSeedPatientLabel] = useState("");
   const [showForm, setShowForm] = useState(Boolean(returnOfFromQuery || patientIdFromQuery));
   const [showBlockForm, setShowBlockForm] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
@@ -95,12 +103,6 @@ export function AgendaPage() {
   const organizationId =
     membership?.practice?.organizationId ?? authorization?.profile?.organizationId ?? null;
   const userId = authorization?.user.id ?? null;
-
-  const patientNames = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const item of patients) map.set(item.id, item.fullName);
-    return map;
-  }, [patients]);
 
   const professionalNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -141,11 +143,10 @@ export function AgendaPage() {
       setRows([]);
       setPredictions(new Map());
       setBlocks([]);
-      setPatients([]);
       setProfessionals([]);
       setRooms([]);
-      setProcedures([]);
       setOccupancy([]);
+      setPatientNames(new Map());
       setLoading(false);
       setError(authorization ? "Nenhuma prática selecionada." : null);
       return;
@@ -161,51 +162,43 @@ export function AgendaPage() {
     setLoading(true);
     void (async () => {
       try {
-        const [
-          appointmentRows,
-          patientRows,
-          professionalRows,
-          roomResult,
-          procedureResult,
-          occupancyResult,
-          blockResult,
-        ] = await Promise.all([
-          listAppointments(supabase, {
-            practiceId: selectedPracticeId,
-            from: bounds.from,
-            to: bounds.to,
-            professionalId: professionalId || undefined,
-            status: status || undefined,
-          }),
-          listPatients(supabase),
-          listProfessionalLabels(supabase, selectedPracticeId),
-          supabase
-            .from("rooms")
-            .select("id, name, code, status, room_kind, is_house")
-            .eq("organization_id", organizationId)
-            .eq("status", "active")
-            .order("name"),
-          supabase
-            .from("procedures")
-            .select("id, name, practice_id, is_shared, organization_id")
-            .eq("organization_id", organizationId)
-            .order("name"),
-          supabase
-            .from("room_occupancy_labels")
-            .select("room_id, organization_id, professional_id, professional_name, occupancy")
-            .eq("organization_id", organizationId),
-          listAgendaBlocksForDay(supabase, {
-            practiceId: selectedPracticeId,
-            from: bounds.from,
-            to: bounds.to,
-          }),
-        ]);
+        const [appointmentRows, professionalRows, roomResult, occupancyResult, blockResult] =
+          await Promise.all([
+            listAppointments(supabase, {
+              practiceId: selectedPracticeId,
+              from: bounds.from,
+              to: bounds.to,
+              professionalId: professionalId || undefined,
+              patientId: patientFilterId || undefined,
+              roomId: roomFilterId || undefined,
+              procedureId: procedureFilterId || undefined,
+              kind: kindFilter || undefined,
+              status: status || undefined,
+            }),
+            listProfessionalLabels(supabase, selectedPracticeId),
+            supabase
+              .from("rooms")
+              .select("id, name, code, status, room_kind, is_house")
+              .eq("organization_id", organizationId)
+              .eq("status", "active")
+              .order("name"),
+            supabase
+              .from("room_occupancy_labels")
+              .select("room_id, organization_id, professional_id, professional_name, occupancy")
+              .eq("organization_id", organizationId),
+            listAgendaBlocksForDay(supabase, {
+              practiceId: selectedPracticeId,
+              from: bounds.from,
+              to: bounds.to,
+            }),
+          ]);
         if (cancelled) return;
         const procedureIds = [
           ...new Set(
             appointmentRows.flatMap((row) => (row.procedureId ? [row.procedureId] : [])),
           ),
         ];
+        const patientIds = [...new Set(appointmentRows.map((row) => row.patientId))];
         const names = new Map<string, string>();
         if (procedureIds.length > 0) {
           const procedures = await supabase.from("procedures").select("id, name").in("id", procedureIds);
@@ -216,8 +209,24 @@ export function AgendaPage() {
             }
           }
         }
+        const nextPatientNames = new Map<string, string>();
+        if (patientIds.length > 0) {
+          const patientsResult = await supabase
+            .from("patients")
+            .select("id, full_name")
+            .in("id", patientIds);
+          if (!patientsResult.error) {
+            for (const item of patientsResult.data ?? []) {
+              const record = item as { id?: string; full_name?: string };
+              if (record.id && record.full_name?.trim()) {
+                nextPatientNames.set(record.id, record.full_name.trim());
+              }
+            }
+          }
+        }
         if (cancelled) return;
         setProcedureNames(names);
+        setPatientNames(nextPatientNames);
         if (roomResult.error) {
           setRooms([]);
           setError("Não foi possível carregar as salas.");
@@ -238,21 +247,6 @@ export function AgendaPage() {
                 return row ? [row] : [];
               }),
         );
-        setProcedures(
-          procedureResult.error
-            ? []
-            : (procedureResult.data ?? []).flatMap((item) => {
-                const record = item as Record<string, unknown>;
-                const id = typeof record.id === "string" ? record.id : null;
-                const name = typeof record.name === "string" ? record.name.trim() : "";
-                const procedurePracticeId = typeof record.practice_id === "string" ? record.practice_id : null;
-                const shared = record.is_shared === true;
-                if (!id || !name) return [];
-                if (procedurePracticeId !== selectedPracticeId && !shared) return [];
-                return [{ id, name }];
-              }),
-        );
-        setPatients(patientRows);
         setProfessionals(professionalRows);
         setRows(appointmentRows);
         setBlocks(blockResult.blocks);
@@ -301,10 +295,38 @@ export function AgendaPage() {
     supabase,
     organizationId,
     professionalId,
+    patientFilterId,
+    roomFilterId,
+    procedureFilterId,
+    kindFilter,
     reloadKey,
     selectedPracticeId,
     status,
   ]);
+
+  useEffect(() => {
+    if (!supabase || !patientIdFromQuery) {
+      setSeedPatientLabel("");
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("patients")
+      .select("id, full_name")
+      .eq("id", patientIdFromQuery)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const name =
+          data && typeof (data as { full_name?: unknown }).full_name === "string"
+            ? String((data as { full_name: string }).full_name).trim()
+            : "";
+        setSeedPatientLabel(name);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [patientIdFromQuery, supabase]);
 
   const labeledRows = useMemo(() => rows.map(labelRow), [labelRow, rows]);
 
@@ -500,7 +522,7 @@ export function AgendaPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className={buttonClass}
+            className={ghostButtonClass}
             disabled={!canCreate || formBusy || Boolean(editingId) || showForm}
             onClick={() => {
               setEditingId(null);
@@ -520,29 +542,70 @@ export function AgendaPage() {
               setShowForm((open) => !open);
             }}
           >
+            <Plus className="h-4 w-4" aria-hidden />
             Novo atendimento
           </button>
         </div>
       </div>
 
-      <AgendaFilters
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        professionalId={professionalId}
-        status={status}
-        professionals={professionals}
-        onDateFromChange={(value) => {
-          setDateFrom(value);
-          if (dateTo < value) setDateTo(value);
-        }}
-        onDateToChange={setDateTo}
-        onRangeChange={(from, to) => {
-          setDateFrom(from);
-          setDateTo(to);
-        }}
-        onProfessionalChange={setProfessionalId}
-        onStatusChange={setStatus}
-      />
+      {supabase && organizationId && selectedPracticeId ? (
+        <AgendaFilters
+          supabase={supabase}
+          organizationId={organizationId}
+          practiceId={selectedPracticeId}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          patientId={patientFilterId}
+          patientLabel={patientFilterLabel}
+          professionalId={professionalId}
+          professionalLabel={professionalLabel}
+          roomId={roomFilterId}
+          roomLabel={roomFilterLabel}
+          procedureId={procedureFilterId}
+          procedureLabel={procedureFilterLabel}
+          kind={kindFilter}
+          status={status}
+          onDateFromChange={(value) => {
+            setDateFrom(value);
+            if (dateTo < value) setDateTo(value);
+          }}
+          onDateToChange={setDateTo}
+          onRangeChange={(from, to) => {
+            setDateFrom(from);
+            setDateTo(to);
+          }}
+          onPatientChange={(id, label) => {
+            setPatientFilterId(id);
+            setPatientFilterLabel(label);
+          }}
+          onProfessionalChange={(id, label) => {
+            setProfessionalId(id);
+            setProfessionalLabel(label);
+          }}
+          onRoomChange={(id, label) => {
+            setRoomFilterId(id);
+            setRoomFilterLabel(label);
+          }}
+          onProcedureChange={(id, label) => {
+            setProcedureFilterId(id);
+            setProcedureFilterLabel(label);
+          }}
+          onKindChange={setKindFilter}
+          onStatusChange={setStatus}
+          onClearFilters={() => {
+            setPatientFilterId("");
+            setPatientFilterLabel("");
+            setProfessionalId("");
+            setProfessionalLabel("");
+            setRoomFilterId("");
+            setRoomFilterLabel("");
+            setProcedureFilterId("");
+            setProcedureFilterLabel("");
+            setKindFilter("");
+            setStatus("");
+          }}
+        />
+      ) : null}
 
       {showBlockForm && supabase && organizationId && selectedPracticeId ? (
         <AgendaBlockForm
@@ -571,14 +634,13 @@ export function AgendaPage() {
           practiceId={selectedPracticeId}
           createdBy={userId}
           defaultDate={dateFrom}
-          patients={patients}
           professionals={professionals}
           rooms={rooms}
-          procedures={procedures}
           occupancy={occupancy}
           busy={formBusy}
           onBusy={setFormBusy}
           initialPatientId={patientIdFromQuery ?? ""}
+          initialPatientLabel={seedPatientLabel}
           returnOfEncounterId={returnOfFromQuery}
           onCancel={() => setShowForm(false)}
           onCreated={(message, bookedDate) => {
@@ -589,6 +651,12 @@ export function AgendaPage() {
             setDateFrom(bookedDate);
             setDateTo(bookedDate);
             setProfessionalId("");
+            setProfessionalLabel("");
+            setPatientFilterId("");
+            setPatientFilterLabel("");
+            setRoomFilterId("");
+            setRoomFilterLabel("");
+            setKindFilter("");
             setStatus("");
             setReloadKey((value) => value + 1);
             if (returnOfFromQuery || patientIdFromQuery) {
@@ -598,15 +666,15 @@ export function AgendaPage() {
         />
       ) : null}
 
-      {editingRow && supabase ? (
+      {editingRow && supabase && organizationId && selectedPracticeId ? (
         <EditAppointmentForm
           key={editingRow.id}
           supabase={supabase}
+          organizationId={organizationId}
+          practiceId={selectedPracticeId}
           appointment={editingRow}
-          patients={patients}
           professionals={professionals}
           rooms={rooms}
-          procedures={procedures}
           occupancy={occupancy}
           busy={formBusy}
           onBusy={setFormBusy}
@@ -617,6 +685,7 @@ export function AgendaPage() {
             setDateFrom(bookedDate);
             setDateTo(bookedDate);
             setProfessionalId("");
+            setProfessionalLabel("");
             setStatus("");
             setReloadKey((value) => value + 1);
           }}

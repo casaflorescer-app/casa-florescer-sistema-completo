@@ -34,10 +34,20 @@ const relationshipPage = read("app/(shell)/app/relationship/page.tsx");
 const relationship = read("components/relationship/RelationshipCenter.tsx");
 
 ok("Nav: Central de Relacionamentos", nav.includes("Central de Relacionamentos"));
-ok("Nav: item Relacionamentos com tab=contact", nav.includes("/app/relationship?tab=contact"));
-ok("Nav: Salas e locações único", nav.includes('label: "Salas e locações"'));
+ok(
+  "Nav: sem segundo item Relacionamentos (?tab=contact)",
+  !nav.includes("/app/relationship?tab=contact") && !nav.includes('id: "relationship-contact"'),
+);
+ok("Nav: Salas e Locações único", /label:\s*"Salas e [Ll]ocações"/.test(nav));
 ok("Nav: sem item Aluguéis flat", !/id:\s*"rentals"/.test(nav));
 ok("Nav: Administração hub", nav.includes('label: "Administração"') && nav.includes('href: "/app/admin"'));
+ok("Nav: hub Pessoas", nav.includes('href: "/app/people"') && nav.includes('label: "Pessoas"'));
+ok(
+  "Nav: sem profissionais/especialidades/workforce flat",
+  !nav.includes('id: "professionals"') &&
+    !nav.includes('id: "specialties"') &&
+    !nav.includes('id: "workforce"'),
+);
 ok("Nav: Contratos clínicos distinto", nav.includes("Contratos clínicos"));
 ok(
   "Nav: sem Usuários/Organização/Permissões/Auditoria flat na gestão",
@@ -46,6 +56,15 @@ ok(
     !nav.includes('href: "/app/admin/permissions"') &&
     !nav.includes('href: "/app/admin/audit"') &&
     !nav.includes('href: "/app/care-policies"'),
+);
+ok("Nav: Plataforma único (sem orgs/users/audit flat)",
+  nav.includes('href: "/app/system"') &&
+    !nav.includes('id: "system-orgs"') &&
+    !nav.includes('id: "system-users"') &&
+    !nav.includes('id: "system-audit"'));
+ok(
+  "Relationship page preserva deep-link ?tab=",
+  relationshipPage.includes("useSearchParams") && relationshipPage.includes("initialTab"),
 );
 
 ok("Admin hub com cards Usuários", admin.includes("/app/admin/users") && admin.includes("Usuários"));
@@ -57,18 +76,19 @@ ok("LocacoesSubnav contratos de locação", subnav.includes("Contratos de locaç
 ok("RoomsBoard usa LocacoesSubnav", rooms.includes("LocacoesSubnav") && rooms.includes('active="salas"'));
 ok("RentalsModule usa LocacoesSubnav", rentals.includes("LocacoesSubnav"));
 ok("RelationshipCenter aceita initialTab", relationship.includes("initialTab"));
-ok("Relationship page lê ?tab=", relationshipPage.includes("useSearchParams") && relationshipPage.includes("initialTab"));
 
-const gestaoItems = [...nav.matchAll(/id:\s*"(rooms|clinical-contracts|professionals|specialties|workforce|inventory|reports|clinic-admin|rentals|care-policies|users)"/g)].map(
+const gestaoItems = [...nav.matchAll(/id:\s*"(rooms|clinical-contracts|people|professionals|specialties|workforce|inventory|reports|clinic-admin|rentals|care-policies|users)"/g)].map(
   (m) => m[1],
 );
 ok(
-  "Gestão Clínica ~8 itens (sem rentals/users flat)",
-  gestaoItems.length >= 7 &&
-    gestaoItems.length <= 9 &&
+  "Gestão ~6 itens hub (rooms, contracts, people, inventory, reports, admin)",
+  gestaoItems.length >= 5 &&
+    gestaoItems.length <= 7 &&
     gestaoItems.includes("rooms") &&
+    gestaoItems.includes("people") &&
     gestaoItems.includes("clinic-admin") &&
-    !gestaoItems.includes("rentals"),
+    !gestaoItems.includes("rentals") &&
+    !gestaoItems.includes("professionals"),
 );
 
 console.log(`\nUAT_C070_NAV_ estrutural: ${pass}/${pass + fail}`);

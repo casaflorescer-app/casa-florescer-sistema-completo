@@ -79,7 +79,9 @@ export function SpecialtiesModule() {
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">Gestão Clínica</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
+        Pessoas / Especialidades
+      </p>
       <h1 className="page-title mt-1">Especialidades</h1>
       <p className="page-sub mt-2">
         Catálogo administrativo de especialidades. Distinto de cargo/função de funcionários e do vínculo

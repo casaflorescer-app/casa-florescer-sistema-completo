@@ -146,19 +146,15 @@ export async function listItems(params: {
   if (params.itemClass && params.itemClass !== "all") {
     q = q.eq("item_class", params.itemClass);
   }
+  const search = params.search?.trim().replace(/[%_\\]/g, "");
+  if (search) {
+    q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+  }
 
   const { data, error } = await q;
   if (error) throw new Error(error.message);
 
-  let items = (data ?? []).map((r) => mapItem(r as Record<string, unknown>));
-  const search = params.search?.trim().toLowerCase();
-  if (search) {
-    items = items.filter(
-      (i) =>
-        i.name.toLowerCase().includes(search) ||
-        i.sku.toLowerCase().includes(search),
-    );
-  }
+  const items = (data ?? []).map((r) => mapItem(r as Record<string, unknown>));
   if (items.length === 0) return items;
 
   const ids = items.map((i) => i.id);

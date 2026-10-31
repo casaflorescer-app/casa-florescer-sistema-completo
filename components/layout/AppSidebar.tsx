@@ -73,10 +73,33 @@ export function AppSidebar({
                   item.href === "/app" ||
                   item.href === "/app/system" ||
                   item.href === "/app/admin" ||
+                  item.href === "/app/people" ||
                   item.href === "/app/dashboard";
-                const active = isHub
-                  ? pathname === item.href
-                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                // Hubs: ativo na página do hub; filhos usam subnav (não destacam o hub por prefixo).
+                // Exceção: pessoas/admin/system — destacar hub também em subrotas conhecidas.
+                const peopleActive =
+                  item.href === "/app/people" &&
+                  (pathname === "/app/people" ||
+                    pathname.startsWith("/app/professionals") ||
+                    pathname.startsWith("/app/specialties") ||
+                    pathname.startsWith("/app/workforce"));
+                const adminActive =
+                  item.href === "/app/admin" &&
+                  (pathname === "/app/admin" ||
+                    pathname.startsWith("/app/admin/") ||
+                    pathname.startsWith("/app/care-policies"));
+                const systemActive =
+                  item.href === "/app/system" &&
+                  (pathname === "/app/system" || pathname.startsWith("/app/system/"));
+                const active = peopleActive
+                  ? true
+                  : adminActive
+                    ? true
+                    : systemActive
+                      ? true
+                      : isHub
+                        ? pathname === item.href
+                        : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <li key={item.id}>
                     <NavItem

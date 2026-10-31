@@ -8,7 +8,6 @@ import {
   buildCampaignAudience,
   cancelCampaign,
   checkCampaignOverlap,
-  confirmCampaignPrepare,
   createCampaign,
   dismissRelationshipAttention,
   duplicateCampaign,
@@ -47,6 +46,7 @@ import {
 import { describeChannelAvailability } from "@/lib/relationship/providers";
 import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Tab =
   | "dashboard"
@@ -66,7 +66,7 @@ export function RelationshipCenter({
   organizationId: string;
   practiceId: string;
   canManage: boolean;
-  /** C070 — deep-link via ?tab=contact (item Relacionamentos no menu). */
+  /** Deep-link interno (?tab=contact). Não exibir como item separado na sidebar (C070-C4.1). */
   initialTab?: Tab;
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -175,8 +175,6 @@ export function RelationshipCenter({
   }, [supabase, activeCampaign]);
 
   const channelInfo = describeChannelAvailability(draftChannel);
-  const eligibleCount = audience.filter((row) => row.eligibilityStatus === "eligible").length;
-  const blockedCount = audience.length - eligibleCount;
   const selectedCount = selectedIds.size;
   const selectedEligible = queue.filter(
     (row) => selectedIds.has(row.opportunityId) && !row.campaignOptOut && Boolean(row.phone),
@@ -384,28 +382,6 @@ export function RelationshipCenter({
         );
         setTab("contact");
         await reload();
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onConfirmPrepare() {
-    if (!supabase || !activeCampaign) return;
-    const confirmed = window.confirm(
-      `PREPARAR LOTE para ${eligibleCount} pacientes elegíveis.\n\nCanal: ${activeCampaign.channel}\n\nSIMULAÇÃO — NÃO ENVIADO.\nNenhuma mensagem será enviada de verdade.\n\nConfirmar preparação?`,
-    );
-    if (!confirmed) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await confirmCampaignPrepare(supabase, activeCampaign.id);
-      if (result.error) setError(result.error);
-      else {
-        setNotice(String(result.result?.message ?? "Preparação concluída — SIMULAÇÃO — NÃO ENVIADO."));
-        await reload();
-        const refreshed = (await listCampaigns(supabase, practiceId)).find((c) => c.id === activeCampaign.id);
-        setActiveCampaign(refreshed ?? null);
       }
     } finally {
       setBusy(false);
@@ -654,9 +630,10 @@ export function RelationshipCenter({
           </div>
 
           {queue.length === 0 ? (
-            <div className="card text-sm text-lotus-600">
-              Nenhuma paciente na fila. Atualize oportunidades ou ajuste os filtros.
-            </div>
+            <EmptyState
+              title="Ainda não há pacientes nesta fila"
+              description="Atualize as oportunidades ou ajuste os filtros para montar a lista de contatos."
+            />
           ) : (
             <>
               <ul className="space-y-3 md:hidden">
@@ -820,7 +797,10 @@ export function RelationshipCenter({
           </div>
           <ul className="divide-y divide-lotus-100">
             {opportunities.length === 0 ? (
-              <li className="py-3 text-sm text-lotus-600">Nenhuma oportunidade aberta.</li>
+              <li className="py-3 text-sm text-lotus-600">
+                Ainda não há oportunidades abertas. Elas aparecem quando houver pacientes elegíveis
+                para contato.
+              </li>
             ) : (
               opportunities.map((item) => (
                 <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
@@ -928,7 +908,9 @@ export function RelationshipCenter({
           <p className="mt-1 text-sm text-lotus-600">Separado do prontuário clínico.</p>
           <ul className="mt-3 space-y-2 text-sm">
             {history.length === 0 ? (
-              <li className="text-lotus-600">Nenhum evento registrado.</li>
+              <li className="text-lotus-600">
+                Ainda não há histórico de eventos nesta prática.
+              </li>
             ) : (
               history.map((item) => (
                 <li key={item.id} className="rounded-lg border border-lotus-100 px-3 py-2">
@@ -965,6 +947,7 @@ export function RelationshipCenter({
           </button>
         </section>
       ) : null}
+
     </div>
   );
 }

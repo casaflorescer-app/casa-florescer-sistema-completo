@@ -16,6 +16,7 @@ import { ROOM_NATURE_LABEL, roomNature } from "@/lib/clinic/room-presentation";
 import { parseReturnOfNote } from "@/lib/attendance/return-link";
 import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { WhatsAppComposeDialog } from "@/components/whatsapp/WhatsAppComposeDialog";
 import { buildAppointmentConfirmationMessage } from "@/lib/whatsapp/messages";
 
@@ -44,9 +45,10 @@ export function AppointmentCard({
   onContinueEncounter?: (appointmentId: string) => void;
   onRecordArrival?: (appointmentId: string) => void;
 }) {
+  const [cancelOpen, setCancelOpen] = useState(false);
+
   function cancel() {
-    if (!window.confirm("Cancelar este agendamento?")) return;
-    onSetStatus(row.id, "cancelled");
+    setCancelOpen(true);
   }
 
   const procedureLabel = row.procedureName?.trim() || APPOINTMENT_KIND_LABEL[row.kind];
@@ -127,6 +129,20 @@ export function AppointmentCard({
         onContinueEncounter={onContinueEncounter}
         onRecordArrival={onRecordArrival}
         onCancel={cancel}
+      />
+      <ConfirmDialog
+        open={cancelOpen}
+        title="Cancelar este agendamento?"
+        description="O horário será marcado como cancelado. Esta ação pode ser revista pela equipe, mas o status muda imediatamente."
+        confirmLabel="Cancelar agendamento"
+        cancelLabel="Manter agendamento"
+        danger
+        busy={busy}
+        onCancel={() => setCancelOpen(false)}
+        onConfirm={() => {
+          setCancelOpen(false);
+          onSetStatus(row.id, "cancelled");
+        }}
       />
     </article>
   );

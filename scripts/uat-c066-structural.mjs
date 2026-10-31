@@ -55,7 +55,7 @@ ok("Admin settings redireciona", adminSettings.includes('redirect("/app/admin")'
 ok("System settings redireciona", systemSettings.includes('redirect("/app/system")'));
 
 // Menu salas/locações (C070: um item no nav + LocacoesSubnav nas páginas)
-ok("Nav Salas e locações", nav.includes("Salas e locações") && nav.includes('href: "/app/rooms"'));
+ok("Nav Salas e Locações", /Salas e [Ll]ocações/.test(nav) && nav.includes('href: "/app/rooms"'));
 ok(
   "Nav Aluguéis unificado via subnav (C070)",
   !/id:\s*"rentals"/.test(nav) &&
@@ -69,7 +69,7 @@ ok(
 ok("Contratos clínicos preservados", nav.includes("Contratos clínicos") && nav.includes("/app/clinical-contracts"));
 ok(
   "Rooms cross-link aluguéis via LocacoesSubnav",
-  rooms.includes("LocacoesSubnav") && rooms.includes("Salas e locações"),
+  rooms.includes("LocacoesSubnav") && /Salas e [Ll]ocações/.test(rooms),
 );
 ok(
   "Rentals cross-link salas via LocacoesSubnav",

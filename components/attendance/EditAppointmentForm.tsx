@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { updateAppointment, type AppointmentRow } from "@/lib/attendance/directory";
 import type { ProfessionalLabel } from "@/lib/pregnancies/directory";
-import type { PatientListRow } from "@/lib/patients/directory";
 import type { AppointmentKind } from "@/lib/types/database";
-import { buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
+import { fieldClass } from "@/components/platform/Ui";
 import {
   APPOINTMENT_KIND_LABEL,
   formatClock,
@@ -18,21 +17,27 @@ import {
   singleOccupancyForProfessional,
   type RoomOccupancy,
 } from "@/lib/clinic/room-occupancy";
-import type {
-  AgendaProcedureOption,
-  AgendaRoomOption,
-} from "@/components/attendance/AppointmentForm";
+import type { AgendaRoomOption } from "@/components/attendance/AppointmentForm";
 import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FormActions } from "@/components/ui/FormActions";
+import {
+  searchPatientOptions,
+  searchProcedureOptions,
+  searchProfessionalOptions,
+  searchRoomOptions,
+} from "@/lib/search/entity-search";
+import { friendlyError } from "@/lib/ui/friendly-error";
 
 const labelClass = "text-sm font-medium text-lotus-800";
 
 export function EditAppointmentForm({
   supabase,
+  organizationId,
+  practiceId,
   appointment,
-  patients,
   professionals,
   rooms,
-  procedures,
   occupancy,
   busy,
   onBusy,
@@ -40,11 +45,11 @@ export function EditAppointmentForm({
   onCancel,
 }: {
   supabase: SupabaseClient;
+  organizationId: string;
+  practiceId: string;
   appointment: AppointmentRow;
-  patients: PatientListRow[];
   professionals: ProfessionalLabel[];
   rooms: AgendaRoomOption[];
-  procedures: AgendaProcedureOption[];
   occupancy: RoomOccupancy[];
   busy: boolean;
   onBusy: (value: boolean) => void;
@@ -52,36 +57,83 @@ export function EditAppointmentForm({
   onCancel: () => void;
 }) {
   const [patientId, setPatientId] = useState(appointment.patientId);
+  const [patientLabel, setPatientLabel] = useState(appointment.patientName ?? "Paciente");
   const [professionalId, setProfessionalId] = useState(appointment.professionalId);
+  const [professionalLabel, setProfessionalLabel] = useState(
+    appointment.professionalName ?? "Profissional",
+  );
   const [roomId, setRoomId] = useState(appointment.roomId);
+  const [roomLabel, setRoomLabel] = useState(appointment.roomName ?? "Sala");
   const [date, setDate] = useState(isoToInputDate(appointment.startsAt));
   const [startsAt, setStartsAt] = useState(isoToInputTime(appointment.startsAt));
   const [endsAt, setEndsAt] = useState(isoToInputTime(appointment.endsAt));
   const [kind, setKind] = useState<AppointmentKind>(appointment.kind);
   const [procedureId, setProcedureId] = useState(appointment.procedureId ?? "");
+  const [procedureLabel, setProcedureLabel] = useState(appointment.procedureName ?? "");
   const [urgencyNote, setUrgencyNote] = useState(appointment.urgencyNote ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmSummary, setConfirmSummary] = useState("");
+  const [pendingPayload, setPendingPayload] = useState<{
+    startIso: string;
+    endIso: string;
+  } | null>(null);
+
+  const searchPatients = useCallback(
+    (query: string) => searchPatientOptions(supabase, query, { limit: 30 }),
+    [supabase],
+  );
+  const searchProfessionalsCb = useCallback(
+    (query: string) =>
+      searchProfessionalOptions(supabase, query, { practiceId, limit: 30 }),
+    [practiceId, supabase],
+  );
+  const searchRoomsCb = useCallback(
+    (query: string) =>
+      searchRoomOptions(supabase, query, { organizationId, limit: 40 }),
+    [organizationId, supabase],
+  );
+  const searchProceduresCb = useCallback(
+    (query: string) =>
+      searchProcedureOptions(supabase, query, {
+        organizationId,
+        practiceId,
+        limit: 30,
+      }),
+    [organizationId, practiceId, supabase],
+  );
 
   const procedureRoom = rooms.filter((room) => room.roomKind === "procedure");
   const sharedProcedureRoom = procedureRoom.length === 1 ? procedureRoom[0] : undefined;
 
-  function roomFor(nextKind: AppointmentKind, nextProfessionalId: string): string {
-    if (nextKind === "procedure" && sharedProcedureRoom) return sharedProcedureRoom.id;
+  function roomFor(nextKind: AppointmentKind, nextProfessionalId: string): {
+    id: string;
+    label: string;
+  } {
+    if (nextKind === "procedure" && sharedProcedureRoom) {
+      return { id: sharedProcedureRoom.id, label: sharedProcedureRoom.name };
+    }
     const fixed = singleOccupancyForProfessional(occupancy, nextProfessionalId);
     const room = fixed ? rooms.find((item) => item.id === fixed.roomId) : undefined;
-    return room?.id ?? roomId;
+    return room ? { id: room.id, label: room.name } : { id: roomId, label: roomLabel };
   }
 
-  function chooseProfessional(nextProfessionalId: string) {
+  function chooseProfessional(nextProfessionalId: string, label?: string) {
     setProfessionalId(nextProfessionalId);
-    setRoomId(roomFor(kind, nextProfessionalId));
+    setProfessionalLabel(label ?? "");
+    const next = roomFor(kind, nextProfessionalId);
+    setRoomId(next.id);
+    setRoomLabel(next.label);
   }
 
   function chooseKind(nextKind: AppointmentKind) {
     setKind(nextKind);
-    setRoomId(roomFor(nextKind, professionalId));
+    const next = roomFor(nextKind, professionalId);
+    setRoomId(next.id);
+    setRoomLabel(next.label);
     if (nextKind === "consultation") {
       setProcedureId("");
+      setProcedureLabel("");
     }
   }
 
@@ -106,55 +158,57 @@ export function EditAppointmentForm({
       return;
     }
 
-    const patientName =
-      patients.find((item) => item.id === patientId)?.fullName ?? "Paciente";
-    const professionalName =
-      professionals.find((item) => item.id === professionalId)?.fullName ?? "Profissional";
     const procedureName =
-      kind === "procedure"
-        ? procedures.find((item) => item.id === procedureId)?.name ?? "Procedimento"
-        : "— (consulta)";
-    const roomName = rooms.find((item) => item.id === roomId)?.name ?? "Sala";
-    const summary = [
-      "Salvar alterações?",
-      "",
-      `Paciente: ${patientName}`,
-      `Profissional: ${professionalName}`,
-      `Procedimento: ${procedureName}`,
-      `Data: ${date}`,
-      `Horário: ${formatClock(startIso)}–${formatClock(endIso)}`,
-      `Sala: ${roomName}`,
-    ].join("\n");
-    if (!window.confirm(summary)) return;
+      kind === "procedure" ? procedureLabel || "Procedimento" : "Consulta (sem procedimento)";
+    setConfirmSummary(
+      [
+        `Paciente: ${patientLabel || "Paciente"}`,
+        `Profissional: ${professionalLabel || "Profissional"}`,
+        `Tipo: ${procedureName}`,
+        `Data: ${date}`,
+        `Horário: ${formatClock(startIso)}–${formatClock(endIso)}`,
+        `Sala: ${roomLabel || "Sala"}`,
+      ].join("\n"),
+    );
+    setPendingPayload({ startIso, endIso });
+    setConfirmOpen(true);
+  }
 
+  async function persistChanges() {
+    if (!pendingPayload) return;
+    setConfirmOpen(false);
     onBusy(true);
     setError(null);
-    const result = await updateAppointment(supabase, {
-      appointmentId: appointment.id,
-      patientId,
-      professionalId,
-      roomId,
-      procedureId: kind === "procedure" ? procedureId : null,
-      kind,
-      startsAt: startIso,
-      endsAt: endIso,
-      urgencyNote: urgencyNote.trim() || null,
-    });
-    onBusy(false);
-    if (result.error || !result.row) {
-      setError(result.error ?? "Não foi possível salvar o agendamento.");
-      return;
+    try {
+      const result = await updateAppointment(supabase, {
+        appointmentId: appointment.id,
+        patientId,
+        professionalId,
+        roomId,
+        procedureId: kind === "procedure" ? procedureId : null,
+        kind,
+        startsAt: pendingPayload.startIso,
+        endsAt: pendingPayload.endIso,
+        urgencyNote: urgencyNote.trim() || null,
+      });
+      if (result.error || !result.row) {
+        setError(
+          friendlyError(result.error, "Não foi possível salvar o agendamento."),
+        );
+        return;
+      }
+      onSaved("Agendamento atualizado com sucesso.", date);
+    } catch (err) {
+      setError(friendlyError(err, "Não foi possível salvar o agendamento."));
+    } finally {
+      onBusy(false);
+      setPendingPayload(null);
     }
-    onSaved("Agendamento atualizado.", date);
   }
 
   const suggested = singleOccupancyForProfessional(occupancy, professionalId);
   const suggestedRoom = suggested ? rooms.find((room) => room.id === suggested.roomId) : undefined;
-  const blocked =
-    patients.length === 0 ||
-    professionals.length === 0 ||
-    rooms.length === 0 ||
-    (kind === "procedure" && procedures.length === 0);
+  const blocked = professionals.length === 0 || rooms.length === 0;
 
   return (
     <form className="card mt-6" onSubmit={(event) => void onSubmit(event)}>
@@ -174,27 +228,27 @@ export function EditAppointmentForm({
           Paciente
           <EntityCombobox
             value={patientId}
-            onChange={setPatientId}
+            selectedLabel={patientLabel}
+            onChange={(id, option) => {
+              setPatientId(id);
+              setPatientLabel(option?.label ?? "");
+            }}
+            onSearch={searchPatients}
+            minChars={2}
             required
-            placeholder="Buscar paciente"
-            options={patients.map((item) => ({
-              id: item.id,
-              label: item.fullName,
-              keywords: item.cpf ?? undefined,
-            }))}
+            placeholder="Digite o nome, CPF ou telefone…"
           />
         </label>
         <label className={labelClass}>
           Profissional
           <EntityCombobox
             value={professionalId}
-            onChange={chooseProfessional}
+            selectedLabel={professionalLabel}
+            onChange={(id, option) => chooseProfessional(id, option?.label)}
+            onSearch={searchProfessionalsCb}
+            minChars={2}
             required
-            placeholder="Buscar profissional"
-            options={professionals.map((item) => ({
-              id: item.id,
-              label: item.fullName,
-            }))}
+            placeholder="Nome, especialidade ou registro…"
           />
         </label>
         <label className={labelClass}>
@@ -213,14 +267,16 @@ export function EditAppointmentForm({
             Procedimento
             <EntityCombobox
               value={procedureId}
-              onChange={setProcedureId}
+              selectedLabel={procedureLabel}
+              onChange={(id, option) => {
+                setProcedureId(id);
+                setProcedureLabel(option?.label ?? "");
+              }}
+              onSearch={searchProceduresCb}
+              minChars={2}
               required
-              placeholder="Buscar procedimento"
+              placeholder="Nome ou código do procedimento…"
               emptyLabel="Nenhum procedimento encontrado."
-              options={procedures.map((item) => ({
-                id: item.id,
-                label: item.name,
-              }))}
             />
           </label>
         ) : (
@@ -262,14 +318,15 @@ export function EditAppointmentForm({
           Sala
           <EntityCombobox
             value={roomId}
-            onChange={setRoomId}
+            selectedLabel={roomLabel}
+            onChange={(id, option) => {
+              setRoomId(id);
+              setRoomLabel(option?.label ?? "");
+            }}
+            onSearch={searchRoomsCb}
+            minChars={1}
             required
-            placeholder="Buscar sala"
-            options={rooms.map((item) => ({
-              id: item.id,
-              label: item.name,
-              keywords: item.code,
-            }))}
+            placeholder="Nome, código ou tipo de sala…"
           />
           {kind === "procedure" && sharedProcedureRoom && roomId === sharedProcedureRoom.id ? (
             <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-lotus-600">
@@ -299,14 +356,26 @@ export function EditAppointmentForm({
         </label>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
-        <button type="submit" className={buttonClass} disabled={busy || blocked}>
-          {busy ? "Salvando…" : "Salvar alterações"}
-        </button>
-        <button type="button" className={ghostButtonClass} onClick={onCancel} disabled={busy}>
-          Fechar
-        </button>
-      </div>
+      <FormActions
+        primaryLabel="Salvar alterações"
+        primaryBusy={busy}
+        primaryDisabled={blocked}
+        cancelLabel="Fechar"
+        onCancel={onCancel}
+      />
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Salvar alterações neste agendamento?"
+        description={confirmSummary}
+        confirmLabel="Salvar"
+        cancelLabel="Voltar"
+        busy={busy}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setPendingPayload(null);
+        }}
+        onConfirm={() => void persistChanges()}
+      />
     </form>
   );
 }

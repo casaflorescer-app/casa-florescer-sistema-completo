@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
+import { StatusMessage, fieldClass } from "@/components/platform/Ui";
 import { ROOM_NATURE_LABEL, roomNature, type RoomNature } from "@/lib/clinic/room-presentation";
 import { listRoomsAdmin, roomsDashboard, upsertRoom } from "@/lib/clinic-mgmt/rooms";
 import type { RoomAdminRow } from "@/lib/clinic-mgmt/types";
 import { LocacoesSubnav } from "@/components/clinic/LocacoesSubnav";
 import { RowActions } from "@/components/ui/RowActions";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchField } from "@/components/ui/SearchField";
+import { FormActions } from "@/components/ui/FormActions";
+import { friendlyError } from "@/lib/ui/friendly-error";
+import { Plus } from "lucide-react";
 
 const NATURE_CLASS: Record<RoomNature, string> = {
   propria: "border-lotus-200 bg-white text-lotus-800",
@@ -38,8 +43,19 @@ export function RoomsBoard() {
   const [roomKind, setRoomKind] = useState("sublet_consultorio");
   const [status, setStatus] = useState<"active" | "maintenance" | "inactive">("active");
   const [sortOrder, setSortOrder] = useState(0);
+  const [roomSearch, setRoomSearch] = useState("");
 
   const stats = useMemo(() => roomsDashboard(rows), [rows]);
+  const filteredRows = useMemo(() => {
+    const q = roomSearch.trim().toLocaleLowerCase("pt-BR");
+    if (!q) return rows;
+    return rows.filter((row) => {
+      const hay = `${row.name} ${row.code} ${row.roomKind ?? ""} ${row.status}`.toLocaleLowerCase(
+        "pt-BR",
+      );
+      return hay.includes(q);
+    });
+  }, [roomSearch, rows]);
 
   const reload = useCallback(async () => {
     if (!orgId) return;
@@ -98,7 +114,7 @@ export function RoomsBoard() {
       startCreate();
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível salvar a sala.");
+      setError(friendlyError(err, "Não foi possível salvar a sala."));
     } finally {
       setBusy(false);
     }
@@ -107,9 +123,9 @@ export function RoomsBoard() {
   return (
     <div className="min-w-0">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Gestão Clínica · Salas e locações
+        Gestão Clínica · Salas e Locações
       </p>
-      <h1 className="page-title mt-1">Salas e locações</h1>
+      <h1 className="page-title mt-1">Salas e Locações</h1>
       <p className="page-sub mt-2">
         Cadastro e disponibilidade das salas. Use as abas para aluguéis e contratos de locação.
         Locatário ≠ funcionário. Contratos clínicos ficam em menu separado.
@@ -134,12 +150,31 @@ export function RoomsBoard() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section>
+          <div className="mb-3">
+            <p className="mb-1 text-sm font-medium text-lotus-800">Pesquisar salas</p>
+            <SearchField
+              value={roomSearch}
+              onChange={setRoomSearch}
+              placeholder="Nome, código ou tipo…"
+              aria-label="Pesquisar salas"
+              className="w-full max-w-none"
+            />
+          </div>
           {loading ? <p className="text-sm text-lotus-600">Carregando salas…</p> : null}
           {!loading && rows.length === 0 ? (
-            <section className="card text-sm text-lotus-700">Nenhuma sala cadastrada.</section>
+            <EmptyState
+              title="Ainda não há salas cadastradas"
+              description="Cadastre a primeira sala para organizar a agenda e as locações."
+            />
+          ) : null}
+          {!loading && rows.length > 0 && filteredRows.length === 0 ? (
+            <EmptyState
+              title="Nenhuma sala encontrada"
+              description="Ajuste o nome, código ou tipo e tente novamente."
+            />
           ) : null}
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {rows.map((room) => {
+            {filteredRows.map((room) => {
               const nature = roomNature({ roomKind: room.roomKind, isHouse: room.isHouse });
               return (
                 <li key={room.id}>
@@ -171,6 +206,14 @@ export function RoomsBoard() {
                         label: "Editar",
                         onClick: () => startEdit(room),
                       }}
+                      secondary={[
+                        { id: "rentals", label: "Aluguéis", href: "/app/rentals" },
+                        {
+                          id: "contracts",
+                          label: "Contratos",
+                          href: "/app/rentals?tab=contracts",
+                        },
+                      ]}
                     />
                   </article>
                 </li>
@@ -180,7 +223,14 @@ export function RoomsBoard() {
         </section>
 
         <aside className="card h-fit">
-          <h2 className="text-base font-semibold text-lotus-900">{editing ? "Editar sala" : "Nova sala"}</h2>
+          <h2 className="text-base font-semibold text-lotus-900">
+            {editing ? "Editar sala" : (
+              <span className="inline-flex items-center gap-1.5">
+                <Plus className="h-4 w-4" aria-hidden />
+                Nova sala
+              </span>
+            )}
+          </h2>
           <label className="mt-3 block text-sm">
             Código
             <input className={fieldClass} value={code} onChange={(e) => setCode(e.target.value)} />
@@ -220,21 +270,13 @@ export function RoomsBoard() {
               onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
             />
           </label>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={buttonClass}
-              disabled={busy || !code.trim() || !name.trim()}
-              onClick={() => void onSave()}
-            >
-              {busy ? "Salvando…" : "Salvar"}
-            </button>
-            {editing ? (
-              <button type="button" className={ghostButtonClass} onClick={startCreate}>
-                Cancelar
-              </button>
-            ) : null}
-          </div>
+          <FormActions
+            primaryLabel="Salvar"
+            primaryBusy={busy}
+            primaryDisabled={!code.trim() || !name.trim()}
+            onPrimary={() => void onSave()}
+            onCancel={editing ? startCreate : undefined}
+          />
         </aside>
       </div>
     </div>

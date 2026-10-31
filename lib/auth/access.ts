@@ -164,6 +164,11 @@ const PATH_RULES: PathRule[] = [
     allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
   },
   {
+    // C070-C4.2 — hub Pessoas (mesma ACL owner|admin dos cadastros filhos).
+    prefix: "/app/people",
+    allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
+  },
+  {
     prefix: "/app/workforce",
     allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
   },

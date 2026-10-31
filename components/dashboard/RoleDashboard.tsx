@@ -76,12 +76,24 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
               Gestão Clínica
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <DashCard title="Salas e locações" note="Cadastro e disponibilidade." href="/app/rooms" />
-              <DashCard title="Aluguéis e contratos" note="Locação de consultórios." href="/app/rentals" />
-              <DashCard title="Contratos clínicos" note="Obstetrícia e procedimentos." href="/app/clinical-contracts" />
-              <DashCard title="Profissionais" note="Médicos e locatários (consulta)." href="/app/professionals" />
+              <DashCard
+                title="Salas e Locações"
+                note="Salas, aluguéis e contratos de locação."
+                href="/app/rooms"
+              />
+              <DashCard
+                title="Contratos clínicos"
+                note="Obstetrícia e procedimentos."
+                href="/app/clinical-contracts"
+              />
+              <DashCard
+                title="Pessoas"
+                note="Profissionais, especialidades e funcionários."
+                href="/app/people"
+              />
               <DashCard title="Estoques" note="Insumos, farmácia e equipamentos." href="/app/inventory" />
               <DashCard title="Relatórios" note="Indicadores operacionais." href="/app/reports" />
+              <DashCard title="Administração" note="Usuários, organização e permissões." href="/app/admin" />
             </div>
           </section>
         ) : null}
@@ -94,7 +106,7 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
     );
   }
 
-  // C068 — Gestão / secretária: atalhos operacionais, sem dump técnico de sessão.
+  // C068 / C070-C4.1 — Gestão: atalhos alinhados à sidebar (sem duplicar Salas/Aluguéis).
   if (showManagers) {
     return (
       <div className="space-y-6">
@@ -114,7 +126,7 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
             <DashCard title="Agenda" note="Atendimentos e salas do dia." href="/app/agenda" />
             <DashCard title="Pacientes" note="Cadastro e identificação." href="/app/patients" />
             <DashCard
-              title="Relacionamentos"
+              title="Central de Relacionamentos"
               note="Fila de contatos e WhatsApp Web."
               href="/app/relationship"
             />
@@ -123,26 +135,27 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
 
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-lotus-500">
-            Salas e locações
+            Gestão
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <DashCard title="Salas" note="Cadastro e disponibilidade." href="/app/rooms" />
-            <DashCard title="Aluguéis e contratos" note="Locação de consultórios." href="/app/rentals" />
-            <DashCard title="Profissionais" note="Médicos e locatários (consulta)." href="/app/professionals" />
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-lotus-500">
-            Administração
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <DashCard title="Contratos clínicos" note="Obstetrícia e procedimentos." href="/app/clinical-contracts" />
-            <DashCard title="Especialidades" note="Catálogo da casa." href="/app/specialties" />
-            <DashCard title="Funcionários" note="RH e prestadores da clínica." href="/app/workforce" />
+            <DashCard
+              title="Salas e Locações"
+              note="Salas, aluguéis e contratos de locação."
+              href="/app/rooms"
+            />
+            <DashCard
+              title="Contratos clínicos"
+              note="Obstetrícia e procedimentos."
+              href="/app/clinical-contracts"
+            />
+            <DashCard
+              title="Pessoas"
+              note="Profissionais, especialidades e funcionários."
+              href="/app/people"
+            />
             <DashCard title="Estoques" note="Materiais, lotes e equipamentos." href="/app/inventory" />
             <DashCard title="Relatórios" note="Indicadores operacionais." href="/app/reports" />
-            <DashCard title="Usuários" note="Acessos da clínica." href="/app/admin/users" />
+            <DashCard title="Administração" note="Usuários, organização e permissões." href="/app/admin" />
           </div>
         </section>
       </div>
@@ -166,7 +179,7 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
             <DashCard title="Agenda" note="Agendamento e confirmação." href="/app/agenda" />
             <DashCard title="Pacientes" note="Cadastro e identificação." href="/app/patients" />
             <DashCard
-              title="Relacionamentos"
+              title="Central de Relacionamentos"
               note="Fila de contatos e WhatsApp Web."
               href="/app/relationship"
             />
@@ -205,8 +218,11 @@ export function RoleDashboard({ auth }: { auth: AuthorizationContext }) {
             Plataforma
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <DashCard title="Organizações" note="Administração da plataforma." href="/app/system/organizations" />
-            <DashCard title="Usuários da plataforma" note="Acessos técnicos." href="/app/system/users" />
+            <DashCard
+              title="Plataforma"
+              note="Organizações, usuários e auditoria técnica."
+              href="/app/system"
+            />
           </div>
         </section>
       ) : null}

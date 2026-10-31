@@ -196,6 +196,11 @@ export type AppointmentListFilter = {
   /** ISO timestamptz exclusive upper bound. */
   to: string;
   professionalId?: string;
+  patientId?: string;
+  roomId?: string;
+  /** C070-C4.3 — filtro opcional por procedimento cadastrado. */
+  procedureId?: string;
+  kind?: AppointmentKind;
   status?: AppointmentStatus | AppointmentStatus[];
 };
 

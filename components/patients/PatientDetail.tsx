@@ -28,6 +28,7 @@ import { ClinicalExamsPanel } from "@/components/exams/ClinicalExamsPanel";
 import { ClinicalPrescriptionPanel } from "@/components/prescriptions/ClinicalPrescriptionPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RowActions } from "@/components/ui/RowActions";
+import { ActionLinkBar } from "@/components/ui/ActionLinkBar";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
 import { WhatsAppAction } from "@/components/whatsapp/WhatsAppAction";
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
@@ -176,6 +177,11 @@ export function PatientDetail({
                 secondary={
                   [
                     {
+                      id: "agenda",
+                      label: "Agendar",
+                      href: `/app/agenda?patientId=${patientId}`,
+                    },
+                    {
                       id: "rx",
                       label: "Receitas",
                       href: `/app/prescriptions?patientId=${patientId}`,
@@ -190,7 +196,6 @@ export function PatientDetail({
                       label: "Editar cadastro",
                       href: `/app/patients/${patientId}/edit`,
                     },
-                    { id: "new", label: "Nova paciente", href: "/app/patients/new" },
                   ] satisfies OverflowItem[]
                 }
                 compact={false}
@@ -221,6 +226,20 @@ export function PatientDetail({
 
       {!loading && row ? (
         <>
+          <div className="mt-4">
+            <ActionLinkBar
+              label="Atalhos da paciente"
+              items={[
+                ...(physicianMembership
+                  ? [{ id: "chart", label: "Prontuário", href: patientChartHref(patientId) }]
+                  : []),
+                { id: "agenda", label: "Agendar", href: `/app/agenda?patientId=${patientId}` },
+                { id: "rx", label: "Receitas", href: `/app/prescriptions?patientId=${patientId}` },
+                { id: "exams", label: "Exames", href: `/app/exams?patientId=${patientId}` },
+                { id: "edit", label: "Editar cadastro", href: `/app/patients/${patientId}/edit` },
+              ]}
+            />
+          </div>
           <section className="card mt-6" aria-labelledby="patient-photo-title">
             <h2 id="patient-photo-title" className="font-semibold text-lotus-900">
               Fotografia

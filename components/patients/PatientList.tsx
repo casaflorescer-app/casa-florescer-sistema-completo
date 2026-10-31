@@ -16,15 +16,18 @@ import {
   type PatientListRow,
 } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
-import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
+import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RowActions } from "@/components/ui/RowActions";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchField } from "@/components/ui/SearchField";
 import type { OverflowItem } from "@/components/ui/OverflowMenu";
 import { WhatsAppComposeDialog } from "@/components/whatsapp/WhatsAppComposeDialog";
 import { buildAdministrativeHelloMessage } from "@/lib/whatsapp/messages";
 import { isValidWhatsAppPhone } from "@/lib/whatsapp/phone";
+import { friendlyError } from "@/lib/ui/friendly-error";
+import { Plus } from "lucide-react";
 
 const FILTER_LABEL: Record<CareSpecialty | "all", string> = {
   all: "Todas",
@@ -41,7 +44,8 @@ function PatientRowActions({
 }) {
   const [waOpen, setWaOpen] = useState(false);
   const secondary: OverflowItem[] = [
-    { id: "detail", label: "Ver detalhes", href: `/app/patients/${row.id}` },
+    { id: "detail", label: "Visualizar", href: `/app/patients/${row.id}` },
+    { id: "agenda", label: "Agendar", href: `/app/agenda?patientId=${row.id}` },
   ];
   if (canOpenChart) {
     secondary.push(
@@ -122,7 +126,7 @@ export function PatientList() {
       })
       .catch((err: unknown) => {
         setRows([]);
-        setError(err instanceof Error ? err.message : "Não foi possível carregar as pacientes.");
+        setError(friendlyError(err, "Não foi possível carregar as pacientes."));
       })
       .finally(() => {
         setLoading(false);
@@ -186,6 +190,7 @@ export function PatientList() {
         description="Cadastro e identificação das pacientes"
         actions={
           <Link href="/app/patients/new" className={buttonClass}>
+            <Plus className="h-4 w-4" aria-hidden />
             Nova paciente
           </Link>
         }
@@ -194,12 +199,12 @@ export function PatientList() {
       <StatusMessage error={error} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <input
-          className={`${fieldClass} mt-0 max-w-md`}
-          placeholder="Pesquisar nome, telefone ou CPF"
+        <SearchField
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={setQuery}
+          placeholder="Pesquisar nome, telefone ou CPF…"
           aria-label="Pesquisar pacientes"
+          className="w-full"
         />
         <p className="text-sm text-lotus-600">
           {loading || searching
@@ -245,17 +250,18 @@ export function PatientList() {
           <EmptyState
             title={
               rows.length === 0
-                ? "Não há pacientes cadastrados"
-                : "Nenhuma paciente encontrada"
+                ? "Ainda não há pacientes cadastradas"
+                : "Nenhuma paciente encontrada nesta pesquisa"
             }
             description={
               rows.length === 0
-                ? "Cadastre a primeira paciente para começar o atendimento."
+                ? "Cadastre uma paciente para iniciar o atendimento."
                 : "Ajuste a pesquisa ou os filtros e tente novamente."
             }
             action={
               rows.length === 0 ? (
                 <Link href="/app/patients/new" className={buttonClass}>
+                  <Plus className="h-4 w-4" aria-hidden />
                   Nova paciente
                 </Link>
               ) : null

@@ -23,11 +23,14 @@ import {
   obstetricDashboard,
 } from "@/lib/clinic-mgmt/clinical-contracts";
 import { createClient } from "@/lib/supabase/client";
+import { EntityCombobox } from "@/components/ui/EntityCombobox";
+import {
+  searchPatientOptions,
+  searchProfessionalOptions,
+  searchProcedureOptions,
+} from "@/lib/search/entity-search";
 
 type Tab = "obstetric" | "procedure";
-
-type PatientHit = { id: string; fullName: string };
-type ProfessionalHit = { id: string; fullName: string };
 
 export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialTab?: Tab }) {
   const { authorization } = useAuth();
@@ -41,12 +44,11 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
   const [notice, setNotice] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
-  const [patientQuery, setPatientQuery] = useState("");
-  const [patientHits, setPatientHits] = useState<PatientHit[]>([]);
   const [patientId, setPatientId] = useState("");
   const [patientName, setPatientName] = useState("");
-  const [professionals, setProfessionals] = useState<ProfessionalHit[]>([]);
   const [professionalId, setProfessionalId] = useState("");
+  const [professionalName, setProfessionalName] = useState("");
+  const [procedureId, setProcedureId] = useState("");
   const [normalBirth, setNormalBirth] = useState(true);
   const [cesarean, setCesarean] = useState(false);
 
@@ -55,6 +57,7 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
   const [procKind, setProcKind] = useState<ProcedureAgreementKind>("risk_acknowledgment");
   const [procBody, setProcBody] = useState("");
   const [ackName, setAckName] = useState("");
+  const supabase = useMemo(() => createClient(), []);
 
   const stats = useMemo(() => obstetricDashboard(obs), [obs]);
 
@@ -82,50 +85,33 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
     void reload();
   }, [reload]);
 
-  useEffect(() => {
-    const supabase = createClient();
-    if (!supabase || !orgId) return;
-    void supabase
-      .from("professionals")
-      .select("id, profiles(full_name)")
-      .eq("organization_id", orgId)
-      .then(({ data }) => {
-        const rows = (data ?? []).flatMap((item) => {
-          const r = item as Record<string, unknown>;
-          const id = typeof r.id === "string" ? r.id : null;
-          const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-          const fullName =
-            profile && typeof profile === "object" && typeof (profile as { full_name?: unknown }).full_name === "string"
-              ? String((profile as { full_name: string }).full_name)
-              : "";
-          if (!id || !fullName) return [];
-          return [{ id, fullName }];
-        });
-        setProfessionals(rows);
-        if (!professionalId && rows[0]) setProfessionalId(rows[0].id);
+  const searchPatientsCb = useCallback(
+    async (query: string) => {
+      if (!supabase) return [];
+      return searchPatientOptions(supabase, query, { limit: 30 });
+    },
+    [supabase],
+  );
+  const searchProfessionalsCb = useCallback(
+    async (query: string) => {
+      if (!supabase || !orgId) return [];
+      return searchProfessionalOptions(supabase, query, {
+        organizationId: orgId,
+        limit: 30,
       });
-  }, [orgId, professionalId]);
-
-  async function searchPatients() {
-    const supabase = createClient();
-    if (!supabase || !orgId || !patientQuery.trim()) return;
-    const { data, error: err } = await supabase
-      .from("patients")
-      .select("id, full_name")
-      .eq("organization_id", orgId)
-      .ilike("full_name", `%${patientQuery.trim()}%`)
-      .limit(8);
-    if (err) {
-      setError("Não foi possível pesquisar pacientes.");
-      return;
-    }
-    setPatientHits(
-      (data ?? []).map((row) => ({
-        id: String((row as { id: string }).id),
-        fullName: String((row as { full_name: string }).full_name),
-      })),
-    );
-  }
+    },
+    [orgId, supabase],
+  );
+  const searchProceduresCb = useCallback(
+    async (query: string) => {
+      if (!supabase || !orgId) return [];
+      return searchProcedureOptions(supabase, query, {
+        organizationId: orgId,
+        limit: 30,
+      });
+    },
+    [orgId, supabase],
+  );
 
   async function onCreateObs() {
     if (!orgId || !patientId || !professionalId) return;
@@ -143,6 +129,8 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
       setNotice("Contrato obstétrico criado.");
       setPatientId("");
       setPatientName("");
+      setProfessionalId("");
+      setProfessionalName("");
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao criar contrato.");
@@ -380,47 +368,35 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
             {tab === "obstetric" ? "Novo contrato obstétrico" : "Novo termo / contrato"}
           </h2>
           <p className="mt-1 text-xs text-lotus-600">Paciente obrigatória. Não cria decisão clínica.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <input
-              className={fieldClass}
-              placeholder="Buscar paciente"
-              value={patientQuery}
-              onChange={(e) => setPatientQuery(e.target.value)}
+          <label className="mt-3 block text-sm">
+            Paciente
+            <EntityCombobox
+              value={patientId}
+              selectedLabel={patientName}
+              onChange={(id, option) => {
+                setPatientId(id);
+                setPatientName(option?.label ?? "");
+              }}
+              onSearch={searchPatientsCb}
+              minChars={2}
+              placeholder="Digite o nome, CPF ou telefone…"
+              emptyLabel="Nenhum paciente encontrado."
             />
-            <button type="button" className={ghostButtonClass} onClick={() => void searchPatients()}>
-              Buscar
-            </button>
-          </div>
-          {patientName ? <p className="mt-2 text-sm text-lotus-800">Selecionada: {patientName}</p> : null}
-          <ul className="mt-2 space-y-1 text-sm">
-            {patientHits.map((hit) => (
-              <li key={hit.id}>
-                <button
-                  type="button"
-                  className={ghostButtonClass}
-                  onClick={() => {
-                    setPatientId(hit.id);
-                    setPatientName(hit.fullName);
-                  }}
-                >
-                  {hit.fullName}
-                </button>
-              </li>
-            ))}
-          </ul>
+          </label>
           <label className="mt-3 block text-sm">
             Profissional
-            <select
-              className={fieldClass}
+            <EntityCombobox
               value={professionalId}
-              onChange={(e) => setProfessionalId(e.target.value)}
-            >
-              {professionals.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.fullName}
-                </option>
-              ))}
-            </select>
+              selectedLabel={professionalName}
+              onChange={(id, option) => {
+                setProfessionalId(id);
+                setProfessionalName(option?.label ?? "");
+              }}
+              onSearch={searchProfessionalsCb}
+              minChars={2}
+              placeholder="Nome ou registro profissional…"
+              emptyLabel="Nenhum profissional encontrado."
+            />
           </label>
 
           {tab === "obstetric" ? (
@@ -446,7 +422,21 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
             <>
               <label className="mt-3 block text-sm">
                 Procedimento
-                <input className={fieldClass} value={procName} onChange={(e) => setProcName(e.target.value)} />
+                <EntityCombobox
+                  value={procedureId}
+                  selectedLabel={procName}
+                  onChange={(id, option) => {
+                    setProcedureId(id);
+                    setProcName(option?.label ?? "");
+                    if (option?.label && !procTitle.trim()) {
+                      setProcTitle(`Termo — ${option.label}`);
+                    }
+                  }}
+                  onSearch={searchProceduresCb}
+                  minChars={2}
+                  placeholder="Nome ou código do procedimento…"
+                  emptyLabel="Nenhum procedimento encontrado."
+                />
               </label>
               <label className="mt-3 block text-sm">
                 Tipo

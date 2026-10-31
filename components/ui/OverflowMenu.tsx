@@ -52,6 +52,7 @@ export function OverflowMenu({
         type="button"
         className={`${buttonVariantClass.secondary} ${buttonCompactPad}`}
         aria-label={label}
+        title={label}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}

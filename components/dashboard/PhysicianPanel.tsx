@@ -195,7 +195,9 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
         {loading ? (
           <p className="mt-3 text-sm text-lotus-600">Carregando…</p>
         ) : upcoming.length === 0 ? (
-          <p className="mt-3 text-sm text-lotus-600">Nenhum próximo atendimento hoje.</p>
+          <p className="mt-3 text-sm text-lotus-600">
+            Ainda não há próximos atendimentos hoje. Abra a agenda para agendar ou revisar o período.
+          </p>
         ) : (
           <ul className="mt-4 space-y-2">
             {upcoming.map((row) => {
@@ -247,7 +249,9 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
         {loading ? (
           <p className="mt-3 text-sm text-lotus-600">Carregando…</p>
         ) : openEncounters.length === 0 ? (
-          <p className="mt-3 text-sm text-lotus-600">Nenhum encounter aberto no momento.</p>
+          <p className="mt-3 text-sm text-lotus-600">
+            Não há atendimentos em andamento no momento.
+          </p>
         ) : (
           <ul className="mt-4 space-y-2">
             {openEncounters.map((enc) => {
@@ -261,7 +265,7 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
                     <p className="text-sm font-semibold text-lotus-950">
                       {patient?.fullName ?? "Paciente"}
                     </p>
-                    <p className="text-xs text-lotus-600">Encounter em aberto · Workspace oficial</p>
+                    <p className="text-xs text-lotus-600">Atendimento em aberto</p>
                   </div>
                   <Link href={`/app/records/${enc.id}`} className={buttonClass}>
                     Continuar atendimento
@@ -273,14 +277,18 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
         )}
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Link href="/app/patients" className="card block transition-colors hover:border-lotus-200">
           <h3 className="font-semibold text-lotus-900">Pacientes</h3>
-          <p className="mt-1 text-sm text-lotus-700">Pesquisar, filtrar e abrir prontuário.</p>
+          <p className="mt-1 text-sm text-lotus-700">Pesquisar, filtrar e abrir o cadastro.</p>
         </Link>
         <Link href="/app/records" className="card block transition-colors hover:border-lotus-200">
           <h3 className="font-semibold text-lotus-900">Prontuário</h3>
-          <p className="mt-1 text-sm text-lotus-700">Índice e busca centrada na paciente (C040.10).</p>
+          <p className="mt-1 text-sm text-lotus-700">Histórico e busca centrada na paciente.</p>
+        </Link>
+        <Link href="/app/obstetrics" className="card block transition-colors hover:border-lotus-200">
+          <h3 className="font-semibold text-lotus-900">Programação obstétrica</h3>
+          <p className="mt-1 text-sm text-lotus-700">Gestações em acompanhamento.</p>
         </Link>
       </section>
     </div>

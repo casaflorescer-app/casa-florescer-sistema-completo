@@ -49,7 +49,7 @@ export function ClinicalPrescriptionPanel({
   encounterId,
   canManage,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   organizationId: string;
   practiceId: string;
   patientId: string;

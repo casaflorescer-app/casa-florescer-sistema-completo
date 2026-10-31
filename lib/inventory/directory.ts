@@ -1,5 +1,16 @@
 "use client";
 
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import {
+  listBalancesCasa,
+  listBalancesForItemCasa,
+  listItemsCasa,
+  listLotsCasa,
+  listMovementsCasa,
+  listWarehousesCasa,
+  loadStockPartsCasa,
+} from "@/lib/casa/module-data";
 import { createClient } from "@/lib/supabase/client";
 import { countEquipmentStats } from "@/lib/inventory/equipment";
 import {
@@ -113,6 +124,9 @@ function mapRpcError(message: string): string {
 }
 
 export async function listWarehouses(organizationId: string): Promise<WarehouseRow[]> {
+  if (isCasaBrowserAuth()) {
+    return (await listWarehousesCasa(organizationId)).map((row) => mapWarehouse(row));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("warehouses")
@@ -132,6 +146,18 @@ export async function listItems(params: {
   activeOnly?: boolean;
   limit?: number;
 }): Promise<ItemRow[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listItemsCasa(params);
+    const items = data.map((row) => mapItem(row));
+    if (items.length === 0) return items;
+    const bals = await listBalancesCasa(items.map((item) => item.id));
+    const totals = new Map<string, number>();
+    for (const row of bals) {
+      const id = String(row.item_id);
+      totals.set(id, (totals.get(id) ?? 0) + Number(row.qty_on_hand));
+    }
+    return items.map((item) => ({ ...item, totalQty: totals.get(item.id) ?? 0 }));
+  }
   const supabase = requireClient();
   let q = supabase
     .from("items")
@@ -175,6 +201,15 @@ export async function getItem(
   organizationId: string,
   itemId: string,
 ): Promise<ItemRow | null> {
+  if (isCasaBrowserAuth()) {
+    const data = await listItemsCasa({ organizationId, limit: 500, activeOnly: false });
+    const found = data.find((row) => String(row.id) === itemId);
+    if (!found) return null;
+    const item = mapItem(found);
+    const bals = await listBalancesCasa([itemId]);
+    item.totalQty = bals.reduce((sum, row) => sum + Number(row.qty_on_hand), 0);
+    return item;
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("items")
@@ -199,6 +234,16 @@ export async function getItem(
 }
 
 export async function listBalancesForItem(itemId: string): Promise<BalanceRow[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listBalancesForItemCasa(itemId);
+    return data.map((row) => ({
+      warehouseId: String(row.warehouse_id),
+      itemId: String(row.item_id),
+      qtyOnHand: Number(row.qty_on_hand),
+      warehouseCode: row.warehouse_code ? String(row.warehouse_code) : undefined,
+      warehouseName: row.warehouse_name ? String(row.warehouse_name) : undefined,
+    }));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("stock_balances")
@@ -220,6 +265,17 @@ export async function listBalancesForItem(itemId: string): Promise<BalanceRow[]>
 }
 
 export async function listLotsForItem(itemId: string): Promise<LotRow[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listLotsCasa(itemId);
+    return data.map((row) => ({
+      id: String(row.id),
+      itemId: String(row.item_id),
+      warehouseId: String(row.warehouse_id),
+      lotCode: String(row.lot_code),
+      expiresOn: (row.expires_on as string | null) ?? null,
+      qtyOnHand: Number(row.qty_on_hand),
+    }));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("item_lots")
@@ -244,6 +300,9 @@ export async function listMovements(params: {
   warehouseId?: string;
   limit?: number;
 }): Promise<MovementRow[]> {
+  if (isCasaBrowserAuth()) {
+    return (await listMovementsCasa(params)).map((row) => mapMovement(row));
+  }
   const supabase = requireClient();
   let q = supabase
     .from("stock_movements")
@@ -263,6 +322,68 @@ export async function listMovements(params: {
 export async function loadStockDashboard(
   organizationId: string,
 ): Promise<{ stats: StockDashboardStats; alerts: StockAlert[] }> {
+  if (isCasaBrowserAuth()) {
+    const parts = await loadStockPartsCasa(organizationId);
+    const today = new Date().toISOString().slice(0, 10);
+    const soon = addDaysIso(today, STOCK_EXPIRING_SOON_DAYS);
+    const items = parts.items;
+    const totals = new Map<string, number>();
+    for (const row of parts.balances) {
+      const id = String(row.item_id);
+      totals.set(id, (totals.get(id) ?? 0) + Number(row.qty_on_hand));
+    }
+    let lowStock = 0;
+    let zeroStock = 0;
+    const alerts: StockAlert[] = [];
+    const seen = new Set<string>();
+    const push = (id: string, severity: "warn" | "error", message: string) => {
+      if (seen.has(id)) return;
+      seen.add(id);
+      alerts.push({ id, severity, message });
+    };
+    for (const item of items) {
+      if (item.is_active === false) continue;
+      const total = totals.get(String(item.id)) ?? 0;
+      const min = Number(item.min_qty ?? 0);
+      if (total <= 0) {
+        zeroStock += 1;
+        push(`zero:${item.id}`, "error", `${item.sku} — ${item.name}: estoque zerado.`);
+      } else if (total <= min) {
+        lowStock += 1;
+        push(`low:${item.id}`, "warn", `${item.sku} — ${item.name}: estoque baixo (${total} ≤ mín. ${min}).`);
+      }
+    }
+    let expiringSoon = 0;
+    let expired = 0;
+    for (const lot of parts.lots) {
+      const exp = lot.expires_on as string | null;
+      if (!exp) continue;
+      const day = exp.slice(0, 10);
+      if (day < today) {
+        expired += 1;
+        push(`expired:${lot.id}`, "error", `Lote ${lot.lot_code} vencido em ${day} (qtd ${lot.qty_on_hand}).`);
+      } else if (day <= soon) {
+        expiringSoon += 1;
+        push(`soon:${lot.id}`, "warn", `Lote ${lot.lot_code} vence em ${day} (qtd ${lot.qty_on_hand}).`);
+      }
+    }
+    const equipmentMaintenance = parts.equipment.filter((row) => row.status === "maintenance").length;
+    return {
+      stats: {
+        itemsTotal: items.length,
+        itemsActive: items.filter((item) => item.is_active !== false).length,
+        lowStock,
+        zeroStock,
+        expiringSoon,
+        expired,
+        warehouses: parts.warehouses.length,
+        recentMovements: parts.movements.length,
+        equipmentTotal: parts.equipment.length,
+        equipmentMaintenance,
+      },
+      alerts,
+    };
+  }
   const supabase = requireClient();
   const today = new Date().toISOString().slice(0, 10);
   const soon = addDaysIso(today, STOCK_EXPIRING_SOON_DAYS);
@@ -369,7 +490,27 @@ export async function loadStockDashboard(
   };
 }
 
+async function casaStockId(name: string, payload: Record<string, unknown>) {
+  try {
+    const data = await callCasaRpc(name, [payload]);
+    const id = data && typeof data === "object" && "id" in data ? String((data as { id: unknown }).id) : "";
+    if (!id) throw new Error("Resposta inválida do servidor.");
+    return id;
+  } catch (error) {
+    throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+  }
+}
+
+async function casaStockVoid(name: string, payload: Record<string, unknown>) {
+  try {
+    await callCasaRpc(name, [payload]);
+  } catch (error) {
+    throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+  }
+}
+
 export async function upsertItem(payload: Record<string, unknown>): Promise<string> {
+  if (isCasaBrowserAuth()) return casaStockId("stock_item_upsert", payload);
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("stock_item_upsert", { p_payload: payload });
   if (error) throw new Error(mapRpcError(error.message));
@@ -379,6 +520,7 @@ export async function upsertItem(payload: Record<string, unknown>): Promise<stri
 }
 
 export async function upsertWarehouse(payload: Record<string, unknown>): Promise<string> {
+  if (isCasaBrowserAuth()) return casaStockId("stock_warehouse_upsert", payload);
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("stock_warehouse_upsert", {
     p_payload: payload,
@@ -390,30 +532,35 @@ export async function upsertWarehouse(payload: Record<string, unknown>): Promise
 }
 
 export async function stockReceipt(payload: Record<string, unknown>): Promise<void> {
+  if (isCasaBrowserAuth()) return casaStockVoid("stock_movement_receipt", payload);
   const supabase = requireClient();
   const { error } = await supabase.rpc("stock_movement_receipt", { p_payload: payload });
   if (error) throw new Error(mapRpcError(error.message));
 }
 
 export async function stockExit(payload: Record<string, unknown>): Promise<void> {
+  if (isCasaBrowserAuth()) return casaStockVoid("stock_movement_exit", payload);
   const supabase = requireClient();
   const { error } = await supabase.rpc("stock_movement_exit", { p_payload: payload });
   if (error) throw new Error(mapRpcError(error.message));
 }
 
 export async function stockTransfer(payload: Record<string, unknown>): Promise<void> {
+  if (isCasaBrowserAuth()) return casaStockVoid("stock_movement_transfer", payload);
   const supabase = requireClient();
   const { error } = await supabase.rpc("stock_movement_transfer", { p_payload: payload });
   if (error) throw new Error(mapRpcError(error.message));
 }
 
 export async function stockAdjust(payload: Record<string, unknown>): Promise<void> {
+  if (isCasaBrowserAuth()) return casaStockVoid("stock_movement_adjust", payload);
   const supabase = requireClient();
   const { error } = await supabase.rpc("stock_movement_adjust", { p_payload: payload });
   if (error) throw new Error(mapRpcError(error.message));
 }
 
 export async function stockInventoryConfirm(payload: Record<string, unknown>): Promise<void> {
+  if (isCasaBrowserAuth()) return casaStockVoid("stock_inventory_confirm", payload);
   const supabase = requireClient();
   const { error } = await supabase.rpc("stock_inventory_confirm", { p_payload: payload });
   if (error) throw new Error(mapRpcError(error.message));

@@ -453,7 +453,7 @@ export function ExamsModule() {
                   ))}
                 </select>
               </label>
-              {selectedEncounterId && supabase ? (
+              {selectedEncounterId ? (
                 <ExamRequestPanel
                   key={selectedEncounterId}
                   supabase={supabase}

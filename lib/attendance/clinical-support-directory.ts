@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { callCasaRpc } from "@/lib/casa/rpc";
+import { listExamCatalogCasa, listExamGroupsCasa, listPrescriptionTemplatesCasa } from "@/lib/casa/module-data";
 import type {
   ClinicalAiPayload,
   ClinicalSuggestionType,
@@ -105,10 +106,29 @@ function mapRpcError(error: { message?: string } | null): string {
 }
 
 export async function listExamCatalog(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   activeOnly = true,
 ): Promise<ExamCatalogRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listExamCatalogCasa(practiceId, activeOnly)).flatMap((row) => {
+      const id = asString(row.id);
+      const practice = asString(row.practice_id);
+      const name = asString(row.name);
+      if (!id || !practice || !name) return [];
+      return [{
+        id,
+        practiceId: practice,
+        name,
+        shortName: asString(row.short_name),
+        category: asString(row.category),
+        description: asString(row.description),
+        isActive: Boolean(row.is_active),
+        sortOrder: typeof row.sort_order === "number" ? row.sort_order : Number(row.sort_order ?? 100),
+      }];
+    });
+  }
   let query = supabase
     .from("clinical_exam_catalog")
     .select("id, practice_id, name, short_name, category, description, is_active, sort_order")
@@ -140,10 +160,29 @@ export async function listExamCatalog(
 }
 
 export async function listExamGroups(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   activeOnly = true,
 ): Promise<ExamGroupRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listExamGroupsCasa(practiceId, activeOnly)).flatMap((row) => {
+      const id = asString(row.id);
+      const practice = asString(row.practice_id);
+      const name = asString(row.name);
+      if (!id || !practice || !name) return [];
+      const catalogIds = Array.isArray(row.catalog_ids) ? row.catalog_ids.map(String) : [];
+      return [{
+        id,
+        practiceId: practice,
+        name,
+        description: asString(row.description),
+        isActive: Boolean(row.is_active),
+        sortOrder: typeof row.sort_order === "number" ? row.sort_order : Number(row.sort_order ?? 100),
+        catalogIds,
+      }];
+    });
+  }
   let query = supabase
     .from("clinical_exam_groups")
     .select("id, practice_id, name, description, is_active, sort_order")
@@ -182,7 +221,7 @@ export async function listExamGroups(
 }
 
 export async function upsertExamCatalog(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     practiceId: string;
     name: string;
@@ -194,6 +233,26 @@ export async function upsertExamCatalog(
     sortOrder?: number;
   },
 ): Promise<{ row: ExamCatalogRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("clinical_exam_catalog_upsert", [
+        input.practiceId,
+        input.name,
+        input.id ?? null,
+        input.shortName ?? null,
+        input.category ?? null,
+        input.description ?? null,
+        input.isActive ?? true,
+        input.sortOrder ?? 100,
+      ]);
+      const id = data && typeof data === "object" && "id" in data ? String((data as { id: unknown }).id) : "";
+      const list = await listExamCatalog(null, input.practiceId, false);
+      return { row: list.find((item) => item.id === id) ?? null, error: null };
+    } catch (error) {
+      return { row: null, error: error instanceof Error ? error.message : "Não foi possível gravar o exame." };
+    }
+  }
   const { data, error } = await supabase.rpc("clinical_exam_catalog_upsert", {
     p_practice_id: input.practiceId,
     p_name: input.name,
@@ -210,7 +269,7 @@ export async function upsertExamCatalog(
 }
 
 export async function upsertExamGroup(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     practiceId: string;
     name: string;
@@ -221,6 +280,23 @@ export async function upsertExamGroup(
     sortOrder?: number;
   },
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("clinical_exam_group_upsert", [
+        input.practiceId,
+        input.name,
+        input.catalogIds,
+        input.id ?? null,
+        input.description ?? null,
+        input.isActive ?? true,
+        input.sortOrder ?? 100,
+      ]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível gravar o grupo." };
+    }
+  }
   const { error } = await supabase.rpc("clinical_exam_group_upsert", {
     p_practice_id: input.practiceId,
     p_name: input.name,
@@ -382,9 +458,10 @@ async function hydrateExamRequestRows(
 }
 
 export async function listExamRequestsForEncounter(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<ExamRequestRow[]> {
+  if (!supabase) return [];
   const { data, error } = await supabase
     .from("clinical_exam_requests")
     .select("id, encounter_id, patient_id, status, notes, clinical_indication, confirmed_at, created_at")
@@ -396,9 +473,10 @@ export async function listExamRequestsForEncounter(
 
 /** Pedidos clínicos do paciente (pedido ≠ resultado/anexo). */
 export async function listExamRequestsForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<ExamRequestRow[]> {
+  if (!supabase) return [];
   const { data, error } = await supabase
     .from("clinical_exam_requests")
     .select("id, encounter_id, patient_id, status, notes, clinical_indication, confirmed_at, created_at")
@@ -409,10 +487,29 @@ export async function listExamRequestsForPatient(
 }
 
 export async function listPrescriptionTemplates(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   activeOnly = true,
 ): Promise<PrescriptionTemplateRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const data = await listPrescriptionTemplatesCasa(practiceId);
+    return data.flatMap((row) => {
+      if (activeOnly && row.is_active === false) return [];
+      const id = asString(row.id);
+      const practice = asString(row.practice_id);
+      const name = asString(row.name);
+      if (!id || !practice || !name) return [];
+      return [{
+        id,
+        practiceId: practice,
+        name,
+        description: asString(row.description),
+        isActive: Boolean(row.is_active),
+        items: [],
+      }];
+    });
+  }
   let query = supabase
     .from("prescription_templates")
     .select("id, practice_id, name, description, is_active")
@@ -463,7 +560,7 @@ export async function listPrescriptionTemplates(
 }
 
 export async function upsertPrescriptionTemplate(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     practiceId: string;
     name: string;
@@ -473,6 +570,22 @@ export async function upsertPrescriptionTemplate(
     isActive?: boolean;
   },
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("prescription_template_upsert", [
+        input.practiceId,
+        input.name,
+        input.items,
+        input.id ?? null,
+        input.description ?? null,
+        input.isActive ?? true,
+      ]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível gravar o modelo." };
+    }
+  }
   const { error } = await supabase.rpc("prescription_template_upsert", {
     p_practice_id: input.practiceId,
     p_name: input.name,
@@ -485,10 +598,20 @@ export async function upsertPrescriptionTemplate(
 }
 
 export async function applyPrescriptionTemplate(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   templateId: string,
   encounterId: string,
 ): Promise<{ prescriptionId: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { prescriptionId: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("prescription_template_apply", [templateId, encounterId]);
+      const id = data && typeof data === "object" && "id" in data ? String((data as { id: unknown }).id) : asString(data);
+      return { prescriptionId: id, error: null };
+    } catch (error) {
+      return { prescriptionId: null, error: error instanceof Error ? error.message : "Não foi possível aplicar o modelo." };
+    }
+  }
   const { data, error } = await supabase.rpc("prescription_template_apply", {
     p_template_id: templateId,
     p_encounter_id: encounterId,

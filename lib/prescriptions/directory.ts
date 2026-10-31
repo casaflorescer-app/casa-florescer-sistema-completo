@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createPrescriptionDraftCasa } from "@/lib/casa/writes";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { deletePrescriptionItemCasa, insertPrescriptionItemCasa, listPrescriptionItemsCasa, listPrescriptionsCasa } from "@/lib/casa/module-data";
 
 export type PrescriptionRow = {
   id: string;
@@ -95,9 +97,15 @@ export function mapPrescriptionError(error: { message?: string } | null): string
 }
 
 export async function listPrescriptionsForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<PrescriptionRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listPrescriptionsCasa(patientId))
+      .map((row) => toRx(row))
+      .filter((item): item is PrescriptionRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("prescriptions")
     .select(
@@ -112,9 +120,15 @@ export async function listPrescriptionsForPatient(
 }
 
 export async function listPrescriptionItems(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   prescriptionId: string,
 ): Promise<PrescriptionItemRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listPrescriptionItemsCasa(prescriptionId))
+      .map((row) => toItem(row))
+      .filter((item): item is PrescriptionItemRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("prescription_items")
     .select(
@@ -188,7 +202,7 @@ export async function createPrescriptionDraft(
 }
 
 export async function addPrescriptionItem(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     prescriptionId: string;
     medicationName: string;
@@ -202,6 +216,26 @@ export async function addPrescriptionItem(
     sortOrder?: number;
   },
 ): Promise<{ item: PrescriptionItemRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { item: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const row = await insertPrescriptionItemCasa({
+        prescriptionId: input.prescriptionId,
+        medicationName: input.medicationName,
+        presentation: input.presentation ?? null,
+        quantity: input.quantity ?? null,
+        dosage: input.dosage ?? null,
+        frequency: input.frequency ?? null,
+        duration: input.duration ?? null,
+        route: input.route ?? null,
+        instructions: input.instructions ?? null,
+        sortOrder: input.sortOrder ?? 0,
+      });
+      return { item: row ? toItem(row) : null, error: row ? null : "A política de acesso recusou o item." };
+    } catch (error) {
+      return { item: null, error: error instanceof Error ? error.message : "Não foi possível incluir o item." };
+    }
+  }
   const { data, error } = await supabase
     .from("prescription_items")
     .insert({
@@ -225,17 +259,35 @@ export async function addPrescriptionItem(
 }
 
 export async function deletePrescriptionItem(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   itemId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await deletePrescriptionItemCasa(itemId);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível excluir o item." };
+    }
+  }
   const { error } = await supabase.from("prescription_items").delete().eq("id", itemId);
   return { error: error ? mapPrescriptionError(error) : null };
 }
 
 export async function publishPrescriptionToPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   prescriptionId: string,
 ): Promise<{ prescription: PrescriptionRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { prescription: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("prescription_publish_to_patient", [prescriptionId]);
+      return { prescription: data ? toRx(data as Record<string, unknown>) : null, error: null };
+    } catch (error) {
+      return { prescription: null, error: error instanceof Error ? error.message : "Não foi possível publicar a receita." };
+    }
+  }
   const { data, error } = await supabase.rpc("prescription_publish_to_patient", {
     p_prescription_id: prescriptionId,
   });
@@ -247,9 +299,18 @@ export async function publishPrescriptionToPatient(
 }
 
 export async function markPrescriptionViewed(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   prescriptionId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("prescription_mark_viewed", [prescriptionId]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível registrar a leitura." };
+    }
+  }
   const { error } = await supabase.rpc("prescription_mark_viewed", {
     p_prescription_id: prescriptionId,
   });
@@ -262,7 +323,7 @@ export async function markPrescriptionViewed(
  * O RPC prescription_template_apply continua preferido quando há encounter.
  */
 export async function applyTemplateItemsAsDraft(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     organizationId: string;
     practiceId: string;
@@ -333,7 +394,7 @@ export async function applyTemplateItemsAsDraft(
 
 /** Copia receita anterior como NOVO rascunho (não documento emitido). */
 export async function copyPrescriptionAsDraft(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     sourcePrescriptionId: string;
     organizationId: string;

@@ -1,5 +1,8 @@
 "use client";
 
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { listEquipmentCasa, listEquipmentEventsCasa, listRoomsCasa, loadStockPartsCasa } from "@/lib/casa/module-data";
 import { createClient } from "@/lib/supabase/client";
 import type {
   EquipmentEventRow,
@@ -73,6 +76,13 @@ function mapRpcError(message: string): string {
 }
 
 export async function listStockRooms(organizationId: string): Promise<RoomOption[]> {
+  if (isCasaBrowserAuth()) {
+    return (await listRoomsCasa(organizationId)).map((row) => ({
+      id: String(row.id),
+      code: String(row.code ?? ""),
+      name: String(row.name ?? ""),
+    }));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("rooms")
@@ -95,6 +105,24 @@ export async function listEquipment(params: {
   roomId?: string;
   limit?: number;
 }): Promise<EquipmentRow[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listEquipmentCasa(params);
+    let rows = data.map((row) =>
+      mapEquipment(row, row.room_id ? { code: String(row.room_code ?? ""), name: String(row.room_name ?? "") } : null),
+    );
+    const search = params.search?.trim().toLowerCase();
+    if (search) {
+      rows = rows.filter(
+        (item) =>
+          item.name.toLowerCase().includes(search) ||
+          (item.assetTag ?? "").toLowerCase().includes(search) ||
+          (item.serialNumber ?? "").toLowerCase().includes(search) ||
+          (item.manufacturer ?? "").toLowerCase().includes(search) ||
+          (item.model ?? "").toLowerCase().includes(search),
+      );
+    }
+    return rows;
+  }
   const supabase = requireClient();
   let q = supabase
     .from("clinic_equipment")
@@ -157,6 +185,19 @@ export async function listEquipmentEvents(
   equipmentId: string,
   limit = 40,
 ): Promise<EquipmentEventRow[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listEquipmentEventsCasa(equipmentId, limit);
+    return data.map((row) => ({
+      id: String(row.id),
+      equipmentId: String(row.equipment_id),
+      eventKind: String(row.event_kind),
+      fromRoomId: (row.from_room_id as string | null) ?? null,
+      toRoomId: (row.to_room_id as string | null) ?? null,
+      detail: (row.detail as Record<string, unknown>) ?? {},
+      createdAt: String(row.created_at),
+      actorId: (row.actor_id as string | null) ?? null,
+    }));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("clinic_equipment_events")
@@ -183,6 +224,15 @@ export async function listEquipmentEvents(
 }
 
 export async function upsertEquipment(payload: Record<string, unknown>): Promise<string> {
+  if (isCasaBrowserAuth()) {
+    try {
+      const data = await callCasaRpc("clinic_equipment_upsert", [payload]);
+      if (!data) throw new Error("Equipamento sem identificador retornado.");
+      return typeof data === "string" ? data : String((data as { id?: string }).id ?? data);
+    } catch (error) {
+      throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+    }
+  }
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("clinic_equipment_upsert", {
     p_payload: payload,
@@ -193,6 +243,15 @@ export async function upsertEquipment(payload: Record<string, unknown>): Promise
 }
 
 export async function transferEquipment(payload: Record<string, unknown>): Promise<string> {
+  if (isCasaBrowserAuth()) {
+    try {
+      const data = await callCasaRpc("clinic_equipment_transfer", [payload]);
+      if (!data) throw new Error("Transferência sem identificador retornado.");
+      return typeof data === "string" ? data : String((data as { id?: string }).id ?? data);
+    } catch (error) {
+      throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+    }
+  }
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("clinic_equipment_transfer", {
     p_payload: payload,
@@ -206,6 +265,13 @@ export async function countEquipmentStats(organizationId: string): Promise<{
   total: number;
   maintenance: number;
 }> {
+  if (isCasaBrowserAuth()) {
+    const parts = await loadStockPartsCasa(organizationId);
+    return {
+      total: parts.equipment.length,
+      maintenance: parts.equipment.filter((row) => row.status === "maintenance").length,
+    };
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("clinic_equipment")

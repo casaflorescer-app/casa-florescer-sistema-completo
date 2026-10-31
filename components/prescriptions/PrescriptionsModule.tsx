@@ -271,7 +271,7 @@ export function PrescriptionsModule() {
         </section>
       ) : null}
 
-      {patient && membership?.professional?.id && supabase ? (
+      {patient && membership?.professional?.id ? (
         <ClinicalPrescriptionPanel
           supabase={supabase}
           organizationId={

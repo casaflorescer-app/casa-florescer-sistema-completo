@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { isCasaDatabaseConfigured } from "@/lib/db/casa";
+import { loadClinicalDocumentCasa } from "@/lib/casa/module-data";
 import {
   attachDocumentPdf,
   documentPdfPath,
@@ -106,28 +108,35 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createServerSupabase();
+    let doc: ClinicalDocumentRow | null = null;
     if (!supabase) {
-      return NextResponse.json({ error: "Supabase indisponível." }, { status: 500 });
+      if (!isCasaDatabaseConfigured()) {
+        return NextResponse.json({ error: "Supabase indisponível." }, { status: 500 });
+      }
+      const raw = await loadClinicalDocumentCasa(documentId);
+      if (!raw) {
+        return NextResponse.json({ error: "Documento não encontrado." }, { status: 404 });
+      }
+      doc = mapRow(raw);
+    } else {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+      }
+
+      const { data, error } = await supabase
+        .from("clinical_document_artifacts")
+        .select("*")
+        .eq("id", documentId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return NextResponse.json({ error: "Documento não encontrado." }, { status: 404 });
+      }
+      doc = mapRow(data as Record<string, unknown>);
     }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-    }
-
-    const { data, error } = await supabase
-      .from("clinical_document_artifacts")
-      .select("*")
-      .eq("id", documentId)
-      .maybeSingle();
-
-    if (error || !data) {
-      return NextResponse.json({ error: "Documento não encontrado." }, { status: 404 });
-    }
-
-    const doc = mapRow(data as Record<string, unknown>);
     if (!doc) {
       return NextResponse.json({ error: "Documento inválido." }, { status: 400 });
     }

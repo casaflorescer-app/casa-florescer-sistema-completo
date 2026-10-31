@@ -201,7 +201,7 @@ export async function searchProcedureOptions(
 }
 
 export async function searchInventoryItemOptions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   query: string,
   options: {
     organizationId: string;
@@ -210,6 +210,7 @@ export async function searchInventoryItemOptions(
     limit?: number;
   },
 ): Promise<EntitySearchOption[]> {
+  if (!supabase) return [];
   const q = escapeIlike(query);
   if (q.length < 2) return [];
   const limit = clampLimit(options.limit);

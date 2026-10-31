@@ -39,12 +39,15 @@ Com o modo da casa ligado, agenda, prontuário, gestação, pedido de exame, emi
 
 Foto, exame e PDF entram por `POST /api/casa/files` e saem por `GET` no mesmo caminho. O arquivo fica sob `CASA_FILES_ROOT`, fora de `public/`. O banco guarda o caminho relativo. A leitura clínica exige `can_read_exam_file`. A fotografia exige `can_access_patient_photo`. Sem a variável do volume, a rota responde indisponível. Essa variável não foi gravada na produção.
 
-A tela `/app/finance` lista fatura, pagamento, rateio e despesa pelo que a policy já devolve. O rateio não calcula percentual. A gravação de despesa só aparece para administradora. Fatura e pagamento só aparecem para quem tem caixa ou é administradora. Estoque, locação e relacionamento continuam no cliente Supabase.
+A tela `/app/finance` lista fatura, pagamento, rateio e despesa pelo que a policy já devolve. O rateio não calcula percentual. A gravação de despesa só aparece para administradora. Fatura e pagamento só aparecem para quem tem caixa ou é administradora.
 
-A prova SQL da C084 continua pendente. Esta máquina não abriu sessão no BancoFlorescerPP. O sistema não está pronto para o corte.
+Com o modo da casa ligado, estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames chamam as funções SQL já existentes. A gravação lê o áudio no volume privado e só segue se o caminho pedido for o caminho gravado. O PDF do documento segue o mesmo volume. O painel de resultados de exame anexados continua no cliente publicado e fica fora da tela nesse modo. O SDK permanece no repositório porque a produção ainda depende dele.
+
+A prova SQL da C084 continua pendente. A saída do console não chegou. O sistema não está pronto para o corte.
 
 ## Histórico
 
+- 2026-10-31 — C086: estoque, locação, relacionamento, portal, gravação, compositor de receitas e catálogo de exames no ramo do servidor. A prova SQL da C084 não chegou. Sem corte.
 - 2026-10-31 — C085: gravações do modo da casa, volume privado em `/api/casa/files` e tela `/app/finance` sobre as policies já existentes. Sem variáveis da casa na produção. A prova SQL da C084 continua pendente.
 - 2026-10-31 — ramo servidor da C084 para pacientes, agenda, prontuário, gestação, exames, receitas, repasse e relatórios. Produção sem as variáveis da casa. A prova SQL ainda não rodou.
 - 2026-10-31 — `0059` e C074 aplicadas no BancoFlorescerPP. `casa_login` provado sem superusuário e sem `BYPASSRLS`. A URL da casa continua desligada.

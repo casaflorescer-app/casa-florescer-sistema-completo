@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { readStoredPathCasa } from "@/lib/casa/module-data";
+import { readPrivateFile } from "@/lib/files/casa-store";
+import { isCasaDatabaseConfigured } from "@/lib/db/casa";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { ENCOUNTER_RECORDING_BUCKET } from "@/lib/attendance/recording-types";
 import { getTranscriptionProvider } from "@/lib/ai/transcription-provider";
@@ -8,6 +12,9 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabase();
+    if (!supabase && isCasaDatabaseConfigured()) {
+      return await transcribeFromCasaVolume(request);
+    }
     if (!supabase) {
       return NextResponse.json({ error: "Autenticação indisponível." }, { status: 500 });
     }
@@ -142,4 +149,80 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Erro interno na transcrição." }, { status: 500 });
   }
+}
+
+async function saveCasa(
+  transcriptionId: string,
+  status: string,
+  provider: string | null,
+  text: string | null,
+  errorMessage: string | null,
+  simulation: boolean,
+) {
+  return callCasaRpc("encounter_recording_save_transcription_result", [
+    transcriptionId,
+    status,
+    provider,
+    text,
+    errorMessage,
+    simulation,
+  ]);
+}
+
+async function transcribeFromCasaVolume(request: Request) {
+  const body = (await request.json()) as { transcriptionId?: string; audioStoragePath?: string };
+  const transcriptionId = body.transcriptionId?.trim();
+  const audioStoragePath = body.audioStoragePath?.trim();
+  if (!transcriptionId || !audioStoragePath || audioStoragePath.includes("..")) {
+    return NextResponse.json({ error: "Parâmetros inválidos." }, { status: 400 });
+  }
+  const stored = await readStoredPathCasa("encounter", transcriptionId);
+  if (!stored || stored !== audioStoragePath) {
+    return NextResponse.json({ error: "Áudio não corresponde a esta transcrição." }, { status: 403 });
+  }
+  try {
+    await saveCasa(transcriptionId, "processing", null, null, null, false);
+  } catch {
+    return NextResponse.json({ error: "Transcrição não autorizada." }, { status: 403 });
+  }
+  const bytes = await readPrivateFile(stored);
+  if (!bytes) {
+    await saveCasa(transcriptionId, "failed", null, null, "Não foi possível ler o áudio para transcrição.", false);
+    return NextResponse.json({ error: "Falha ao ler áudio.", status: "failed" }, { status: 400 });
+  }
+  const provider = getTranscriptionProvider();
+  const result = await provider.transcribe({
+    bytes: Uint8Array.from(bytes).buffer,
+    mimeType: "audio/webm",
+    fileName: "encounter-segment.webm",
+  });
+  const isSimulation = result.provider === "dev-mock";
+  if (result.status === "unavailable") {
+    const data = await saveCasa(
+      transcriptionId,
+      "unavailable",
+      result.provider,
+      null,
+      result.error ?? "Transcrição automática indisponível.",
+      false,
+    );
+    return NextResponse.json({
+      status: "unavailable",
+      error: "Transcrição automática indisponível.",
+      provider: result.provider,
+      transcription: data ?? null,
+    });
+  }
+  if (result.status !== "completed" || !result.text.trim()) {
+    await saveCasa(transcriptionId, "failed", result.provider, null, result.error ?? "Transcrição falhou.", isSimulation);
+    return NextResponse.json({ error: result.error ?? "Transcrição falhou.", status: "failed" }, { status: 422 });
+  }
+  const data = await saveCasa(transcriptionId, "available", result.provider, result.text, null, isSimulation);
+  return NextResponse.json({
+    status: "available",
+    text: result.text,
+    provider: result.provider,
+    isSimulation,
+    transcription: data ?? null,
+  });
 }

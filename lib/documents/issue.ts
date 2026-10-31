@@ -24,7 +24,7 @@ async function renderAndAttachPdf(
 }
 
 export async function issuePrescriptionDocumentWithPdf(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     prescriptionId: string;
     shareWithPatient?: boolean;
@@ -40,7 +40,7 @@ export async function issuePrescriptionDocumentWithPdf(
 }
 
 export async function issueExamRequestDocumentWithPdf(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     requestId: string;
     clinicalIndication?: string | null;

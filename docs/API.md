@@ -103,8 +103,13 @@ Grava e lê foto, exame e PDF no volume privado. Sem `CASA_DATABASE_URL` ou sem 
 - `POST` recebe `multipart` com `kind` e `file`. Foto aceita JPEG, PNG ou WebP até 2 MB. Documento e exame aceitam PDF, JPEG, PNG ou WebP até 15 MB. Tipo ou tamanho fora disso responde 400 e não grava. Se o banco recusar depois da escrita, o arquivo novo é apagado.
 - 200, 400, 403, 404 ou 503.
 
+### `POST /api/encounters/transcribe` e `POST /api/orientations/transcribe`
+
+Com `CASA_DATABASE_URL` e sem cliente Supabase, o áudio sai de `CASA_FILES_ROOT`. O caminho pedido precisa ser igual ao caminho gravado no segmento ou na versão. Sem essa igualdade a rota responde 403 e não lê o arquivo. O caminho publicado continua baixando o Storage quando o cliente existe.
+
 ## Histórico
 
+- 2026-10-31 — C086: as duas rotas de transcrição leem o volume privado quando a URL da casa está no processo. O caminho precisa ser o gravado.
 - 2026-10-31 — C085: `/api/casa/files` grava e lê no volume privado. A rota fica indisponível sem `CASA_FILES_ROOT`. A variável não foi gravada na produção.
 - 2026-10-31 — a `0059` está no BancoFlorescerPP. As rotas `/api/casa/*` continuam inertes enquanto `CASA_DATABASE_URL` não existir no processo.
 - 2026-10-31 — redefinição de senha, leitura de autorização e criação de staff. A `0059` ainda não foi aplicada no BancoFlorescerPP.

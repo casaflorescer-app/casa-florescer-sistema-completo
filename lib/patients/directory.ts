@@ -1,4 +1,5 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { isValidCpf, onlyDigits } from "@/lib/patients/format";
 
 export const PATIENT_LIST_COLUMNS =
@@ -783,10 +784,16 @@ async function setPatientPhotoPath(
 }
 
 export async function getPatientPhotoUrl(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   photoPath: string | null,
 ): Promise<string | null> {
   if (!photoPath) return null;
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const patientId = photoPath.split("/")[1] ?? "";
+    if (!patientId) return null;
+    return `/api/casa/files?kind=photo&id=${patientId}`;
+  }
   const { data, error } = await supabase.storage
     .from(PATIENT_PHOTO_BUCKET)
     .createSignedUrl(photoPath, PATIENT_PHOTO_SIGNED_SECONDS);
@@ -798,12 +805,25 @@ export async function getPatientPhotoUrl(
 }
 
 export async function uploadPatientPhoto(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
   patientId: string,
   file: File,
 ): Promise<string> {
   const validation = await validatePatientPhotoFile(file);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    if (validation) throw new Error(validation);
+    const body = new FormData();
+    body.set("kind", "photo");
+    body.set("organizationId", organizationId);
+    body.set("patientId", patientId);
+    body.set("file", file);
+    const response = await fetch("/api/casa/files", { method: "POST", body });
+    if (!response.ok) throw new Error("Não foi possível guardar a fotografia.");
+    const payload = (await response.json()) as { path?: string };
+    return payload.path ?? patientPhotoObjectPath(organizationId, patientId);
+  }
   if (validation) throw new Error(validation);
   const path = patientPhotoObjectPath(organizationId, patientId);
   const { error: uploadError } = await supabase.storage.from(PATIENT_PHOTO_BUCKET).upload(path, file, {

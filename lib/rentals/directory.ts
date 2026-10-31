@@ -1,5 +1,15 @@
 "use client";
 
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import {
+  getRentalContractCasa,
+  listRentalContractsCasa,
+  listRentalEventsCasa,
+  listRentalProfessionalsCasa,
+  listSubletRoomsCasa,
+  loadRentalPartsCasa,
+} from "@/lib/casa/module-data";
 import { createClient } from "@/lib/supabase/client";
 import {
   RENTAL_EXPIRING_SOON_DAYS,
@@ -179,6 +189,36 @@ export type ListRentalContractsParams = {
 export async function listRentalContracts(
   params: ListRentalContractsParams,
 ): Promise<RentalContractRow[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listRentalContractsCasa({
+      organizationId: params.organizationId,
+      roomId: params.roomId,
+      specialty: params.specialty,
+      from: params.from,
+      to: params.to,
+      status: params.status,
+      limit: params.limit,
+    });
+    let rows = data.map((row) =>
+      mapContract({
+        ...(row as DbContract),
+        starts_on: String(row.starts_on ?? "").slice(0, 10),
+        ends_on: row.ends_on ? String(row.ends_on).slice(0, 10) : null,
+        rooms: { code: (row.room_code as string | null) ?? null, name: (row.room_name as string | null) ?? null },
+      }),
+    );
+    const search = params.search?.trim().toLowerCase();
+    if (search) {
+      rows = rows.filter((row) =>
+        [row.contractCode, row.tenantName, row.tenantSpecialty, row.roomName, row.roomCode, row.notes]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(search),
+      );
+    }
+    return rows;
+  }
   const supabase = requireClient();
   const limit = Math.min(Math.max(params.limit ?? 100, 1), 300);
   let q = supabase
@@ -236,6 +276,16 @@ export async function getRentalContract(
   organizationId: string,
   contractId: string,
 ): Promise<RentalContractRow | null> {
+  if (isCasaBrowserAuth()) {
+    const row = await getRentalContractCasa(organizationId, contractId);
+    if (!row) return null;
+    return mapContract({
+      ...(row as DbContract),
+      starts_on: String(row.starts_on ?? "").slice(0, 10),
+      ends_on: row.ends_on ? String(row.ends_on).slice(0, 10) : null,
+      rooms: { code: (row.room_code as string | null) ?? null, name: (row.room_name as string | null) ?? null },
+    });
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("rental_contracts")
@@ -251,6 +301,17 @@ export async function getRentalContract(
 export async function listRentalContractEvents(
   contractId: string,
 ): Promise<RentalContractEventRow[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listRentalEventsCasa(contractId);
+    return data.map((row) => ({
+      id: String(row.id),
+      contractId: String(row.contract_id),
+      eventKind: String(row.event_kind),
+      actorId: (row.actor_id as string | null) ?? null,
+      detail: (row.detail as Record<string, unknown>) ?? {},
+      createdAt: String(row.created_at),
+    }));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("rental_contract_events")
@@ -272,6 +333,29 @@ export async function listRentalContractEvents(
 export async function loadRentalDashboard(
   organizationId: string,
 ): Promise<RentalDashboardStats> {
+  if (isCasaBrowserAuth()) {
+    const today = new Date().toISOString().slice(0, 10);
+    const soon = addDaysIso(today, RENTAL_EXPIRING_SOON_DAYS);
+    const parts = await loadRentalPartsCasa(organizationId);
+    const contracts = parts.contracts;
+    const activeRoomIds = new Set(
+      contracts
+        .filter((row) => row.status === "active" || row.status === "scheduled")
+        .map((row) => String(row.room_id)),
+    );
+    return {
+      active: contracts.filter((row) => row.status === "active").length,
+      scheduled: contracts.filter((row) => row.status === "scheduled").length,
+      expiringSoon: contracts.filter((row) => {
+        const ends = row.ends_on ? String(row.ends_on).slice(0, 10) : "";
+        return row.status === "active" && ends >= today && ends <= soon;
+      }).length,
+      ended: contracts.filter((row) => row.status === "ended").length,
+      cancelled: contracts.filter((row) => row.status === "cancelled").length,
+      subletRooms: parts.rooms.filter((row) => row.room_kind === "sublet_consultorio").length,
+      roomsWithActiveContract: activeRoomIds.size,
+    };
+  }
   const supabase = requireClient();
   const today = new Date().toISOString().slice(0, 10);
   const soon = addDaysIso(today, RENTAL_EXPIRING_SOON_DAYS);
@@ -320,6 +404,14 @@ export async function loadRentalDashboard(
 export async function listSubletRooms(
   organizationId: string,
 ): Promise<RentalRoomOption[]> {
+  if (isCasaBrowserAuth()) {
+    return (await listSubletRoomsCasa(organizationId)).map((row) => ({
+      id: String(row.id),
+      code: String(row.code),
+      name: String(row.name),
+      roomKind: (row.room_kind as string | null) ?? null,
+    }));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("rooms")
@@ -340,6 +432,22 @@ export async function listSubletRooms(
 export async function listRentalProfessionals(
   organizationId: string,
 ): Promise<RentalProfessionalOption[]> {
+  if (isCasaBrowserAuth()) {
+    const data = await listRentalProfessionalsCasa(organizationId);
+    return data
+      .map((row) => {
+        const council = [row.council_type, row.council_number].filter(Boolean).join(" ") || "—";
+        return {
+          id: String(row.id),
+          fullName: String(row.full_name || "Profissional"),
+          specialty: String(row.specialty || "Não informada"),
+          council,
+          practiceName: row.practice_name ? String(row.practice_name) : null,
+          isActive: row.is_active !== false,
+        };
+      })
+      .sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("professionals")
@@ -387,20 +495,31 @@ export async function listRentalProfessionals(
 export async function createRentalContract(
   input: CreateRentalContractInput,
 ): Promise<string> {
+  const payload = {
+    organization_id: input.organizationId,
+    room_id: input.roomId,
+    tenant_professional_id: input.tenantProfessionalId ?? null,
+    tenant_name: input.tenantName,
+    tenant_specialty: input.tenantSpecialty,
+    monthly_rent_cents: input.monthlyRentCents,
+    starts_on: input.startsOn,
+    ends_on: input.endsOn ?? null,
+    due_day: input.dueDay ?? null,
+    notes: input.notes ?? null,
+  };
+  if (isCasaBrowserAuth()) {
+    try {
+      const data = await callCasaRpc("rental_contract_create", [payload]);
+      const id = data && typeof data === "object" && "id" in data ? String((data as { id: unknown }).id) : "";
+      if (!id) throw new Error("Contrato criado sem identificador retornado.");
+      return id;
+    } catch (error) {
+      throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+    }
+  }
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("rental_contract_create", {
-    p_payload: {
-      organization_id: input.organizationId,
-      room_id: input.roomId,
-      tenant_professional_id: input.tenantProfessionalId ?? null,
-      tenant_name: input.tenantName,
-      tenant_specialty: input.tenantSpecialty,
-      monthly_rent_cents: input.monthlyRentCents,
-      starts_on: input.startsOn,
-      ends_on: input.endsOn ?? null,
-      due_day: input.dueDay ?? null,
-      notes: input.notes ?? null,
-    },
+    p_payload: payload,
   });
   if (error) throw new Error(mapRpcError(error.message));
   const row = data as { id?: string } | null;
@@ -437,6 +556,14 @@ export async function updateRentalContract(params: {
   if (params.dueDay !== undefined) payload.due_day = params.dueDay;
   if (params.notes !== undefined) payload.notes = params.notes;
 
+  if (isCasaBrowserAuth()) {
+    try {
+      await callCasaRpc("rental_contract_update", [params.contractId, payload]);
+      return;
+    } catch (error) {
+      throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+    }
+  }
   const supabase = requireClient();
   const { error } = await supabase.rpc("rental_contract_update", {
     p_contract_id: params.contractId,
@@ -449,6 +576,14 @@ export async function endRentalContract(
   contractId: string,
   reason?: string | null,
 ): Promise<void> {
+  if (isCasaBrowserAuth()) {
+    try {
+      await callCasaRpc("rental_contract_end", [contractId, reason ?? null]);
+      return;
+    } catch (error) {
+      throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+    }
+  }
   const supabase = requireClient();
   const { error } = await supabase.rpc("rental_contract_end", {
     p_contract_id: contractId,
@@ -461,6 +596,14 @@ export async function cancelRentalContract(
   contractId: string,
   reason: string,
 ): Promise<void> {
+  if (isCasaBrowserAuth()) {
+    try {
+      await callCasaRpc("rental_contract_cancel", [contractId, reason]);
+      return;
+    } catch (error) {
+      throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+    }
+  }
   const supabase = requireClient();
   const { error } = await supabase.rpc("rental_contract_cancel", {
     p_contract_id: contractId,
@@ -475,6 +618,21 @@ export async function renewRentalContract(params: {
   endsOn?: string | null;
   monthlyRentCents?: number | null;
 }): Promise<string> {
+  if (isCasaBrowserAuth()) {
+    try {
+      const data = await callCasaRpc("rental_contract_renew", [
+        params.contractId,
+        params.startsOn,
+        params.endsOn ?? null,
+        params.monthlyRentCents ?? null,
+      ]);
+      const id = data && typeof data === "object" && "id" in data ? String((data as { id: unknown }).id) : "";
+      if (!id) throw new Error("Renovação sem identificador retornado.");
+      return id;
+    } catch (error) {
+      throw new Error(mapRpcError(error instanceof Error ? error.message : "Não foi possível concluir a operação."));
+    }
+  }
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("rental_contract_renew", {
     p_contract_id: params.contractId,

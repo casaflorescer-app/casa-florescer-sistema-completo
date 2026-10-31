@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import { readStoredPathCasa } from "@/lib/casa/module-data";
+import { readPrivateFile } from "@/lib/files/casa-store";
+import { isCasaDatabaseConfigured } from "@/lib/db/casa";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { saveOrientationDraft } from "@/lib/orientations/directory";
 import { CLINICAL_ORIENTATION_BUCKET } from "@/lib/orientations/types";
@@ -9,6 +13,9 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabase();
+    if (!supabase && isCasaDatabaseConfigured()) {
+      return await transcribeOrientationFromVolume(request);
+    }
     if (!supabase) {
       return NextResponse.json({ error: "Autenticação indisponível." }, { status: 500 });
     }
@@ -124,4 +131,65 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Erro interno na transcrição." }, { status: 500 });
   }
+}
+
+async function saveOrientationCasa(payload: Record<string, unknown>) {
+  return callCasaRpc("clinical_orientation_save_draft", [payload]);
+}
+
+async function transcribeOrientationFromVolume(request: Request) {
+  const body = (await request.json()) as { versionId?: string; audioStoragePath?: string };
+  const versionId = body.versionId?.trim();
+  const audioStoragePath = body.audioStoragePath?.trim();
+  if (!versionId || !audioStoragePath || audioStoragePath.includes("..")) {
+    return NextResponse.json({ error: "Parâmetros inválidos." }, { status: 400 });
+  }
+  const stored = await readStoredPathCasa("orientation", versionId);
+  if (!stored || stored !== audioStoragePath) {
+    return NextResponse.json({ error: "Áudio não corresponde a esta orientação." }, { status: 403 });
+  }
+  try {
+    await saveOrientationCasa({
+      version_id: versionId,
+      transcription_status: "processing",
+      transcription_error: null,
+    });
+  } catch {
+    return NextResponse.json({ error: "Transcrição não autorizada." }, { status: 403 });
+  }
+  const bytes = await readPrivateFile(stored);
+  if (!bytes) {
+    await saveOrientationCasa({
+      version_id: versionId,
+      transcription_status: "failed",
+      transcription_error: "Não foi possível ler o áudio para transcrição.",
+    });
+    return NextResponse.json({ error: "Falha ao ler áudio." }, { status: 400 });
+  }
+  const result = await transcribeAudioBuffer({
+    bytes: Uint8Array.from(bytes).buffer,
+    mimeType: "audio/webm",
+    fileName: "orientation.webm",
+  });
+  if (result.status !== "completed") {
+    await saveOrientationCasa({
+      version_id: versionId,
+      transcription_status: result.status === "unavailable" ? "unavailable" : "failed",
+      transcription_error: result.error ?? "Transcrição falhou.",
+    });
+    return NextResponse.json({ error: result.error ?? "Transcrição falhou.", status: result.status }, { status: 422 });
+  }
+  const version = await saveOrientationCasa({
+    version_id: versionId,
+    transcription_status: "completed",
+    transcription_text: result.text,
+    transcription_error: null,
+    final_text: result.text,
+  });
+  return NextResponse.json({
+    status: "completed",
+    text: result.text,
+    provider: result.provider,
+    version,
+  });
 }

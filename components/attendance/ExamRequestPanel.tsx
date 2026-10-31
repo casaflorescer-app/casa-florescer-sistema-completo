@@ -25,7 +25,7 @@ export function ExamRequestPanel({
   locked,
   canEdit,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   practiceId: string;
   encounterId: string;
   locked: boolean;

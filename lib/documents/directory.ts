@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { callCasaRpc } from "@/lib/casa/rpc";
+import { listClinicalDocumentsCasa } from "@/lib/casa/module-data";
 import {
   CLINICAL_DOCUMENT_BUCKET,
   DOCUMENT_KINDS,
@@ -140,9 +141,21 @@ export function documentPdfPath(doc: Pick<
 }
 
 export async function listDocumentsForEncounter(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   encounterId: string,
 ): Promise<{ rows: ClinicalDocumentRow[]; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { rows: [], error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("clinical_document_list_for_encounter", [encounterId]);
+      const rows = (Array.isArray(data) ? data : [])
+        .map((item) => mapDocument(item as Record<string, unknown>))
+        .filter((item): item is ClinicalDocumentRow => Boolean(item));
+      return { rows, error: null };
+    } catch (error) {
+      return { rows: [], error: error instanceof Error ? error.message : "Não foi possível listar os documentos." };
+    }
+  }
   const { data, error } = await supabase.rpc("clinical_document_list_for_encounter", {
     p_encounter_id: encounterId,
   });
@@ -155,10 +168,20 @@ export async function listDocumentsForEncounter(
 
 /** Lista documentos clínicos do paciente (RLS: can_read_clinical). Sem RPC nova. */
 export async function listDocumentsForPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
   sourceType?: DocumentSourceType,
 ): Promise<{ rows: ClinicalDocumentRow[]; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { rows: [], error: "Autenticação não configurada neste ambiente." };
+    const data = await listClinicalDocumentsCasa(patientId, sourceType);
+    return {
+      rows: data
+        .map((row) => mapDocument(row))
+        .filter((item): item is ClinicalDocumentRow => Boolean(item)),
+      error: null,
+    };
+  }
   let query = supabase
     .from("clinical_document_artifacts")
     .select(
@@ -281,9 +304,22 @@ export async function issueDocumentFromOrientation(
 }
 
 export async function attachDocumentPdf(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: { documentId: string; storagePath: string; pdfSha256: string },
 ): Promise<{ row: ClinicalDocumentRow | null; error: string | null }> {
+  if (!supabase) {
+    try {
+      const data = await callCasaRpc("clinical_document_attach_pdf", [
+        input.documentId,
+        input.storagePath,
+        input.pdfSha256,
+      ]);
+      return { row: mapDocument(data as Record<string, unknown>), error: null };
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Falha ao anexar o PDF.";
+      return { row: null, error: message };
+    }
+  }
   const { data, error } = await supabase.rpc("clinical_document_attach_pdf", {
     p_document_id: input.documentId,
     p_storage_path: input.storagePath,
@@ -314,10 +350,17 @@ export async function auditDocumentDownload(
 }
 
 export async function createSignedDocumentUrl(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   storagePath: string,
   expiresIn = 120,
 ): Promise<{ url: string | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { url: null, error: "Autenticação não configurada neste ambiente." };
+    const parts = storagePath.split("/");
+    const documentId = parts.length >= 4 ? parts[3] : "";
+    if (!documentId) return { url: null, error: "Documento não encontrado." };
+    return { url: `/api/casa/files?kind=document&id=${documentId}`, error: null };
+  }
   const { data, error } = await supabase.storage
     .from(CLINICAL_DOCUMENT_BUCKET)
     .createSignedUrl(storagePath, expiresIn);
@@ -328,10 +371,21 @@ export async function createSignedDocumentUrl(
 }
 
 export async function uploadDocumentPdf(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   storagePath: string,
   bytes: Uint8Array,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    const body = new FormData();
+    body.set("kind", "document");
+    const id = storagePath.split("/")[3] ?? "";
+    body.set("documentId", id);
+    body.set("file", new Blob([Uint8Array.from(bytes)], { type: "application/pdf" }), "document.pdf");
+    const response = await fetch("/api/casa/files", { method: "POST", body });
+    if (!response.ok) return { error: "Não foi possível guardar o documento." };
+    return { error: null };
+  }
   const { error } = await supabase.storage.from(CLINICAL_DOCUMENT_BUCKET).upload(storagePath, bytes, {
     contentType: "application/pdf",
     upsert: false,

@@ -1,4 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
+import {
+  listCampaignAudienceCasa,
+  listCampaignTemplatesCasa,
+  listCampaignsCasa,
+  listOpenOpportunitiesCasa,
+  listRelationshipHistoryCasa,
+} from "@/lib/casa/module-data";
 import type {
   AudienceFilter,
   Campaign,
@@ -17,6 +26,17 @@ import type {
 } from "@/lib/relationship/types";
 import { OPEN_OPPORTUNITY_STATUSES } from "@/lib/relationship/types";
 import { describeChannelAvailability } from "@/lib/relationship/providers";
+
+async function casaValue(name: string, args: unknown[]) {
+  try {
+    return { data: await callCasaRpc(name, args), error: null as string | null };
+  } catch (error) {
+    return {
+      data: null,
+      error: mapRelationshipRpcError({ message: error instanceof Error ? error.message : "" }),
+    };
+  }
+}
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
@@ -97,10 +117,41 @@ function toCampaign(value: Record<string, unknown>): Campaign | null {
 }
 
 export async function fetchRelationshipDashboard(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
   practiceId: string,
 ): Promise<{ stats: DashboardStats | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { stats: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("relationship_dashboard_stats", [organizationId, practiceId]);
+    if (result.error) return { stats: null, error: result.error };
+    const row = (result.data ?? {}) as Record<string, unknown>;
+    return {
+      stats: {
+        opportunitiesOpen: Number(row.opportunities_open ?? 0),
+        opportunitiesNew: Number(row.opportunities_new ?? 0),
+        opportunitiesPending: Number(row.opportunities_pending ?? 0),
+        birthdayToday: Number(row.birthday_today ?? 0),
+        birthdayWeek: Number(row.birthday_week ?? 0),
+        inactive12m: Number(row.inactive_12m ?? 0),
+        noUpcoming: Number(row.no_upcoming ?? 0),
+        campaignsDraft: Number(row.campaigns_draft ?? 0),
+        campaignsReady: Number(row.campaigns_ready ?? 0),
+        dispatchesPrepared: Number(row.dispatches_prepared ?? 0),
+        messagesPending: Number(row.messages_pending ?? 0),
+        messagesSent: Number(row.messages_sent ?? 0),
+        messagesFailed: Number(row.messages_failed ?? 0),
+        optOuts: Number(row.opt_outs ?? 0),
+        optOutsRecent: Number(row.opt_outs_recent ?? 0),
+        attentionFingerprint: asString(row.attention_fingerprint),
+        attentionDismissed: Boolean(row.attention_dismissed),
+        providerWhatsappConfigured: describeChannelAvailability("whatsapp").configured,
+        providerEmailConfigured: describeChannelAvailability("email").configured,
+        providerPushConfigured: describeChannelAvailability("push").configured,
+      },
+      error: null,
+    };
+  }
   const { data, error } = await supabase.rpc("relationship_dashboard_stats", {
     p_organization_id: organizationId,
     p_practice_id: practiceId,
@@ -135,11 +186,16 @@ export async function fetchRelationshipDashboard(
 }
 
 export async function dismissRelationshipAttention(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
   practiceId: string,
   fingerprint: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("relationship_attention_dismiss", [organizationId, practiceId, fingerprint]);
+    return { error: result.error };
+  }
   const { error } = await supabase.rpc("relationship_attention_dismiss", {
     p_organization_id: organizationId,
     p_practice_id: practiceId,
@@ -149,9 +205,15 @@ export async function dismissRelationshipAttention(
 }
 
 export async function listCampaignTemplates(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
 ): Promise<CampaignTemplate[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listCampaignTemplatesCasa(practiceId))
+      .map((row) => toTemplate(row))
+      .filter((row): row is CampaignTemplate => Boolean(row));
+  }
   const { data, error } = await supabase
     .from("campaign_templates")
     .select("id, organization_id, practice_id, name, purpose, channel, subject, body, active")
@@ -164,18 +226,30 @@ export async function listCampaignTemplates(
 }
 
 export async function upsertCampaignTemplate(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ template: CampaignTemplate | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { template: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_template_upsert", [payload]);
+    if (result.error) return { template: null, error: result.error };
+    return { template: toTemplate((result.data ?? {}) as Record<string, unknown>), error: null };
+  }
   const { data, error } = await supabase.rpc("campaign_template_upsert", { p_payload: payload });
   if (error) return { template: null, error: mapRelationshipRpcError(error) };
   return { template: toTemplate(data as Record<string, unknown>), error: null };
 }
 
 export async function listCampaigns(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
 ): Promise<Campaign[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listCampaignsCasa(practiceId))
+      .map((row) => toCampaign(row))
+      .filter((row): row is Campaign => Boolean(row));
+  }
   const { data, error } = await supabase
     .from("campaigns")
     .select(
@@ -191,53 +265,92 @@ export async function listCampaigns(
 }
 
 export async function createCampaign(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ campaign: Campaign | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { campaign: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_create", [payload]);
+    if (result.error) return { campaign: null, error: result.error };
+    return { campaign: toCampaign((result.data ?? {}) as Record<string, unknown>), error: null };
+  }
   const { data, error } = await supabase.rpc("campaign_create", { p_payload: payload });
   if (error) return { campaign: null, error: mapRelationshipRpcError(error) };
   return { campaign: toCampaign(data as Record<string, unknown>), error: null };
 }
 
 export async function updateCampaignDraft(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ campaign: Campaign | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { campaign: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_update_draft", [payload]);
+    if (result.error) return { campaign: null, error: result.error };
+    return { campaign: toCampaign((result.data ?? {}) as Record<string, unknown>), error: null };
+  }
   const { data, error } = await supabase.rpc("campaign_update_draft", { p_payload: payload });
   if (error) return { campaign: null, error: mapRelationshipRpcError(error) };
   return { campaign: toCampaign(data as Record<string, unknown>), error: null };
 }
 
 export async function duplicateCampaign(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   campaignId: string,
 ): Promise<{ campaign: Campaign | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { campaign: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_duplicate", [campaignId]);
+    if (result.error) return { campaign: null, error: result.error };
+    return { campaign: toCampaign((result.data ?? {}) as Record<string, unknown>), error: null };
+  }
   const { data, error } = await supabase.rpc("campaign_duplicate", { p_campaign_id: campaignId });
   if (error) return { campaign: null, error: mapRelationshipRpcError(error) };
   return { campaign: toCampaign(data as Record<string, unknown>), error: null };
 }
 
 export async function buildCampaignAudience(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ summary: Record<string, unknown> | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { summary: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_build_audience", [payload]);
+    return { summary: (result.data ?? null) as Record<string, unknown> | null, error: result.error };
+  }
   const { data, error } = await supabase.rpc("campaign_build_audience", { p_payload: payload });
   if (error) return { summary: null, error: mapRelationshipRpcError(error) };
   return { summary: (data ?? null) as Record<string, unknown> | null, error: null };
 }
 
 export async function mutateCampaignAudience(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_audience_mutate", [payload]);
+    return { error: result.error };
+  }
   const { error } = await supabase.rpc("campaign_audience_mutate", { p_payload: payload });
   return { error: error ? mapRelationshipRpcError(error) : null };
 }
 
 export async function listCampaignAudience(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   campaignId: string,
 ): Promise<CampaignAudienceRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listCampaignAudienceCasa(campaignId)).map((row) => ({
+      campaignId: String(row.campaign_id),
+      patientId: String(row.patient_id),
+      eligibilityStatus: row.eligibility_status as "eligible" | "ineligible",
+      exclusionReason: (row.exclusion_reason as string | null) ?? null,
+      patientName: row.patient_name ? String(row.patient_name) : null,
+      phone: (row.phone as string | null) ?? null,
+    }));
+  }
   const { data, error } = await supabase
     .from("campaign_audiences")
     .select("campaign_id, patient_id, eligibility_status, exclusion_reason")
@@ -269,9 +382,14 @@ export async function listCampaignAudience(
 }
 
 export async function confirmCampaignPrepare(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   campaignId: string,
 ): Promise<{ result: Record<string, unknown> | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { result: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_confirm_prepare", [campaignId]);
+    return { result: (result.data ?? null) as Record<string, unknown> | null, error: result.error };
+  }
   const { data, error } = await supabase.rpc("campaign_confirm_prepare", {
     p_campaign_id: campaignId,
   });
@@ -280,10 +398,15 @@ export async function confirmCampaignPrepare(
 }
 
 export async function cancelCampaign(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   campaignId: string,
   reason?: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_cancel", [campaignId, reason ?? null]);
+    return { error: result.error };
+  }
   const { error } = await supabase.rpc("campaign_cancel", {
     p_campaign_id: campaignId,
     p_reason: reason ?? null,
@@ -292,10 +415,15 @@ export async function cancelCampaign(
 }
 
 export async function checkCampaignOverlap(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   campaignId: string,
   days = 30,
 ): Promise<{ result: Record<string, unknown> | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { result: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_check_recent_overlap", [campaignId, days]);
+    return { result: (result.data ?? null) as Record<string, unknown> | null, error: result.error };
+  }
   const { data, error } = await supabase.rpc("campaign_check_recent_overlap", {
     p_campaign_id: campaignId,
     p_days: days,
@@ -305,10 +433,33 @@ export async function checkCampaignOverlap(
 }
 
 export async function previewCampaignMessage(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   campaignId: string,
   offset = 0,
 ): Promise<{ total: number; offset: number; row: PreviewMessageRow | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { total: 0, offset, row: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("campaign_preview_messages", [campaignId, offset]);
+    if (result.error) return { total: 0, offset, row: null, error: result.error };
+    const payload = (result.data ?? {}) as Record<string, unknown>;
+    const rowRaw = (payload.row ?? payload) as Record<string, unknown>;
+    return {
+      total: Number(payload.total ?? 0),
+      offset,
+      row: rowRaw.rendered_message
+        ? {
+            patientId: String(rowRaw.patient_id ?? ""),
+            patientName: asString(rowRaw.patient_name) ?? "",
+            phone: asString(rowRaw.phone),
+            channel: String(rowRaw.channel) as RelationshipChannel,
+            eligibilityStatus: String(rowRaw.eligibility_status ?? ""),
+            exclusionReason: asString(rowRaw.exclusion_reason),
+            renderedMessage: String(rowRaw.rendered_message ?? ""),
+          }
+        : null,
+      error: null,
+    };
+  }
   const { data, error } = await supabase.rpc("campaign_preview_messages", {
     p_campaign_id: campaignId,
     p_offset: offset,
@@ -338,10 +489,15 @@ export async function previewCampaignMessage(
 }
 
 export async function refreshOpportunities(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
   practiceId: string,
 ): Promise<{ result: Record<string, unknown> | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { result: null, error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("relationship_opportunities_refresh", [organizationId, practiceId]);
+    return { result: (result.data ?? null) as Record<string, unknown> | null, error: result.error };
+  }
   const { data, error } = await supabase.rpc("relationship_opportunities_refresh", {
     p_organization_id: organizationId,
     p_practice_id: practiceId,
@@ -351,13 +507,46 @@ export async function refreshOpportunities(
 }
 
 export async function fetchContactQueue(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
   practiceId: string,
   filters: CombinedAudienceFilters = {},
   limit = 100,
   offset = 0,
 ): Promise<{ total: number; rows: ContactQueueRow[]; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { total: 0, rows: [], error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("relationship_contact_queue", [organizationId, practiceId, filters, limit, offset]);
+    if (result.error) return { total: 0, rows: [], error: result.error };
+    const payload = (result.data ?? {}) as Record<string, unknown>;
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    return {
+      total: Number(payload.total ?? rows.length),
+      rows: rows.map((item) => {
+        const row = item as Record<string, unknown>;
+        return {
+          opportunityId: String(row.opportunity_id ?? ""),
+          patientId: asString(row.patient_id),
+          patientName: asString(row.patient_name),
+          phone: asString(row.phone),
+          email: asString(row.email),
+          preferredChannel: String(row.preferred_channel ?? "whatsapp"),
+          opportunityType: String(row.opportunity_type ?? "") as ContactQueueRow["opportunityType"],
+          opportunityTitle: String(row.opportunity_title ?? ""),
+          source: String(row.source ?? ""),
+          status: String(row.status ?? "NEW") as OpportunityStatus,
+          priority: String(row.priority ?? "normal"),
+          dueAt: asString(row.due_at),
+          nextActionAt: asString(row.next_action_at),
+          assigneeName: asString(row.assignee_name),
+          lastAppointmentAt: asString(row.last_appointment_at),
+          nextAppointmentAt: asString(row.next_appointment_at),
+          campaignOptOut: Boolean(row.campaign_opt_out),
+        };
+      }),
+      error: null,
+    };
+  }
   const { data, error } = await supabase.rpc("relationship_contact_queue", {
     p_organization_id: organizationId,
     p_practice_id: practiceId,
@@ -394,9 +583,27 @@ export async function fetchContactQueue(
 }
 
 export async function listOpenOpportunities(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
 ): Promise<RelationshipOpportunity[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listOpenOpportunitiesCasa(practiceId)).map((row) => ({
+      id: String(row.id),
+      patientId: (row.patient_id as string | null) ?? null,
+      opportunityType: row.opportunity_type as RelationshipOpportunity["opportunityType"],
+      title: String(row.title ?? ""),
+      description: (row.description as string | null) ?? null,
+      priority: String(row.priority ?? ""),
+      status: row.status as RelationshipOpportunity["status"],
+      dueAt: (row.due_at as string | null) ?? null,
+      createdAt: String(row.created_at ?? ""),
+      patientName: row.patient_name ? String(row.patient_name) : null,
+      phone: (row.phone as string | null) ?? null,
+      assigneeName: null,
+      nextActionAt: (row.next_action_at as string | null) ?? null,
+    }));
+  }
   const { data, error } = await supabase
     .from("relationship_opportunities")
     .select(
@@ -449,10 +656,15 @@ export async function listOpenOpportunities(
 }
 
 export async function setOpportunityStatus(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   opportunityId: string,
   status: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("relationship_opportunity_set_status", [opportunityId, status]);
+    return { error: result.error };
+  }
   const { error } = await supabase.rpc("relationship_opportunity_set_status", {
     p_opportunity_id: opportunityId,
     p_status: status,
@@ -461,26 +673,37 @@ export async function setOpportunityStatus(
 }
 
 export async function createManualOpportunity(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("relationship_opportunity_create_manual", [payload]);
+    return { error: result.error };
+  }
   const { error } = await supabase.rpc("relationship_opportunity_create_manual", { p_payload: payload });
   return { error: error ? mapRelationshipRpcError(error) : null };
 }
 
 export async function upsertCommunicationPreferences(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   payload: Record<string, unknown>,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    const result = await casaValue("communication_preferences_upsert", [payload]);
+    return { error: result.error };
+  }
   const { error } = await supabase.rpc("communication_preferences_upsert", { p_payload: payload });
   return { error: error ? mapRelationshipRpcError(error) : null };
 }
 
 export async function searchPatientsForAudience(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
   query: string,
 ): Promise<Array<{ id: string; fullName: string; phone: string | null }>> {
+  if (!supabase) return [];
   const q = query.trim();
   let builder = supabase
     .from("patients")
@@ -501,10 +724,23 @@ export async function searchPatientsForAudience(
 }
 
 export async function listRelationshipHistory(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   patientId?: string,
 ): Promise<Array<{ id: string; patientId: string; title: string; detail: string | null; createdAt: string; patientName?: string | null }>> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listRelationshipHistoryCasa(practiceId))
+      .filter((row) => !patientId || String(row.patient_id) === patientId)
+      .map((row) => ({
+        id: String(row.id),
+        patientId: String(row.patient_id),
+        title: String(row.title ?? ""),
+        detail: (row.detail as string | null) ?? null,
+        createdAt: String(row.created_at ?? ""),
+        patientName: row.patient_name ? String(row.patient_name) : null,
+      }));
+  }
   let builder = supabase
     .from("relationship_history")
     .select("id, patient_id, title, detail, created_at")

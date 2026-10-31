@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
 import type { AppointmentStatus } from "@/lib/types/database";
 import type {
   PatientJourneyStatus,
@@ -119,9 +121,31 @@ function mapAppointment(raw: Record<string, unknown>): PatientPortalAppointment 
 }
 
 export async function listPatientPortalAppointments(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   limit = 40,
 ): Promise<{ data: PatientPortalPayload | null; error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { data: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("patient_portal_my_appointments", [limit]);
+      const payload = (data ?? {}) as Record<string, unknown>;
+      const patientId = asString(payload.patient_id) ?? "";
+      const rows = Array.isArray(payload.appointments) ? payload.appointments : [];
+      const appointments = rows
+        .map((row) => mapAppointment(row as Record<string, unknown>))
+        .filter((item): item is PatientPortalAppointment => Boolean(item));
+      return {
+        data: {
+          patientId,
+          appointments,
+          notifyThresholdMin: asNumber(payload.notify_threshold_min) ?? DEFAULT_NOTIFY_THRESHOLD_MIN,
+        },
+        error: null,
+      };
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error.message : "Não foi possível carregar suas consultas." };
+    }
+  }
   const { data, error } = await supabase.rpc("patient_portal_my_appointments", {
     p_limit: limit,
   });
@@ -151,9 +175,23 @@ export async function listPatientPortalAppointments(
 }
 
 export async function patientPortalRecordArrival(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointmentId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("patient_portal_record_arrival", [appointmentId]);
+      return { error: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("FORBIDDEN")) return { error: "Não foi possível registrar a chegada para este atendimento." };
+      if (message.includes("APPOINTMENT_NOT_ATTENDABLE")) {
+        return { error: "Este atendimento não está disponível para registro de chegada." };
+      }
+      return { error: message || "Não foi possível registrar sua chegada." };
+    }
+  }
   const { error } = await supabase.rpc("patient_portal_record_arrival", {
     p_appointment_id: appointmentId,
   });

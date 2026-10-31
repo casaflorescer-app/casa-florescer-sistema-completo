@@ -60,20 +60,33 @@ export async function searchProfessionalOptions(
   const q = escapeIlike(query);
   if (q.length < 2) return [];
   const limit = clampLimit(options?.limit);
-  let builder = supabase
-    .from("professional_labels")
-    .select("id, practice_id, organization_id, council_type, council_number, full_name")
-    .or(
-      `full_name.ilike.%${q}%,council_number.ilike.%${q}%,council_type.ilike.%${q}%`,
-    )
-    .order("full_name")
-    .limit(limit);
-  if (options?.practiceId) builder = builder.eq("practice_id", options.practiceId);
-  if (options?.organizationId) builder = builder.eq("organization_id", options.organizationId);
-  const { data, error } = await builder;
+  function build(selectCols: string) {
+    let b = supabase
+      .from("professional_labels")
+      .select(selectCols)
+      .or(
+        `full_name.ilike.%${q}%,council_number.ilike.%${q}%,council_type.ilike.%${q}%`,
+      )
+      .order("full_name")
+      .limit(limit);
+    if (options?.practiceId) b = b.eq("practice_id", options.practiceId);
+    if (options?.organizationId) b = b.eq("organization_id", options.organizationId);
+    return b;
+  }
+
+  let { data, error } = await build(
+    "id, practice_id, organization_id, council_type, council_number, full_name, is_active",
+  );
+  // Compat: view pré-C074 sem is_active
+  if (error && /is_active/i.test(error.message)) {
+    ({ data, error } = await build(
+      "id, practice_id, organization_id, council_type, council_number, full_name",
+    ));
+  }
   if (error) throw new Error("Não foi possível pesquisar profissionais.");
-  return (data ?? []).flatMap((item) => {
-    const row = item as Record<string, unknown>;
+  const rows = (data ?? []) as unknown as Record<string, unknown>[];
+  return rows.flatMap((row) => {
+    if (row.is_active === false) return [];
     const id = typeof row.id === "string" ? row.id : null;
     const fullName = typeof row.full_name === "string" ? row.full_name.trim() : "";
     if (!id || !fullName) return [];

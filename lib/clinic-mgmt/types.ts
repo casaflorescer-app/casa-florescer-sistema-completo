@@ -9,6 +9,43 @@ export type ClinicSpecialty = {
   professionalCount?: number;
 };
 
+/** C074 — categoria profissional (≠ council_type). */
+export type ProfessionalCategory =
+  | "medico"
+  | "enfermeiro"
+  | "fisioterapeuta"
+  | "psicologo"
+  | "nutricionista"
+  | "outro";
+
+export const PROFESSIONAL_CATEGORY_LABEL: Record<ProfessionalCategory, string> = {
+  medico: "Médica / Médico",
+  enfermeiro: "Enfermeira / Enfermeiro",
+  fisioterapeuta: "Fisioterapeuta",
+  psicologo: "Psicóloga / Psicólogo",
+  nutricionista: "Nutricionista",
+  outro: "Outro",
+};
+
+export type ClinicProfessional = {
+  id: string;
+  organizationId: string;
+  practiceId: string;
+  practiceName: string | null;
+  profileId: string | null;
+  profileName: string | null;
+  displayName: string;
+  category: ProfessionalCategory;
+  councilType: string;
+  councilNumber: string;
+  councilUf: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  isActive: boolean;
+  specialties: Array<{ id: string; name: string; isPrimary: boolean }>;
+};
+
 export type WorkforceEngagement = "employee" | "contractor" | "other";
 export type WorkforceStatus = "active" | "inactive";
 

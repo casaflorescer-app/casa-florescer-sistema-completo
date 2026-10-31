@@ -14,11 +14,12 @@ Componentes da hospedagem e quem fala com quem.
 
 Fora desse desenho: funções de borda, pooler, analytics e vector.
 
-## C076 — ainda não ligado
+## C076 — schema no banco, produção ainda no desenho acima
 
-Quando a conexão for autorizada, o navegador deixa de falar com a API. O Next abre o BancoFlorescerPP como `casa_app`. Arquivo clínico fica em volume da VPS e a rota confere `can_read_exam_file` antes de ler. Esse desenho está no código e não substitui o organograma de produção.
+O schema está no BancoFlorescerPP. O navegador de produção continua no Caddy e na API. Quando a conexão for autorizada, o Next abre esse database como `casa_login`, que herda `casa_app`. Arquivo clínico fica em volume da VPS e a rota confere `can_read_exam_file` antes de ler. Esse desenho não substitui o organograma de produção.
 
 ## Histórico
 
+- 2026-10-31 — o papel de conexão previsto passou a ser `casa_login`. O schema está no BancoFlorescerPP e a API de produção não mudou.
 - 2026-10-31 — organograma da casa no Postgres próprio, sem deploy e sem troca da API.
 - 2026-10-21 — organograma da VPS com app, gateway, Auth, API e Storage.

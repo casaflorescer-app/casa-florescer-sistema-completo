@@ -72,7 +72,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 - **Status:** `confirmada`
 - **Enunciado:** A secretária não lê alergia, pedido de exame, arquivo de exame nem receita. Quem lê é a médica da prática, o break-glass e a própria paciente. A administradora também não lê. A função `is_house_ops` permanece para a agenda.
-- **Rastreio:** `0057_c077_clinical_finance_isolation.sql`. Prova em `supabase/tests/c077_practice_isolation.sql`, ainda sem execução.
+- **Rastreio:** `0057_c077_clinical_finance_isolation.sql`. Prova em `supabase/tests/c077_practice_isolation.sql`, executada em 2026-10-31 no BancoFlorescerPP e desfeita na mesma transação.
 
 ### RN-CASA-008 — Senha da casa
 
@@ -80,7 +80,14 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 - **Enunciado:** Quando a casa deixar o Auth, a senha de staff é Argon2id em `staff_credentials`. O browser não recebe o hash. Cadastro público continua fechado.
 - **Rastreio:** `0000_c076_postgres_prelude.sql`, `0056`, `app/api/casa/session/route.ts`.
 
+### RN-CASA-010 — Sessão revogável
+
+- **Status:** `confirmada`
+- **Enunciado:** O cookie `casa_session` leva o identificador de uma linha em `casa_sessions`. Sair revoga essa linha. Trocar a senha revoga todas as linhas daquela conta e apaga o cookie. Um cookie com assinatura válida e linha revogada ou ausente não abre a sessão. O middleware, na borda, continua aceitando a assinatura; a recusa da linha acontece no processo Node, quando `CASA_DATABASE_URL` existe. Sem essa variável, a produção segue no Auth.
+- **Rastreio:** `0058_c082_sessions.sql`, `lib/auth/casa-session.ts`, `app/api/casa/session/route.ts`, `app/api/casa/password/route.ts`, `components/layout/RoleGate.tsx`. Prova em `supabase/tests/c082_sessions_and_gaps.sql`, executada em 2026-10-31 e desfeita na mesma transação.
+
 ## Histórico
 
+- 2026-10-31 — RN-CASA-010: sessão da casa revogável no logout e na troca de senha. As provas C077 e C082 rodaram no BancoFlorescerPP e foram desfeitas. Nenhuma organização foi criada.
 - 2026-10-31 — RN-CASA-007 revogada. Ficha por prática, rateio da própria fatura e repasse das duas para a administradora. O SQL da C077 ainda não foi aplicado.
 - 2026-10-31 — regras de isolamento das duas práticas, da fatura, da despesa e da sessão da casa. O SQL ainda não foi aplicado no banco.

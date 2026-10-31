@@ -46,19 +46,28 @@ Transcreve o áudio de uma versão de orientação.
 Entra na sessão da casa quando `CASA_DATABASE_URL` e `CASA_SESSION_SECRET` existem. Sem essas variáveis responde 503 e o login de produção não usa esta rota.
 
 - Body: `{ "email": "...", "password": "..." }`
-- 200 grava o cookie `casa_session`. A senha não volta na resposta.
+- 200 grava o cookie `casa_session`, com o identificador da linha em `casa_sessions`. A senha não volta na resposta.
 - 400 pedido inválido. 401 e-mail ou senha não conferem, com a mesma mensagem nos dois casos. 503 sessão da casa desligada. 500 falha interna, sem detalhe do banco.
 
 ### `GET /api/casa/session`
 
-- 200 `{ "id": "<uuid>" }` se o cookie for válido.
-- 401 sem sessão.
+- 200 `{ "id": "<uuid do usuário>" }` se a assinatura for válida e a linha da sessão ainda estiver ativa.
+- 401 sem cookie, com cookie sem identificador, ou com a linha revogada.
 
 ### `DELETE /api/casa/session`
 
-Apaga o cookie. 200.
+Revoga a linha daquele identificador e apaga o cookie. 200.
+
+### `POST /api/casa/password`
+
+Troca a senha da conta da sessão. Exige cookie válido e linha ativa.
+
+- Body: `{ "currentPassword": "...", "newPassword": "..." }`. A nova senha tem no mínimo 8 caracteres.
+- 200 `{ "ok": true }` grava um hash Argon2id novo, apaga todas as sessões daquela conta e apaga o cookie. A senha não volta na resposta.
+- 400 pedido inválido. 401 sessão ausente ou senha atual recusada, com a mesma mensagem nos dois casos de senha. 503 sessão da casa desligada. 500 falha interna, sem detalhe do banco.
 
 ## Histórico
 
+- 2026-10-31 — o cookie da sessão da casa passou a ter identificador. `DELETE` revoga a linha. `POST /api/casa/password` revoga todas as sessões da conta. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.
 - 2026-10-31 — sessão da casa em `/api/casa/session`. As rotas clínicas continuam no cookie do Auth enquanto a casa não está ligada.
 - 2026-10-22 — as duas rotas de transcrição passam a recusar um caminho de áudio que não seja o do registro autenticado.

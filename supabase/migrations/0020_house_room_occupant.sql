@@ -108,7 +108,7 @@ declare
   v_updated integer;
 begin
   if (select count(*) from public.organizations where id = v_org) <> 1 then
-    raise exception 'ORGANIZATION_NOT_FOUND';
+    return;
   end if;
 
   select p.full_name, p.is_active

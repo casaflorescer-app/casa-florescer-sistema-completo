@@ -85,6 +85,8 @@ insert into public.clinical_notes (encounter_id, organization_id, practice_id, b
 insert into public.exam_orders (id, organization_id, practice_id, patient_id, title, requested_by) values
   ('00000000-0000-4000-8000-000000000071', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000031', 'Exame Thais', '00000000-0000-4000-8000-000000000022');
 
+select set_config('app.user_id', '00000000-0000-4000-8000-000000000012', true);
+
 insert into public.prescriptions (id, organization_id, practice_id, patient_id, professional_id, created_by) values
   ('00000000-0000-4000-8000-000000000081', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000031', '00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000012');
 

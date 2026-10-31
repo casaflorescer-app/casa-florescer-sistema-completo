@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 # Aplica no BancoFlorescerPP. Sem backup e sem outro database.
 # Para se public.organizations já tiver linha.
-set -eu
+set -euo pipefail
+trap 'echo C082_FAIL' ERR
 
 hits=$(docker ps --format '{{.ID}} {{.Names}}' | awk 'BEGIN{IGNORECASE=1} $0 ~ /bancoflorescer/ && $0 !~ /florescerweb/ && $0 !~ /florescerapi/')
 count=$(printf '%s\n' "$hits" | awk 'NF{n++} END{print n+0}')
@@ -12,6 +13,7 @@ if [ "$count" -ne 1 ]; then
 fi
 CID=${hits%% *}
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+START="${1:-}"
 
 psql_q() {
   docker exec "$CID" sh -c "psql -U \"\$POSTGRES_USER\" -d BancoFlorescerPP -X -P pager=off -v ON_ERROR_STOP=1 -tA -c \"$1\""
@@ -34,14 +36,28 @@ if [ "$orgs" != "0" ]; then
   exit 1
 fi
 
-if [ "$tables" = "0" ]; then
-  docker exec -i "$CID" sh -c 'psql -U "$POSTGRES_USER" -d BancoFlorescerPP -X -v ON_ERROR_STOP=1' < "$ROOT/scripts/c076-roles.sql"
-  docker exec -i "$CID" sh -c 'psql -U "$POSTGRES_USER" -d BancoFlorescerPP -X -v ON_ERROR_STOP=1' < "$ROOT/scripts/c082-login-role.sql"
+run_migrations() {
+  local from="$1"
+  local file base prefix
   for file in "$ROOT"/supabase/migrations/*.sql; do
-    echo "migration $(basename "$file")"
+    base=$(basename "$file")
+    prefix=${base%%_*}
+    if [ -n "$from" ] && [[ "$prefix" < "$from" ]]; then
+      continue
+    fi
+    echo "migration $base"
     docker exec -i "$CID" sh -c 'psql -U "$POSTGRES_USER" -d BancoFlorescerPP -X -v ON_ERROR_STOP=1' < "$file"
   done
   docker exec -i "$CID" sh -c 'psql -U "$POSTGRES_USER" -d BancoFlorescerPP -X -v ON_ERROR_STOP=1' < "$ROOT/scripts/c082-grants.sql"
+}
+
+if [ "$tables" = "0" ]; then
+  docker exec -i "$CID" sh -c 'psql -U "$POSTGRES_USER" -d BancoFlorescerPP -X -v ON_ERROR_STOP=1' < "$ROOT/scripts/c076-roles.sql"
+  docker exec -i "$CID" sh -c 'psql -U "$POSTGRES_USER" -d BancoFlorescerPP -X -v ON_ERROR_STOP=1' < "$ROOT/scripts/c082-login-role.sql"
+  run_migrations ""
+elif [ -n "$START" ]; then
+  echo "Retomando em $START"
+  run_migrations "$START"
 else
   echo "Schema já existe e não há organização. Só os testes."
 fi

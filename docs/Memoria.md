@@ -1,9 +1,16 @@
 # Memória
 
+## 2026-10-31 — C082 schema aplicado
+
+- O BancoFlorescerPP recebeu papéis, `0000`–`0058` e o `GRANT`, direto, sem backup e sem database temporário. A `0020` precisa retornar quando a organização fixa da casa não existe; na primeira passagem ela levantava `ORGANIZATION_NOT_FOUND` depois que o DDL anterior da mesma migration já tinha ficado. A retomada começa no prefixo `0020`, sem repetir `0000`–`0019`.
+- Escrever no dispositivo do terminal pinta o texto e não vira comando. O comando entra com `osascript` em `do script` na aba já logada. A senha do SSH não vai para o chat nem para o comando.
+- A receita do teste só passa se `app.user_id` for a médica da prática antes do `INSERT`. A retaguarda nomeada não lê a gestação só por estar na coluna: a policy da `0012` exige linha ativa em `pregnancy_backup_grants`.
+- Depois dos testes desfeitos: extensões instaladas, schemas `auth`, `storage` e `extensions`, `casa_login` com login e sem superusuário nem `BYPASSRLS`, 102 tabelas, 0 organizações. A API de produção não foi trocada.
+
 ## 2026-10-31 — C081 catálogo fechado
 
 - No SSH do host `srv2083061`, o administrador leu o BancoFlorescerPP no container `cap-romao_bancoflorescer.1.ztmjkauvhnvygcuyck02n14sy`. `citext` 1.8, `btree_gist` 1.8 e `pgcrypto` 1.4 estão disponíveis e não instaladas. Só existem os schemas de sistema e `public`, com 0 tabelas. `auth`, `storage` e `extensions` não existem.
-- `deploy/backup.sh` não serve para esse database. A ordem futura é papéis fora de transação, `0000`, `0001`–`0057`, `GRANT` explícito sem reabrir `staff_credentials`, e o teste da C077 em transação desfeita. Antes disso, dump custom, checksum, `pg_restore -l` e ensaio num database descartável. Nada disso rodou. `casa_login` e a revogação do cookie continuam só descritos.
+- `deploy/backup.sh` não serve para esse database. A ordem então prevista era papéis fora de transação, `0000`, `0001`–`0057`, `GRANT` explícito sem reabrir `staff_credentials`, e o teste da C077 em transação desfeita. Antes disso, dump custom, checksum, `pg_restore -l` e ensaio num database descartável. Nada disso rodou neste momento. A C082, no mesmo dia, aplicou o schema sem esse backup e sem o ensaio.
 
 ## 2026-10-31 — C080 SSH recusado
 
@@ -58,6 +65,7 @@
 
 ## Histórico
 
+- 2026-10-31 — o schema do BancoFlorescerPP foi aplicado sem backup e sem database temporário; a `0020` vazia de clínica precisa retornar, e a retaguarda só lê a gestação com grant.
 - 2026-10-31 — o catálogo do BancoFlorescerPP fechou por SSH do administrador; a implantação não rodou.
 - 2026-10-31 — a chave deste computador continua sem autorização na VPS; as consultas do BancoFlorescerPP não saíram daqui.
 - 2026-10-31 — o `psql -c` não interativo também ficou no textarea; `casa_login` não foi criado.

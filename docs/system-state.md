@@ -71,10 +71,10 @@ volumes / backup      ← ainda BLOCKED comprovar
 
 ```text
 SSH: root com senha entrou em 2026-10-31. A chave deste Mac continua recusada
-Terminal EasyPanel: não usado na leitura C081
-DATABASE INSPECT: catálogo do BancoFlorescerPP lido (C081). Apply não feito
-MIGRATION PARITY: INCONCLUSIVO
-BACKUP OPERACIONAL: NÃO COMPROVADO (C)
+Terminal EasyPanel: não usado na C082
+DATABASE INSPECT: schema 0000–0058 no BancoFlorescerPP (C082). 102 tabelas, 0 organizações
+MIGRATION PARITY: aplicada neste database. A API api.thvp.cloud não foi trocada
+BACKUP OPERACIONAL: dispensado pelo operador nesta etapa. deploy/backup.sh continua no outro Postgres
 RESTORE: NÃO TESTADO
 ```
 
@@ -185,4 +185,18 @@ Leitura no SSH do host `srv2083061`, container `cap-romao_bancoflorescer.1.ztmjk
 | Tabelas em `public` | 0. `public.organizations` ausente | COMPROVADO pelo administrador |
 | Backup, papéis, migrations, `casa_login`, sessão, deploy | não executados | CONFIRMADO |
 
-O nome do container muda se o EasyPanel recriar o serviço. `deploy/backup.sh` continua apontando para `supabase-db` e para o database `postgres`. A ordem, o ensaio e o rollback estão em `docs/Infraestrutura.md`. A implantação não rodou.
+O nome do container muda se o EasyPanel recriar o serviço. `deploy/backup.sh` continua apontando para `supabase-db` e para o database `postgres`. A implantação que veio depois está na C082.
+
+## C082 — schema aplicado (2026-10-31)
+
+Aplicação direta no BancoFlorescerPP, sem backup e sem database temporário. A API `api.thvp.cloud` e `CASA_DATABASE_URL` não foram alteradas. Nenhum deploy.
+
+| Item | Valor | Confiança |
+|---|---|---|
+| Extensões instaladas | `btree_gist` 1.8, `citext` 1.8, `pgcrypto` 1.4 | COMPROVADO depois dos testes |
+| Schemas | `auth`, `storage`, `extensions` presentes | COMPROVADO |
+| `casa_login` | login, `rolsuper` falso, `rolbypassrls` falso | COMPROVADO |
+| Tabelas em `public` | 102 | COMPROVADO |
+| `public.organizations` | 0 linhas | COMPROVADO |
+| Provas | C077 e C082, transação desfeita, saída `C082_OK tabelas=102 orgs=0` | COMPROVADO |
+| Organização, prática e usuário reais | não criados | CONFIRMADO |

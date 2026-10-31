@@ -236,35 +236,42 @@ O `npm run build` avisa que `next@14.2.15` tem uma atualização de segurança p
 
 ## C076 — BancoFlorescerPP
 
-O banco de destino é o nome `BancoFlorescerPP` no serviço EasyPanel `bancoflorescer`. Em 2026-10-31, `select current_database()` devolveu esse nome e `select version()` devolveu PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2). A API `api.thvp.cloud` não usa esse banco: na mesma data, `/auth/v1/health` e `/rest/v1/` responderam 401 e `/storage/v1/version` respondeu `1.81.0`, atrás de Caddy e Envoy. Em 2026-10-31 o administrador leu o catálogo por SSH no host `srv2083061`: `citext` 1.8, `btree_gist` 1.8 e `pgcrypto` 1.4 estão disponíveis e não instaladas. Os schemas `auth`, `storage` e `extensions` não existem. `public` tem 0 tabelas. O prelúdio instala as três. Sem `citext` ou `btree_gist` disponíveis, a `0001` para. Disponível não é o mesmo que instalado. O procedimento está na seção C081. Nada foi aplicado.
+O banco de destino é o nome `BancoFlorescerPP` no serviço EasyPanel `bancoflorescer`. Em 2026-10-31, `select current_database()` devolveu esse nome e `select version()` devolveu PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2). A API `api.thvp.cloud` não usa esse banco: na mesma data, `/auth/v1/health` e `/rest/v1/` responderam 401 e `/storage/v1/version` respondeu `1.81.0`, atrás de Caddy e Envoy. O catálogo lido antes da C082 dizia que `citext` 1.8, `btree_gist` 1.8 e `pgcrypto` 1.4 estavam disponíveis e não instaladas, que `auth`, `storage` e `extensions` não existiam e que `public` tinha 0 tabelas. A C082 instalou as três e criou esses schemas. `deploy/backup.sh` permanece o script do Postgres `supabase-db` / database `postgres`. Não usar esse script nem `deploy/apply-migrations.sh` no BancoFlorescerPP.
 
-Ainda não há apply, usuário, troca de `CASA_DATABASE_URL` nem deploy. `deploy/apply-migrations.sh` não serve para esse banco: ele entra no container `supabase-db` e abre transação, e `CREATE ROLE` não aceita transação. Os papéis estão em `scripts/c076-roles.sql`.
+Ainda não há usuário, troca de `CASA_DATABASE_URL` nem deploy. O schema `0000`–`0058`, os papéis e os testes desfeitos estão na seção C082. `deploy/apply-migrations.sh` não serve para esse banco: ele entra no container `supabase-db` e abre transação, e `CREATE ROLE` não aceita transação. Os papéis estão em `scripts/c076-roles.sql` e `scripts/c082-login-role.sql`.
 
-Variáveis do processo, quando a ligação for autorizada: `CASA_DATABASE_URL` (papel que herda `casa_app`, sem superusuário), `CASA_SESSION_SECRET` (32 caracteres ou mais), `CASA_FILES_ROOT` e, no build, `NEXT_PUBLIC_CASA_AUTH=1`. Nenhuma delas foi gravada no ambiente de produção.
+Variáveis do processo, quando a ligação for autorizada: `CASA_DATABASE_URL` (papel `casa_login`, sem superusuário e sem `BYPASSRLS`), `CASA_SESSION_SECRET` (32 caracteres ou mais), `CASA_FILES_ROOT` e, no build, `NEXT_PUBLIC_CASA_AUTH=1`. Nenhuma delas foi gravada no ambiente de produção.
 
-## C081 — backup, ordem e rollback
+## C081 — ordem escrita e depois dispensada
 
-Nada disto foi executado. `deploy/backup.sh` permanece o script do Postgres `supabase-db` / database `postgres`. Não usar esse script nem `deploy/apply-migrations.sh` no BancoFlorescerPP.
+Esta ordem foi escrita e não foi a que rodou. O operador dispensou o backup e o database temporário. O que foi aplicado está na C082.
+
+`deploy/backup.sh` permanece o script do Postgres `supabase-db` / database `postgres`. Não usar esse script nem `deploy/apply-migrations.sh` no BancoFlorescerPP.
 
 O container lido em 2026-10-31 foi `cap-romao_bancoflorescer.1.ztmjkauvhnvygcuyck02n14sy`. Se o EasyPanel recriar o serviço, o nome muda. Achar de novo o único container cujo nome contém `bancoflorescer` e não contém `florescerweb` nem `florescerapi`.
 
-Quando houver autorização, no SSH do host, sem senha no comando:
+A ordem que ficou só no papel era: conferir as extensões disponíveis, dump custom com checksum, ensaio num database descartável, papéis, `0000`–`0057`, `GRANT` e o teste da C077. Não há script inverso das migrations. A API em `api.thvp.cloud` não entra num rollback desta etapa, porque a conexão dela não foi trocada. A VPS avisou restart pendente; esta etapa não reinicia o servidor.
 
-1. Confirmar de novo que `citext` e `btree_gist` estão em `pg_available_extensions`. Se uma faltar, parar.
-2. Backup em formato custom, `--no-owner`, database `BancoFlorescerPP`, usuário `$POSTGRES_USER` dentro do container. Diretório no host com permissão `700`, arquivo com `600`, e `sha256sum` ao lado.
-3. `pg_restore -l` nesse arquivo. A lista tem de abrir e não pode mostrar tabela de clínica.
-4. Ensaio num database descartável: restaurar o dump, aplicar os papéis e `0000`–`0057`, rodar o teste e apagar esse database. O `BancoFlorescerPP` só recebe a mesma sequência se o ensaio passar.
-5. No alvo, `scripts/c076-roles.sql` fora de transação. `CREATE ROLE` não entra em transação. `casa_login` só entra se essa correção já estiver autorizada e escrita.
-6. `0000`, depois `0001`–`0057`, um arquivo por vez, `ON_ERROR_STOP=1`, pelo nome. São 58 arquivos, sem furo de número. O `0000` cria os schemas `auth`, `storage` e `extensions` e instala `pgcrypto` no schema `extensions`, porque a `0046` chama `extensions.digest`.
-7. O `GRANT` explícito para `authenticated`, quando esse script existir. Não usar `GRANT ALL ON ALL TABLES`: isso reabriria `staff_credentials`. `staff_login_hash` continua só para `casa_app`.
-8. `supabase/tests/c077_practice_isolation.sql`, que abre transação e desfaz. Organização, práticas e usuários reais ficam de fora. Sem `CASA_DATABASE_URL`, sem deploy e sem cadastro.
+## C082 — schema no BancoFlorescerPP vazio de clínica
 
-O teste da C077 cobre o cruzamento entre as duas médicas, a secretária, a administradora, a despesa compartilhada e a troca de `practice_id` no exame. Cookie depois do logout, break-glass, retaguarda nomeada, a paciente na própria ficha, arquivo de exame e a recusa de superusuário em `withCasaUser` ainda não têm teste. `casa_login`, o `RESET ROLE` e a revogação do cookie continuam só como proposta.
+Em 2026-10-31, no SSH do host `srv2083061`, sem backup e sem database temporário. A condição de parada era `public.organizations` com alguma linha. A contagem era 0 antes e continuou 0.
 
-Se a sequência falhar no alvo, restaurar o dump anterior com `pg_restore` no `BancoFlorescerPP`. Não há script inverso das 58 migrations. O ensaio se desfaz com `drop database`. A API em `api.thvp.cloud` não entra nesse rollback, porque esta etapa não troca a conexão dela. A VPS avisou restart pendente; esta etapa não reinicia o servidor.
+O que rodou, nesta ordem:
+
+1. `scripts/c076-roles.sql` e `scripts/c082-login-role.sql`, fora de transação.
+2. Migrations `0000`–`0058`, um arquivo por vez, `ON_ERROR_STOP=1`. A `0020` parou na primeira passagem porque a organização fixa da casa não existe. O bloco passou a retornar sem erro nesse caso. A retomada começou em `0020`, sem repetir `0000`–`0019`.
+3. `scripts/c082-grants.sql`. `authenticated` recebe uso das tabelas de `public`, com `REVOKE` em `staff_credentials` e `casa_sessions`.
+4. `supabase/tests/c077_practice_isolation.sql` e `supabase/tests/c082_sessions_and_gaps.sql`, cada um em transação desfeita.
+
+A receita do teste só entra com `app.user_id` da médica daquela prática. A retaguarda nomeada só lê a gestação depois da linha em `pregnancy_backup_grants`. As duas correções ficaram nos testes. Nenhuma linha de prova permaneceu.
+
+Leitura depois dos testes: `citext` 1.8, `btree_gist` 1.8 e `pgcrypto` 1.4 instaladas. Schemas `auth`, `storage` e `extensions` presentes. `casa_login` faz login, `rolsuper` falso e `rolbypassrls` falso. `public` tem 102 tabelas. `organizations` tem 0 linhas. A saída final foi `C082_OK tabelas=102 orgs=0`.
+
+Não houve `CASA_DATABASE_URL`, deploy, organização real, usuário real nem reinício da VPS. `florescerweb`, `florescerapi` e os serviços vizinhos não foram alterados.
 
 ## Histórico
 
+- 2026-10-31 — C082: schema `0000`–`0058`, papéis e `GRANT` no BancoFlorescerPP. Testes C077 e C082 desfeitos. 102 tabelas, 0 organizações. Sem backup, sem database temporário, sem troca da API e sem deploy.
 - 2026-10-31 — catálogo do BancoFlorescerPP lido: extensões disponíveis e não instaladas, schemas `auth`, `storage` e `extensions` ausentes, 0 tabelas. Backup, ordem e rollback escritos. Sem apply.
 - 2026-10-31 — SSH com chave para `deploy` e `root` na VPS recusado de novo. Consultas do BancoFlorescerPP não rodaram. Sem apply.
 - 2026-10-31 — o `psql -c` não interativo também não chegou ao BancoFlorescerPP. Extensões seguem sem lista. Sem apply e sem papel novo.

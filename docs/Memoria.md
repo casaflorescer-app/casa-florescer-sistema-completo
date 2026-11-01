@@ -1,5 +1,9 @@
 # Memória
 
+## 2026-10-31 — C086 publicada
+
+- O commit `53b452682c0b04d12cad18e9c55586adcded47fb` subiu para `origin/main` em fast-forward, a partir de `fcad447`. O `tsconfig.tsbuildinfo` local ficou de fora. Não houve deploy.
+
 ## 2026-10-31 — C086 revalidada na cópia
 
 - No Next 14, uma ação de servidor que lança “Sem sessão.” vira HTTP 500. O status real sai de um route handler. A ficha do navegador passou a usar `GET` e `POST /api/casa/clinical`.
@@ -127,6 +131,7 @@ A imagem que rodou a rota nova é `casa-hml-web:c086b`, não a `c086`. O identif
 
 ## Histórico
 
+- 2026-10-31 — C086 publicada em `main` no hash `53b452682c0b04d12cad18e9c55586adcded47fb`.
 - 2026-10-31 — C086: a rota da ficha devolveu 401, 403, 404 e 200 na imagem `c086c`. “Salvando…” pintou. A cópia foi esvaziada e o contêiner saiu.
 - 2026-10-31 — C086 complementar: a rota de agenda rodou na imagem `c086b`. O cookie seguro não gruda em HTTP. A ficha sem sessão respondeu 500. A cópia foi esvaziada e o contêiner saiu.
 - 2026-10-31 — C086: clone em `/root/casa-hml-src`. A sessão caiu antes do build da imagem isolada. Homologação HTTP não executada.

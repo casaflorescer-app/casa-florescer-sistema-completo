@@ -72,15 +72,16 @@ export function PregnancyForm({
     : `/app/patients/${patientId}`;
 
   useEffect(() => {
-    const client = createClient();
-    if (!client) {
+    const casa = isCasaBrowserAuth();
+    const client = casa ? null : createClient();
+    if (!casa && !client) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
     }
     setLoading(true);
 
-    async function load(db: NonNullable<ReturnType<typeof createClient>>) {
+    async function load(db: ReturnType<typeof createClient>) {
       const labels = await listProfessionalLabels(db);
       setProfessionals(labels);
 

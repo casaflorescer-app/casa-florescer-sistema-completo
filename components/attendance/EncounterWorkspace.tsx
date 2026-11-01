@@ -833,8 +833,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
           persist: true,
         });
         if (recalc.error) {
-          predictionNotice =
-            "Término clínico registrado. A previsão da agenda será atualizada na próxima carga da agenda.";
+          predictionNotice = "Término clínico registrado. A previsão da agenda não foi gravada.";
         } else if (recalc.persisted > 0) {
           predictionNotice = `Término clínico registrado. Previsão da agenda atualizada (${recalc.persisted}).`;
         } else {
@@ -842,8 +841,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         }
       }
     } catch {
-      predictionNotice =
-        "Término clínico registrado. A previsão da agenda será atualizada na próxima carga da agenda.";
+      predictionNotice = "Término clínico registrado. A previsão da agenda não foi gravada.";
     }
 
     await markEncounterAuditEvent(supabase, encounter.id, "encounter_closed");
@@ -929,7 +927,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
             actions={
               canOfferPregnancyLink ? (
                 <div className="flex flex-wrap gap-2">
-                  {!pregnancyLinked && supabase ? (
+                  {!pregnancyLinked && (supabase || isCasaBrowserAuth()) ? (
                     <button
                       type="button"
                       className={buttonClass}

@@ -161,10 +161,16 @@ export function PatientList() {
     setSearching(true);
     void (casa ? searchPatientsCasa(debounced) : searchPatients(supabase!, debounced, { limit: 40 }))
       .then((data) => {
-        if (!cancelled) setFiltered(data);
+        if (!cancelled) {
+          setFiltered(data);
+          setError(null);
+        }
       })
-      .catch(() => {
-        if (!cancelled) setFiltered([]);
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setFiltered([]);
+          setError(friendlyError(err, "Não foi possível pesquisar as pacientes."));
+        }
       })
       .finally(() => {
         if (!cancelled) setSearching(false);

@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthUser } from "@/lib/auth/session";
+import { bindCasaRpcArguments, isInternalSqlError } from "@/lib/casa/jsonb-arg";
 import { isCasaDatabaseConfigured, withCasaUser } from "@/lib/db/casa";
 
 const ALLOWED: Record<string, number> = {
@@ -135,6 +136,29 @@ const JSONB_AT: Record<string, number[]> = {
   professional_upsert: [0],
   clinic_workforce_upsert: [0],
   appointment_predictions_append: [0],
+  agenda_block_create: [0],
+  agenda_block_update: [0],
+  clinical_orientation_create: [0],
+  clinical_orientation_save_draft: [0],
+  exam_upload_register: [0],
+  communication_preferences_upsert: [0],
+  clinic_equipment_upsert: [0],
+  clinic_equipment_transfer: [0],
+  stock_item_upsert: [0],
+  stock_warehouse_upsert: [0],
+  stock_movement_receipt: [0],
+  stock_movement_exit: [0],
+  stock_movement_transfer: [0],
+  stock_movement_adjust: [0],
+  stock_inventory_confirm: [0],
+  rental_contract_create: [0],
+  rental_contract_update: [1],
+  campaign_template_upsert: [0],
+  campaign_create: [0],
+  campaign_update_draft: [0],
+  campaign_build_audience: [0],
+  campaign_audience_mutate: [0],
+  relationship_opportunity_create_manual: [0],
 };
 
 function assertName(name: string, args: unknown[]) {
@@ -151,15 +175,17 @@ export async function callCasaRpc(name: string, args: unknown[]): Promise<unknow
   }
   const user = await getAuthUser();
   if (!user) throw new Error("Sem sessão.");
-  const jsonbAt = new Set(JSONB_AT[fn] ?? []);
+  const jsonbIndexes = JSONB_AT[fn] ?? [];
+  const jsonbAt = new Set(jsonbIndexes);
   const placeholders = args
     .map((_, index) => (jsonbAt.has(index) ? `$${index + 1}::jsonb` : `$${index + 1}`))
     .join(", ");
+  const bound = bindCasaRpcArguments(args, jsonbIndexes);
   try {
     return await withCasaUser(user.userId, async (client) => {
       const result = await client.query<{ data: unknown }>(
         `select to_jsonb(public.${fn}(${placeholders})) as data`,
-        args,
+        bound,
       );
       if (fn === "appointment_predictions_append" && result.rows.length > 1) {
         return result.rows.map((row) => row.data);
@@ -168,6 +194,11 @@ export async function callCasaRpc(name: string, args: unknown[]): Promise<unknow
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Não foi possível concluir a operação.";
-    throw new Error(message.split("\n")[0] ?? "Não foi possível concluir a operação.");
+    const first = message.split("\n")[0] ?? "Não foi possível concluir a operação.";
+    console.error("[casa-rpc]", fn, first);
+    if (isInternalSqlError(first)) {
+      throw new Error("Não foi possível concluir a operação.");
+    }
+    throw new Error(first);
   }
 }

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { bindCasaRpcArguments, isInternalSqlError, serializeJsonbArgument } from "../lib/casa/jsonb-arg.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -33,7 +34,13 @@ test("conversão de gestação aceita cliente nulo e preserva o agendamento", ()
   assert.match(conversion, /linkEncounterToPregnancy/);
   assert.match(conversion, /O agendamento original foi preservado/);
   assert.match(workspace, /\(!supabase && !isCasaBrowserAuth\(\)\)/);
+  assert.match(workspace, /!pregnancyLinked && \(supabase \|\| isCasaBrowserAuth\(\)\)/);
   assert.doesNotMatch(workspace, /if \(!supabase \|\| !encounter \|\| linkBusy\) return/);
+  const form = read("components/pregnancies/PregnancyForm.tsx");
+  const load = form.slice(form.indexOf("useEffect(() => {"), form.indexOf("const principals"));
+  assert.match(load, /isCasaBrowserAuth\(\)/);
+  assert.match(load, /listProfessionalLabels\(db\)/);
+  assert.doesNotMatch(load, /if \(!client\)/);
 });
 
 test("cadastro, edição e busca de paciente seguem o modo da casa sem cliente", () => {
@@ -63,6 +70,28 @@ test("término clínico no modo da casa recalcula a previsão sem o cliente", ()
   assert.match(directory, /callCasaRpc\("appointment_predictions_append"/);
   assert.match(rpc, /appointment_predictions_append: 1/);
   assert.match(rpc, /appointment_predictions_append: \[0\]/);
+  assert.match(rpc, /clinical_orientation_create: \[0\]/);
+  assert.match(rpc, /clinical_orientation_save_draft: \[0\]/);
+  assert.match(block, /A previsão da agenda não foi gravada/);
+  assert.doesNotMatch(block, /será atualizada na próxima carga/);
+  const agenda = read("components/attendance/AgendaPage.tsx");
+  const casaAgenda = agenda.slice(agenda.indexOf("if (casa)"), agenda.indexOf("if (!supabase) return"));
+  assert.match(casaAgenda, /recalculateDayPredictions\(null/);
+  assert.match(casaAgenda, /persist: true/);
+});
+
+test("argumento jsonb vira JSON textual uma vez e escalar permanece", () => {
+  const items = [{ appointment_id: "abc", predicted_starts_at: "2026-11-01T18:05:00.000Z" }];
+  const once = serializeJsonbArgument(items);
+  assert.equal(typeof once, "string");
+  assert.deepEqual(JSON.parse(once), items);
+  assert.equal(serializeJsonbArgument(once), once);
+  assert.equal(serializeJsonbArgument(null), null);
+  const bound = bindCasaRpcArguments(["uuid-escalar", items], [1]);
+  assert.equal(bound[0], "uuid-escalar");
+  assert.equal(bound[1], once);
+  assert.equal(isInternalSqlError("invalid input syntax for type json"), true);
+  assert.equal(isInternalSqlError("NOT_AUTHENTICATED"), false);
 });
 
 test("o modo publicado continua no cliente quando a flag não é 1", () => {

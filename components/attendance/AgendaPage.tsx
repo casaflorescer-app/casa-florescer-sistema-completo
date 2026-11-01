@@ -179,7 +179,7 @@ export function AgendaPage() {
           status: status || undefined,
         },
       })
-        .then((board) => {
+        .then(async (board) => {
           if (cancelled) return;
           setProcedureNames(new Map(board.procedureNames));
           setPatientNames(new Map(board.patientNames));
@@ -207,8 +207,29 @@ export function AgendaPage() {
           );
           setRows(board.appointments);
           setBlocks(board.blocks);
-          setPredictions(new Map());
-          setError(null);
+          const predictionResult = await recalculateDayPredictions(null, {
+            organizationId,
+            practiceId: selectedPracticeId,
+            appointments: board.appointments,
+            from: bounds.from,
+            to: bounds.to,
+            blocks: board.blocks.map((block) => ({
+              id: block.id,
+              professionalId: block.professionalId,
+              roomId: block.roomId,
+              startsAt: block.startsAt,
+              endsAt: block.endsAt,
+              reason: block.reasonCode,
+            })),
+            persist: true,
+          });
+          if (cancelled) return;
+          const nextPredictions = new Map<string, AppointmentPredictionView>();
+          for (const item of predictionResult.predictions) {
+            nextPredictions.set(item.appointmentId, item);
+          }
+          setPredictions(nextPredictions);
+          setError(predictionResult.error);
         })
         .catch((err: unknown) => {
           if (cancelled) return;

@@ -355,6 +355,7 @@ Na rodada complementar, a imagem `casa-hml-web:c086b` subiu de novo só em `127.
 
 ## Histórico
 
+- 2026-11-01 — C090: imagem `casa-hml-web:c090e` em `127.0.0.1:3017`, depois removida com as imagens `c090` a `c090d` e o volume `casa-c090-files`. Porta 3017 fechada. Linhas fictícias em 0. `casa_hml` e BancoFlorescerPP permaneceram. Backup 1343810 bytes, SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`. Florescer Web sem variável da casa. Sem deploy.
 - 2026-10-31 — C090: a previsão do término ficou no ramo da casa, ainda sem contêiner isolado. Porta 5432 fechada. Florescer Web sem as variáveis da casa.
 - 2026-10-31 — C089: plano de corte escrito e não executado. Sem variável da casa no Florescer Web e sem porta 5432.
 - 2026-10-31 — C086: imagem `casa-hml-web:c086c` em `127.0.0.1:3017`, depois removida. Porta 3017 e 5432 fechadas. Backup conferido de novo. Florescer Web sem as variáveis da casa.

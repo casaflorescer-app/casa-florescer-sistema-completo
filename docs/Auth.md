@@ -78,6 +78,7 @@ No contêiner `casa-hml-web`, já removido, o login válido respondeu 200, a sen
 
 ## Histórico
 
+- 2026-11-01 — C090: `/app/finance` abre para owner, admin ou caixa. `/app/admin/users` abre para o administrador principal, owner ou admin. O restante de `/app/admin` continua só para owner ou admin. A produção continua no Auth.
 - 2026-10-31 — C089: a produção continua no Auth. A sessão da casa permanece homologada só na cópia. Realtime não é chamado pelo app.
 - 2026-10-31 — C086: a rota da ficha devolveu 401 sem sessão. O cookie `Secure` continuou exigindo HTTPS no teste. A produção continua no Auth.
 - 2026-10-31 — C086 complementar: o cookie `Secure` segurou a sessão só em HTTPS. A agenda sem cookie respondeu 401 e a ficha sem cookie respondeu 500. A produção continua no Auth.

@@ -253,7 +253,7 @@ export async function listOrientationVersions(
   if (!supabase) {
     if (!isCasaBrowserAuth()) return [];
     const data = await callCasaRpc("clinical_orientation_versions_list", [orientationId]);
-    const rows = Array.isArray(data) ? data : [];
+    const rows = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : [];
     return rows
       .map((raw) => toVersionRow(raw as Record<string, unknown>))
       .filter((item): item is ClinicalOrientationVersionRow => Boolean(item));

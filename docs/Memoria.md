@@ -1,5 +1,15 @@
 # Memória
 
+## 2026-11-01 — C090 na cópia
+
+- Um array JavaScript passado a `$1::jsonb` precisa de `JSON.stringify` uma vez. String que já é JSON passa direto. A frase antiga dizia que a previsão seria gravada na próxima carga mesmo quando a escrita tinha falhado.
+- `clinical_orientation_versions_list` é `SETOF`. `to_jsonb` devolve uma linha por versão. Ficar só com `rows[0]` fazia a tela tratar a lista como vazia e soltar o rascunho. `appointment_predictions_append` continua no caso de mais de uma linha.
+- `/app/finance` não tinha regra de caminho, então o menu aparecia e o servidor mandava todo mundo para `/unauthorized`. A regra é owner, admin ou caixa. A secretária fica de fora.
+- O layout de `/app/admin` exigia owner ou admin e escondia a tela de usuários do administrador principal, mesmo com a regra de caminho permitindo `/app/admin/users`. A exceção é só esse caminho.
+- A sessão SSH caía depois de cerca de dois minutos em silêncio. `ServerAliveInterval` no cliente e o tmux `c090` seguraram a sessão. O `sshd` não foi alterado.
+- `pregnancies_forbid_delete` e `pregnancy_events_forbid_mutation` impedem apagar a gestação de prova. No PostgreSQL 17, o RESTRICT de chave estrangeira vem como `restrict_violation`, não como `foreign_key_violation`. `audit_events.id` é `bigint`, então uma limpeza que só segue tabelas com `id uuid` deixa a trilha segurando `profiles`.
+- A cópia `casa_hml` foi esvaziada das linhas fictícias. O contêiner, as imagens `casa-hml-web:c090*` e o volume saíram. A porta 3017 fechou. O BancoFlorescerPP e o backup não foram mexidos.
+
 ## 2026-10-31 — C090 modo da casa
 
 - `createClient()` devolve nulo quando a flag é `1`. Tela que faz `if (!supabase) return` impede o ramo já existente. O furo da previsão era `if (bounds && supabase)`: o término gravava e o recálculo não rodava. Agora `listAppointments`, durações, amostras, bloqueios e `appointment_predictions_append` aceitam cliente nulo. A função SQL continua exigindo `auth.uid()`, então o autor é a sessão. `callCasaRpc` devolve a lista só em `appointment_predictions_append` quando a função emite mais de uma linha. As demais funções continuam na primeira linha. O prompt da VPS não estava aberto, então a C090 não repetiu HTTP e não está homologada.
@@ -139,6 +149,7 @@ A imagem que rodou a rota nova é `casa-hml-web:c086b`, não a `c086`. O identif
 
 ## Histórico
 
+- 2026-11-01 — C090: lista `SETOF`, porta do financeiro, layout de usuários, sessão SSH e limpeza da gestação de prova. A cópia foi esvaziada e o contêiner saiu. Sem deploy.
 - 2026-10-31 — C090: a previsão do término saiu do cliente no modo da casa. Sem cópia isolada nesta etapa. A C090 não está homologada.
 - 2026-10-31 — C089: matriz em `docs/c089-auditoria.md`. Sem corte e sem push desta auditoria no momento em que foi escrita.
 - 2026-10-31 — C086 publicada em `main` no hash `53b452682c0b04d12cad18e9c55586adcded47fb`.

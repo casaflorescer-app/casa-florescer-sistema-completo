@@ -187,6 +187,9 @@ export async function callCasaRpc(name: string, args: unknown[]): Promise<unknow
         `select to_jsonb(public.${fn}(${placeholders})) as data`,
         bound,
       );
+      if (fn === "clinical_orientation_versions_list") {
+        return result.rows.map((row) => row.data);
+      }
       if (fn === "appointment_predictions_append" && result.rows.length > 1) {
         return result.rows.map((row) => row.data);
       }

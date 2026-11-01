@@ -72,6 +72,18 @@ test("término clínico no modo da casa recalcula a previsão sem o cliente", ()
   assert.match(rpc, /appointment_predictions_append: \[0\]/);
   assert.match(rpc, /clinical_orientation_create: \[0\]/);
   assert.match(rpc, /clinical_orientation_save_draft: \[0\]/);
+  assert.match(rpc, /fn === "clinical_orientation_versions_list"/);
+  const access = read("lib/auth/access.ts");
+  assert.match(access, /prefix: "\/app\/finance"/);
+  assert.match(access, /item\.canCashier/);
+  assert.match(access, /prefix: "\/app\/admin\/users"/);
+  assert.match(access, /auth\.isSystemAdmin/);
+  const adminLayout = read("app/(shell)/app/admin/layout.tsx");
+  assert.match(adminLayout, /pathname === "\/app\/admin\/users"/);
+  assert.match(adminLayout, /authorization\.isSystemAdmin/);
+  assert.match(adminLayout, /RequireRole roles=\{\["owner", "admin"\]\}/);
+  const versions = read("lib/orientations/directory.ts");
+  assert.match(versions, /data && typeof data === "object" \? \[data\] : \[\]/);
   assert.match(block, /A previsão da agenda não foi gravada/);
   assert.doesNotMatch(block, /será atualizada na próxima carga/);
   const agenda = read("components/attendance/AgendaPage.tsx");

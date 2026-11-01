@@ -20,6 +20,7 @@ O schema `0000`–`0059` e a C074 estão no BancoFlorescerPP. O navegador de pro
 
 ## Histórico
 
+- 2026-11-01 — C090: a imagem isolada em `127.0.0.1:3017` foi removida. O Caddy e o Florescer Web não mudaram.
 - 2026-10-31 — C090: o modo da casa cobre foto, gestação, pacientes, a previsão do término e as telas que abortavam sem cliente. O Caddy e o Florescer Web não mudaram.
 - 2026-10-31 — C089: o desenho publicado permanece no Caddy e no Auth. O caminho da casa continua desligado. A matriz está em `docs/c089-auditoria.md`.
 - 2026-10-31 — C086: a ficha do navegador passou a usar a rota da casa. A imagem `c086c` foi removida. O Caddy e o Florescer Web não mudaram.

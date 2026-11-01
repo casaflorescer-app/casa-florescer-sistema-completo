@@ -90,7 +90,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 - **Status:** `confirmada`
 - **Enunciado:** Só o administrador principal, que é `SYSTEM_ADMIN`, cria usuário da casa. A administradora, a secretária e as médicas não criam. A criação não concede `SYSTEM_ADMIN`. A secretária entra sem caixa e sem prontuário. A administradora entra no financeiro das duas práticas, sem prontuário e sem caixa própria. A médica entra só na própria prática, com a própria caixa. O primeiro administrador principal não nasce por essa função, porque ela exige um `SYSTEM_ADMIN` já ativo.
-- **Rastreio:** `0059_c083_staff_and_reset.sql`, `app/api/casa/staff/route.ts`, `scripts/c083-bootstrap.sql`. A migration foi aplicada no BancoFlorescerPP em 2026-10-31. O teste `supabase/tests/c083_login_and_staff.sql` rodou nessa data e foi desfeito. Organizações continuaram em 0.
+- **Rastreio:** `0059_c083_staff_and_reset.sql`, `app/api/casa/staff/route.ts`, `scripts/c083-bootstrap.sql`, `lib/auth/access.ts`, `app/(shell)/app/admin/layout.tsx`. A migration foi aplicada no BancoFlorescerPP em 2026-10-31. O teste `supabase/tests/c083_login_and_staff.sql` rodou nessa data e foi desfeito. Organizações continuaram em 0. Em 2026-11-01, na cópia, o botão “Criar usuário” apareceu para o administrador principal. A administradora abriu a lista sem o botão. Secretária e médica não abriram a página. O restante de `/app/admin` continuou fechado para o principal.
 
 ### RN-CASA-012 — Redefinição sem revelar a conta
 
@@ -107,7 +107,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 ### RN-CASA-014 — Financeiro na tela, sem percentual novo
 
 - **Status:** `⚠ inferida`
-- **Enunciado:** A tela lista o que a policy já devolve. Fatura e pagamento gravam só onde `invoices_write` e `payments_via_invoice` já permitem. O rateio é somente leitura e mostra `amount_cents` já gravado. Nenhum percentual é calculado. Despesa compartilhada é centro `is_shared` com `practice_id` nulo. Despesa particular leva `practice_id`. A administradora grava. A médica lê a compartilhada e a particular da própria prática. A secretária não lê. Se a policy recusar, a tela mostra a recusa.
+- **Enunciado:** A tela lista o que a policy já devolve. A rota `/app/finance` abre para owner, admin ou quem tem caixa. A secretária não entra. Fatura e pagamento gravam só onde `invoices_write` e `payments_via_invoice` já permitem. O rateio é somente leitura e mostra `amount_cents` já gravado. Nenhum percentual é calculado. Despesa compartilhada é centro `is_shared` com `practice_id` nulo. Despesa particular leva `practice_id`. A administradora grava despesa. A médica lê a compartilhada e a particular da própria prática e não grava despesa. A secretária não lê. Se a policy recusar, a tela mostra a recusa.
 - **Rastreio:** `components/finance/FinanceDesk.tsx`, `lib/casa/writes.ts`, `0056` e `0057`. A prova `supabase/tests/c084_module_isolation.sql` rodou no BancoFlorescerPP em 2026-10-31, terminou em `ROLLBACK` e deixou organizações em 0. A tela publicada não foi ligada a esse banco.
 
 ### RN-CASA-015 — Agenda cancela; ficha não se apaga
@@ -118,6 +118,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 ## Histórico
 
+- 2026-11-01 — C090: RN-CASA-011 segue confirmada. A rota de usuários passou a abrir para o administrador principal sem abrir o resto da administração. RN-CASA-014 segue inferida e passou a dizer quem entra em `/app/finance`. A lista de versões da orientação devolve todas as linhas. A frase de falha da previsão não afirma que a gravação ocorrerá depois.
 - 2026-10-31 — C086 complementar: RN-CASA-015 segue inferida. O envio vazio do formulário foi barrado pelo campo obrigatório. A frase da aplicação não apareceu.
 - 2026-10-31 — C086: RN-CASA-015 inferida. A agenda passa a criar pelo modo da casa e o cancelamento continua sendo a retirada. A ficha não ganhou exclusão física.
 - 2026-10-31 — C088: a prova de isolamento foi repetida no BancoFlorescerPP, terminou em `ROLLBACK` e deixou organizações em 0. RN-CASA-013 segue inferida. A aplicação publicada não foi ligada.

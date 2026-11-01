@@ -137,6 +137,11 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/unauthorized", exact: true, allow: () => true },
   { prefix: "/app/system", allow: (auth) => auth.isSystemAdmin },
   {
+    prefix: "/app/admin/users",
+    allow: (auth) =>
+      auth.isSystemAdmin || hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
+  },
+  {
     prefix: "/app/admin",
     allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
   },
@@ -154,6 +159,13 @@ const PATH_RULES: PathRule[] = [
   {
     prefix: "/app/reports",
     allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
+  },
+  {
+    prefix: "/app/finance",
+    allow: (auth) =>
+      hasStaffRole(auth, "owner") ||
+      hasStaffRole(auth, "admin") ||
+      auth.memberships.some((item) => item.canCashier),
   },
   {
     prefix: "/app/rentals",

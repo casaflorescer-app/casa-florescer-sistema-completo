@@ -52,6 +52,10 @@ Dependências do Supabase:
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
 
+## C090 — prova na cópia, sem corte
+
+O argumento `jsonb` entra em `callCasaRpc` serializado uma vez. Uma lista `SETOF`, como `clinical_orientation_versions_list`, volta inteira; `appointment_predictions_append` continua no caso que já existia. Se a previsão não grava, a tela diz que o término foi registrado e a previsão não. A rota `/app/finance` aceita owner, admin ou caixa. `/app/admin/users` aceita o administrador principal, owner ou admin; o layout de `/app/admin` só abre essa exceção nesse caminho. A imagem isolada `casa-hml-web:c090e` rodou em `127.0.0.1:3017` contra `casa_hml` e foi removida, com as imagens anteriores da mesma prova e o volume de arquivos. O Florescer Web não recebeu a flag. O corte não foi executado.
+
 ## C089 — auditoria, sem corte
 
 O inventário e a matriz estão em `docs/c089-auditoria.md`. Ter ramo no servidor não é homologação. A prova HTTP da cópia cobre autenticação, criação de usuário, agenda, ficha, visibilidade de fatura e de despesa compartilhada, e o arquivo autorizado. Na C090, a remoção da foto, a conversão de gestação nova e a previsão depois do término clínico passaram a ter ramo sem cliente Supabase. Realtime não é chamado pelo app. O Florescer Web não recebeu a flag. Nenhuma fase do corte foi executada.
@@ -66,6 +70,7 @@ A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de 
 
 ## Histórico
 
+- 2026-11-01 — C090: jsonb uma vez, lista de orientações completa e portões de `/app/finance` e `/app/admin/users`. A imagem isolada foi removida. Sem corte.
 - 2026-10-31 — C090: a previsão do término clínico deixou de exigir o cliente no modo da casa. Sem prova HTTP nova e sem corte.
 - 2026-10-31 — C089: inventário e matriz em `docs/c089-auditoria.md`. Código com ramo da casa não foi tratado como homologado. Sem corte.
 - 2026-10-31 — C086: a ficha passou a responder pela rota, com 401, 403 e 404 distintos. “Salvando…” pintou na cópia. A imagem `casa-hml-web:c086c` foi removida. Sem corte.

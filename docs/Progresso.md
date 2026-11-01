@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-11-01 — C090 homologada na cópia `casa_hml` e removida em seguida. Previsão, busca, conversão, orientação, financeiro, botão de criar usuário e foto nos três tamanhos tiveram prova de tela. Linhas fictícias em 0. Porta 3017 fechada. Backup intacto. Florescer Web sem variável da casa. Sem deploy.
 - 2026-10-31 — C090 complementar: a previsão do término clínico roda com cliente nulo no modo da casa. TypeScript passou. Testes de fonte 9/9. HTTP e Playwright não rodaram: o prompt da VPS não estava aberto. Sem deploy e sem flag na produção. A C090 não está homologada. O commit fica local.
 - 2026-10-31 — C089: auditoria do Supabase em `docs/c089-auditoria.md`. Inventário, matriz e fases A–F escritos. Sem deploy, sem desativação e sem leitura viva do banco. A C086 já estava em `origin/main`.
 - 2026-10-31 — C086 publicada em `main`: `53b452682c0b04d12cad18e9c55586adcded47fb`, fast-forward a partir de `fcad447`. TypeScript passou. O teste da agenda passou 4/4. Sem deploy. A C089 não começou.

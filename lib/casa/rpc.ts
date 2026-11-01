@@ -118,6 +118,7 @@ const ALLOWED: Record<string, number> = {
   patient_notification_dismiss: 1,
   patient_notification_mark_read: 1,
   staff_notification_dismiss: 1,
+  appointment_predictions_append: 1,
 };
 
 const JSONB_AT: Record<string, number[]> = {
@@ -133,6 +134,7 @@ const JSONB_AT: Record<string, number[]> = {
   professional_specialty_set: [0],
   professional_upsert: [0],
   clinic_workforce_upsert: [0],
+  appointment_predictions_append: [0],
 };
 
 function assertName(name: string, args: unknown[]) {
@@ -159,6 +161,9 @@ export async function callCasaRpc(name: string, args: unknown[]): Promise<unknow
         `select to_jsonb(public.${fn}(${placeholders})) as data`,
         args,
       );
+      if (fn === "appointment_predictions_append" && result.rows.length > 1) {
+        return result.rows.map((row) => row.data);
+      }
       return result.rows[0]?.data ?? null;
     });
   } catch (error) {

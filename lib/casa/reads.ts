@@ -652,3 +652,51 @@ export async function listUnreadNotificationsCasa(
     return result.rows.map(plain);
   });
 }
+
+export async function listProcedureDurationsCasa(organizationId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      "select id, duration_min from public.procedures where organization_id = $1",
+      [organizationId],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listHistoricalDurationsCasa(practiceId: string, limit: number): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select procedure_id, professional_id, practice_id, actual_start_at, actual_end_at
+       from public.appointments
+       where practice_id = $1
+         and actual_start_at is not null
+         and actual_end_at is not null
+         and procedure_id is not null
+       order by actual_end_at desc
+       limit $2`,
+      [practiceId, limit],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listAgendaBlocksCasa(practiceId: string, from: string, to: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, organization_id, practice_id, professional_id, room_id, starts_at, ends_at,
+              block_type, reason_code, title, description, status, recorded_after_start,
+              created_by, created_at, updated_at, cancelled_at, cancellation_reason
+       from public.agenda_blocks
+       where practice_id = $1
+         and status in ('scheduled', 'active')
+         and starts_at < $3
+         and ends_at > $2
+       order by starts_at`,
+      [practiceId, from, to],
+    );
+    return result.rows.map(plain);
+  });
+}

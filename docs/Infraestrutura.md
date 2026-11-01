@@ -333,7 +333,7 @@ Em 2026-10-31 a sessão SSH deste processo foi recusada. A conferência seguiu n
 
 ## C090 — código local, sem cópia isolada
 
-O prompt da VPS não estava aberto. Não houve contêiner, não houve escrita em `casa_hml` e a porta 5432 não foi aberta. O Florescer Web não recebeu a flag. A prova desta etapa é local: TypeScript e os testes de fonte `uat-c090-casa-mode` e `uat-c086-agenda`.
+O prompt da VPS não estava aberto. Não houve contêiner, não houve escrita em `casa_hml` e a porta 5432 não foi aberta. O Florescer Web não recebeu a flag. A prova desta etapa é local: TypeScript e os testes de fonte `uat-c090-casa-mode` e `uat-c086-agenda`, incluindo o recálculo da previsão com cliente nulo. A C090 não está homologada.
 
 ## C089 — plano de corte, sem executar
 
@@ -355,7 +355,7 @@ Na rodada complementar, a imagem `casa-hml-web:c086b` subiu de novo só em `127.
 
 ## Histórico
 
-- 2026-10-31 — C090: sem contêiner isolado. Porta 5432 fechada. Florescer Web sem as variáveis da casa.
+- 2026-10-31 — C090: a previsão do término ficou no ramo da casa, ainda sem contêiner isolado. Porta 5432 fechada. Florescer Web sem as variáveis da casa.
 - 2026-10-31 — C089: plano de corte escrito e não executado. Sem variável da casa no Florescer Web e sem porta 5432.
 - 2026-10-31 — C086: imagem `casa-hml-web:c086c` em `127.0.0.1:3017`, depois removida. Porta 3017 e 5432 fechadas. Backup conferido de novo. Florescer Web sem as variáveis da casa.
 - 2026-10-31 — C086 complementar: imagem `casa-hml-web:c086b` em `127.0.0.1:3017`, depois removida. Porta 3017 e 5432 fechadas. Backup conferido de novo. Florescer Web sem as variáveis da casa. Etapa bloqueada.

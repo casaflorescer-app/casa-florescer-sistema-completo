@@ -12,7 +12,7 @@ Quando `NEXT_PUBLIC_CASA_AUTH` é `1`, a lista e o cadastro de pacientes, a agen
 
 ## Histórico
 
-- 2026-10-31 — C090: ficha da paciente, edição, foto, gestação, portal, orientações, relacionamento e permissões seguem quando o cliente é nulo e a flag é `1`. A flag continua desligada na produção.
+- 2026-10-31 — C090: o término clínico dispara a previsão com a flag ligada e o cliente nulo. A flag continua desligada na produção.
 - 2026-10-31 — C089: a flag continua desligada. Telas com ramo da casa sem prova HTTP não foram marcadas como homologadas. A remoção da foto segue no cliente.
 - 2026-10-31 — C086: “Salvando…” pintou com o botão desabilitado e um único envio pendente. O prontuário passou a chamar `/api/casa/clinical`. O modo continua desligado na produção.
 - 2026-10-31 — C086 complementar: o formulário abriu nos três tamanhos na cópia isolada, o envio vazio foi barrado e o agendamento criado apareceu na lista. “Salvando…” não pintou. O modo continua desligado na produção.

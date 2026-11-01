@@ -814,7 +814,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         timeZone: "America/Sao_Paulo",
       }).format(new Date(result.row.startsAt));
       const bounds = dayBoundsIso(dayKey);
-      if (bounds && supabase) {
+      if (bounds) {
         const dayAppts = await listAppointments(supabase, {
           practiceId: encounter.practiceId,
           from: bounds.from,

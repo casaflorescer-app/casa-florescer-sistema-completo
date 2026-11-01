@@ -46,6 +46,25 @@ test("cadastro, edição e busca de paciente seguem o modo da casa sem cliente",
   assert.match(edit, /updatePatient\(supabase/);
 });
 
+test("término clínico no modo da casa recalcula a previsão sem o cliente", () => {
+  const workspace = read("components/attendance/EncounterWorkspace.tsx");
+  const directory = read("lib/attendance/directory.ts");
+  const rpc = read("lib/casa/rpc.ts");
+  const end = workspace.slice(workspace.indexOf("async function onEndAttendance"));
+  const block = end.slice(0, end.indexOf("setNotice(predictionNotice)"));
+  assert.match(block, /recalculateDayPredictions\(supabase/);
+  assert.match(block, /if \(bounds\)/);
+  assert.doesNotMatch(block, /if \(bounds && supabase\)/);
+  assert.doesNotMatch(block, /storage\.from|createClient\(/);
+  assert.match(directory, /listAppointmentsCasa/);
+  assert.match(directory, /listProcedureDurationsCasa/);
+  assert.match(directory, /listHistoricalDurationsCasa/);
+  assert.match(directory, /listAgendaBlocksCasa/);
+  assert.match(directory, /callCasaRpc\("appointment_predictions_append"/);
+  assert.match(rpc, /appointment_predictions_append: 1/);
+  assert.match(rpc, /appointment_predictions_append: \[0\]/);
+});
+
 test("o modo publicado continua no cliente quando a flag não é 1", () => {
   const mode = read("lib/auth/casa-mode.ts");
   const client = read("lib/supabase/client.ts");

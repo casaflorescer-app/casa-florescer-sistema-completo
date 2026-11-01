@@ -12,7 +12,7 @@ O commit documental desta auditoria, `a3c723c`, foi publicado em `origin/main` e
 
 No modo da casa, a remoção da foto passou a usar `DELETE /api/casa/files`, com `can_access_patient_photo`, limpeza de `photo_path` e apagamento só no volume `CASA_FILES_ROOT`. A conversão que cria gestação nova aceita cliente nulo e usa `savePregnancyCasa` e `link_encounter_to_pregnancy`. Cadastro, edição e busca de paciente, encerramento e retaguarda da gestação, permissões de interface, profissionais, funcionários, notificações, portal, orientações e buscas de paciente, profissional e procedimento também seguem o servidor quando a flag é `1`. O cliente publicado permanece para quando a flag está ausente.
 
-Isso não é homologação. `npx tsc --noEmit` passou. `scripts/uat-c090-casa-mode.mjs` e `scripts/uat-c086-agenda.mjs` passaram, 8 testes. O prompt da VPS não estava aberto, então não houve HTTP em `casa_hml`. A previsão do dia depois do término clínico continua no cliente publicado. A flag de produção não foi ligada.
+Isso não é homologação. `npx tsc --noEmit` passou. `scripts/uat-c090-casa-mode.mjs` e `scripts/uat-c086-agenda.mjs` passaram, 9 testes. O término clínico, com a flag em `1`, chama `recalculateDayPredictions` com cliente nulo: a leitura do dia, das durações, das amostras e dos bloqueios usa `withCasaUser`, e a gravação chama `appointment_predictions_append` já existente. `starts_at` e `scheduled_*` não são alterados. O prompt da VPS não estava aberto, então não houve HTTP nem Playwright em `casa_hml`. A flag de produção não foi ligada. A C090 não está homologada.
 
 ## Como ler a classificação
 

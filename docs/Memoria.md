@@ -2,7 +2,7 @@
 
 ## 2026-10-31 — C090 modo da casa
 
-- `createClient()` devolve nulo quando a flag é `1`. Tela que faz `if (!supabase) return` impede o ramo já existente. A previsão do dia após o término clínico ainda chama o cliente; o término em si segue a função da casa. O prompt da VPS não estava aberto, então a C090 não repetiu HTTP.
+- `createClient()` devolve nulo quando a flag é `1`. Tela que faz `if (!supabase) return` impede o ramo já existente. O furo da previsão era `if (bounds && supabase)`: o término gravava e o recálculo não rodava. Agora `listAppointments`, durações, amostras, bloqueios e `appointment_predictions_append` aceitam cliente nulo. A função SQL continua exigindo `auth.uid()`, então o autor é a sessão. `callCasaRpc` devolve a lista só em `appointment_predictions_append` quando a função emite mais de uma linha. As demais funções continuam na primeira linha. O prompt da VPS não estava aberto, então a C090 não repetiu HTTP e não está homologada.
 
 ## 2026-10-31 — C089 auditoria
 
@@ -139,7 +139,7 @@ A imagem que rodou a rota nova é `casa-hml-web:c086b`, não a `c086`. O identif
 
 ## Histórico
 
-- 2026-10-31 — C090: foto e conversão saíram do cliente no modo da casa. Sem cópia isolada nesta etapa.
+- 2026-10-31 — C090: a previsão do término saiu do cliente no modo da casa. Sem cópia isolada nesta etapa. A C090 não está homologada.
 - 2026-10-31 — C089: matriz em `docs/c089-auditoria.md`. Sem corte e sem push desta auditoria no momento em que foi escrita.
 - 2026-10-31 — C086 publicada em `main` no hash `53b452682c0b04d12cad18e9c55586adcded47fb`.
 - 2026-10-31 — C086: a rota da ficha devolveu 401, 403, 404 e 200 na imagem `c086c`. “Salvando…” pintou. A cópia foi esvaziada e o contêiner saiu.

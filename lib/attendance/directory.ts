@@ -497,9 +497,14 @@ export function toClinicalNoteRow(value: Record<string, unknown>): ClinicalNoteR
 // ---------------------------------------------------------------------------
 
 export async function listAppointments(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   filter: AppointmentListFilter,
 ): Promise<AppointmentRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listAppointmentsCasa } = await import("@/lib/casa/actions");
+    return listAppointmentsCasa(filter);
+  }
   let query = supabase
     .from("appointments")
     .select(APPOINTMENT_COLUMNS)
@@ -1292,14 +1297,24 @@ function toPredictionAppointment(row: AppointmentRow): PredictionAppointment {
 
 /** Catálogo duration_min da organização (uma consulta). */
 export async function listProcedureDurationMinutes(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
 ): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return map;
+    const { listProcedureDurationsCasa } = await import("@/lib/casa/reads");
+    for (const raw of await listProcedureDurationsCasa(organizationId)) {
+      const id = asString(raw.id);
+      const minutes = asNumber(raw.duration_min);
+      if (id && minutes != null && minutes > 0) map.set(id, minutes);
+    }
+    return map;
+  }
   const { data, error } = await supabase
     .from("procedures")
     .select("id, duration_min")
     .eq("organization_id", organizationId);
-  const map = new Map<string, number>();
   if (error || !data) return map;
   for (const raw of data) {
     const row = raw as { id?: unknown; duration_min?: unknown };
@@ -1310,15 +1325,36 @@ export async function listProcedureDurationMinutes(
   return map;
 }
 
+function toDurationSamples(data: Record<string, unknown>[]): HistoricalDurationSample[] {
+  const samples: HistoricalDurationSample[] = [];
+  for (const row of data) {
+    const procedureId = asString(row.procedure_id);
+    const professionalId = asString(row.professional_id);
+    const rowPracticeId = asString(row.practice_id);
+    const start = asString(row.actual_start_at);
+    const end = asString(row.actual_end_at);
+    if (!procedureId || !professionalId || !rowPracticeId || !start || !end) continue;
+    const durationMin = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60_000);
+    if (durationMin <= 0) continue;
+    samples.push({ procedureId, professionalId, practiceId: rowPracticeId, durationMin });
+  }
+  return samples;
+}
+
 /**
  * Amostras históricas efetivas (actual_start + actual_end) da prática.
  * Sem inventar dados; usadas só se >= MIN_HISTORICAL_SAMPLES no motor.
  */
 export async function listHistoricalDurationSamples(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   limit = 500,
 ): Promise<HistoricalDurationSample[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listHistoricalDurationsCasa } = await import("@/lib/casa/reads");
+    return toDurationSamples(await listHistoricalDurationsCasa(practiceId, limit));
+  }
   const { data, error } = await supabase
     .from("appointments")
     .select("procedure_id, professional_id, practice_id, actual_start_at, actual_end_at")
@@ -1329,27 +1365,7 @@ export async function listHistoricalDurationSamples(
     .order("actual_end_at", { ascending: false })
     .limit(limit);
   if (error || !data) return [];
-  const samples: HistoricalDurationSample[] = [];
-  for (const raw of data) {
-    const row = raw as Record<string, unknown>;
-    const procedureId = asString(row.procedure_id);
-    const professionalId = asString(row.professional_id);
-    const rowPracticeId = asString(row.practice_id);
-    const start = asString(row.actual_start_at);
-    const end = asString(row.actual_end_at);
-    if (!procedureId || !professionalId || !rowPracticeId || !start || !end) continue;
-    const durationMin = Math.round(
-      (new Date(end).getTime() - new Date(start).getTime()) / 60_000,
-    );
-    if (durationMin <= 0) continue;
-    samples.push({
-      procedureId,
-      professionalId,
-      practiceId: rowPracticeId,
-      durationMin,
-    });
-  }
-  return samples;
+  return toDurationSamples(data as Record<string, unknown>[]);
 }
 
 /** Última versão por appointment_id (staff SELECT). */
@@ -1374,7 +1390,7 @@ export async function listLatestAppointmentPredictions(
 }
 
 export async function appendAppointmentPredictions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   items: Array<{
     appointmentId: string;
     predictedStartsAt: string;
@@ -1383,13 +1399,30 @@ export async function appendAppointmentPredictions(
   }>,
 ): Promise<{ rows: AppointmentPredictionRow[]; error: string | null }> {
   if (items.length === 0) return { rows: [], error: null };
+  const payload = items.map((item) => ({
+    appointment_id: item.appointmentId,
+    predicted_starts_at: item.predictedStartsAt,
+    predicted_ends_at: item.predictedEndsAt,
+    prediction_reason: item.predictionReason,
+  }));
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { rows: [], error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await callCasaRpc("appointment_predictions_append", [payload]);
+      const list = Array.isArray(data) ? data : data ? [data] : [];
+      return {
+        rows: list.flatMap((raw) => {
+          const row = raw && typeof raw === "object" ? toAppointmentPredictionRow(raw as Record<string, unknown>) : null;
+          return row ? [row] : [];
+        }),
+        error: null,
+      };
+    } catch (error) {
+      return { rows: [], error: rpcFailure(error) };
+    }
+  }
   const { data, error } = await supabase.rpc("appointment_predictions_append", {
-    p_items: items.map((item) => ({
-      appointment_id: item.appointmentId,
-      predicted_starts_at: item.predictedStartsAt,
-      predicted_ends_at: item.predictedEndsAt,
-      prediction_reason: item.predictionReason,
-    })),
+    p_items: payload,
   });
   if (error) return { rows: [], error: mapAttendanceRpcError(error) };
   const rows = Array.isArray(data)
@@ -1405,7 +1438,7 @@ export async function appendAppointmentPredictions(
  * Retorna o view model operacional para a UI.
  */
 export async function recalculateDayPredictions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     organizationId: string;
     practiceId: string;
@@ -1608,7 +1641,7 @@ export function toAgendaBlockInterval(block: AgendaBlockRow): AgendaBlockInterva
 }
 
 export async function listAgendaBlocksForDay(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     practiceId: string;
     appointments?: AppointmentRow[];
@@ -1625,6 +1658,17 @@ export async function listAgendaBlocksForDay(
     to = ends[ends.length - 1];
   }
   if (!from || !to) return { blocks: [], error: null };
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { blocks: [], error: "Autenticação não configurada neste ambiente." };
+    const { listAgendaBlocksCasa } = await import("@/lib/casa/reads");
+    const data = await listAgendaBlocksCasa(input.practiceId, from, to);
+    return {
+      blocks: data
+        .map((raw) => toAgendaBlockRow(raw))
+        .filter((item): item is AgendaBlockRow => Boolean(item)),
+      error: null,
+    };
+  }
 
   const { data, error } = await supabase
     .from("agenda_blocks")

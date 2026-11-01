@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import {
@@ -11,6 +12,7 @@ import {
   listRecentEncountersForProfessional,
   type EncounterRow,
 } from "@/lib/attendance/directory";
+import { listPatientsCasa } from "@/lib/casa/actions";
 import { listPatients, patientChartHref, type PatientListRow } from "@/lib/patients/directory";
 import { formatDateTime } from "@/lib/platform/format";
 import { PatientSearchPanel } from "@/components/attendance/PatientSearchPanel";
@@ -35,7 +37,7 @@ export function RecordsIndex() {
   );
 
   const load = useCallback(async () => {
-    if (!supabase || !authorization) {
+    if ((!supabase && !isCasaBrowserAuth()) || !authorization) {
       setLoading(false);
       return;
     }
@@ -68,7 +70,7 @@ export function RecordsIndex() {
           membership.practiceId,
           membership.professional.id,
         ),
-        listPatients(supabase).catch(() => []),
+        (supabase ? listPatients(supabase) : listPatientsCasa()).catch(() => []),
       ]);
       setOpenRows(open);
       setRecentRows(recent);

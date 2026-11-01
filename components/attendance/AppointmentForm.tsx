@@ -130,7 +130,14 @@ export function AppointmentForm({
   );
   const searchProcedures = useCallback(
     async (query: string) => {
-      if (!supabase) return [];
+      if (!supabase) {
+        if (!isCasaBrowserAuth() || !organizationId) return [];
+        return searchProcedureOptions(null, query, {
+          organizationId,
+          practiceId,
+          limit: 30,
+        });
+      }
       return searchProcedureOptions(supabase, query, {
         organizationId,
         practiceId,

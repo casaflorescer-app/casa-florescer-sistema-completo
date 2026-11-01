@@ -6,6 +6,7 @@ import { callCasaRpc } from "@/lib/casa/rpc";
 import { createAppointmentCasa, updateAppointmentOpenCasa } from "@/lib/casa/writes";
 import {
   listEncountersForPatientCasa,
+  listEncountersForProfessionalCasa,
   listReturnsOfEncounterCasa,
   readAppointmentCasa,
   readClinicalNotesCasa,
@@ -928,11 +929,17 @@ export async function listEncountersForPatient(
 
 /** Encounters abertos do profissional na prática (índice do prontuário — C040.1). */
 export async function listOpenEncountersForProfessional(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   professionalId: string,
   limit = 40,
 ): Promise<EncounterRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listEncountersForProfessionalCasa(practiceId, professionalId, true, limit))
+      .map((raw) => toEncounterRow(raw))
+      .filter((item): item is EncounterRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("encounters")
     .select(ENCOUNTER_COLUMNS)
@@ -949,11 +956,17 @@ export async function listOpenEncountersForProfessional(
 
 /** Encounters recentes (inclui assinados) — consulta em modo leitura. */
 export async function listRecentEncountersForProfessional(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   practiceId: string,
   professionalId: string,
   limit = 30,
 ): Promise<EncounterRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    return (await listEncountersForProfessionalCasa(practiceId, professionalId, false, limit))
+      .map((raw) => toEncounterRow(raw))
+      .filter((item): item is EncounterRow => Boolean(item));
+  }
   const { data, error } = await supabase
     .from("encounters")
     .select(ENCOUNTER_COLUMNS)

@@ -3,6 +3,8 @@
  * Sem migration. Respeita RLS; camada clínica só quando `includeClinical`.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listProfessionalLabelsCasa } from "@/lib/casa/reads";
 import { ageFromBirthDate, formatIsoDateBr, formatPhone } from "@/lib/patients/format";
 import { getPatient, maskCpf, patientChartHref } from "@/lib/patients/directory";
 import {
@@ -95,11 +97,18 @@ export type Patient360Snapshot = {
 };
 
 async function resolveProfessionalName(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   appointment: AppointmentRow | undefined,
 ): Promise<string | null> {
   if (!appointment) return null;
   if (appointment.professionalName) return appointment.professionalName;
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const labels = await listProfessionalLabelsCasa();
+    const match = labels.find((row) => row.id === appointment.professionalId);
+    const name = typeof match?.full_name === "string" ? match.full_name.trim() : "";
+    return name || null;
+  }
   const { data } = await supabase
     .from("professional_labels")
     .select("full_name")
@@ -112,7 +121,7 @@ async function resolveProfessionalName(
 }
 
 export async function loadPatient360Snapshot(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     patientId: string;
     practiceId: string | null;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { formatIsoDateBr } from "@/lib/patients/format";
 import {
@@ -20,7 +21,7 @@ export function PatientPregnancies({ patientId }: { patientId: string }) {
 
   useEffect(() => {
     const supabase = createClient();
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;

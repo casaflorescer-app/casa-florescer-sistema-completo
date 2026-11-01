@@ -106,6 +106,25 @@ test("argumento jsonb vira JSON textual uma vez e escalar permanece", () => {
   assert.equal(isInternalSqlError("NOT_AUTHENTICATED"), false);
 });
 
+test("índice, painel, gestações e busca de procedimento não param com cliente nulo", () => {
+  const records = read("components/attendance/RecordsIndex.tsx");
+  const panel = read("components/dashboard/PhysicianPanel.tsx");
+  const pregnancies = read("components/pregnancies/PatientPregnancies.tsx");
+  const form = read("components/attendance/AppointmentForm.tsx");
+  const edit = read("components/attendance/EditAppointmentForm.tsx");
+  const quick = read("components/patients/PatientQuickView.tsx");
+  assert.match(records, /\(!supabase && !isCasaBrowserAuth\(\)\)/);
+  assert.match(records, /listPatientsCasa\(\)/);
+  assert.match(panel, /listRoomsCasa\(/);
+  assert.match(panel, /listPatientsCasa\(\)/);
+  assert.match(pregnancies, /!supabase && !isCasaBrowserAuth\(\)/);
+  assert.match(form, /searchProcedureOptions\(null/);
+  assert.match(edit, /searchProcedureOptions\(null/);
+  assert.match(quick, /!supabase && !isCasaBrowserAuth\(\)/);
+  const reads = read("lib/casa/reads.ts");
+  assert.match(reads, /listEncountersForProfessionalCasa/);
+});
+
 test("o modo publicado continua no cliente quando a flag não é 1", () => {
   const mode = read("lib/auth/casa-mode.ts");
   const client = read("lib/supabase/client.ts");

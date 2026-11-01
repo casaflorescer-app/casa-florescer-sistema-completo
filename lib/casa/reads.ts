@@ -102,6 +102,23 @@ export async function listClinicUsersCasa() {
   });
 }
 
+export async function listEncountersForProfessionalCasa(
+  practiceId: string,
+  professionalId: string,
+  openOnly: boolean,
+  limit: number,
+): Promise<SqlRow[]> {
+  const userId = await actorId();
+  const statusSql = openOnly ? "status = 'open'" : "status <> 'open'";
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `${ENCOUNTER_SQL} where practice_id = $1 and professional_id = $2 and ${statusSql} order by created_at desc limit $3`,
+      [practiceId, professionalId, limit],
+    );
+    return result.rows.map(plain);
+  });
+}
+
 export async function listEncountersForPatientCasa(practiceId: string, patientId: string): Promise<SqlRow[]> {
   const userId = await actorId();
   return withCasaUser(userId, async (client) => {

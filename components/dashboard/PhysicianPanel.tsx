@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listPatientsCasa } from "@/lib/casa/actions";
+import { listRoomsCasa } from "@/lib/casa/reads";
 import { createClient } from "@/lib/supabase/client";
 import {
   listAppointments,
@@ -53,7 +56,8 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
 
   useEffect(() => {
     const supabase = createClient();
-    if (!supabase || !practiceId || !professionalId) {
+    const casa = isCasaBrowserAuth();
+    if ((!supabase && !casa) || !practiceId || !professionalId) {
       setLoading(false);
       setError(
         !practiceId || !professionalId
@@ -81,9 +85,11 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
             to: bounds.to,
             professionalId,
           }),
-          listPatients(supabase),
+          supabase ? listPatients(supabase) : listPatientsCasa(),
           listOpenEncountersForProfessional(supabase, practiceId, professionalId, 20),
-          supabase.from("rooms").select("id, name").eq("organization_id", auth.organization?.id ?? ""),
+          supabase
+            ? supabase.from("rooms").select("id, name").eq("organization_id", auth.organization?.id ?? "")
+            : listRoomsCasa(auth.organization?.id ?? "").then((data) => ({ data: data.rooms })),
         ]);
         if (cancelled) return;
         const pMap = new Map<string, PatientListRow>();
@@ -91,7 +97,7 @@ export function PhysicianPanel({ auth }: { auth: AuthorizationContext }) {
         const rMap = new Map<string, string>();
         for (const raw of roomsRes.data ?? []) {
           const row = raw as { id?: string; name?: string };
-          if (row.id && row.name) rMap.set(row.id, row.name);
+          if (row.id && row.name) rMap.set(String(row.id), String(row.name));
         }
         setAppointments(apptRows);
         setPatientsById(pMap);

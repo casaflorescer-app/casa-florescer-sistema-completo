@@ -1,5 +1,9 @@
 # Memória
 
+## 2026-10-31 — C090 modo da casa
+
+- `createClient()` devolve nulo quando a flag é `1`. Tela que faz `if (!supabase) return` impede o ramo já existente. A previsão do dia após o término clínico ainda chama o cliente; o término em si segue a função da casa. O prompt da VPS não estava aberto, então a C090 não repetiu HTTP.
+
 ## 2026-10-31 — C089 auditoria
 
 - Ramo `isCasaBrowserAuth()` no código não é homologação. A prova HTTP está limitada ao que `docs/Infraestrutura.md` registrou na cópia. `removePatientPhoto` ainda exige o cliente Supabase. Não há `.channel(` de Realtime no app. O estado vivo do banco não foi relido.
@@ -135,6 +139,7 @@ A imagem que rodou a rota nova é `casa-hml-web:c086b`, não a `c086`. O identif
 
 ## Histórico
 
+- 2026-10-31 — C090: foto e conversão saíram do cliente no modo da casa. Sem cópia isolada nesta etapa.
 - 2026-10-31 — C089: matriz em `docs/c089-auditoria.md`. Sem corte e sem push desta auditoria no momento em que foi escrita.
 - 2026-10-31 — C086 publicada em `main` no hash `53b452682c0b04d12cad18e9c55586adcded47fb`.
 - 2026-10-31 — C086: a rota da ficha devolveu 401, 403, 404 e 200 na imagem `c086c`. “Salvando…” pintou. A cópia foi esvaziada e o contêiner saiu.

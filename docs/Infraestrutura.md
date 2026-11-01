@@ -331,6 +331,10 @@ Esse texto é anterior à prova da C086. A seção da C086, mais abaixo, registr
 
 Em 2026-10-31 a sessão SSH deste processo foi recusada. A conferência seguiu no prompt já aberto na VPS. As organizações estavam em 0. A prova `supabase/tests/c084_module_isolation.sql` rodou como `postgre` no BancoFlorescerPP, terminou em `ROLLBACK` e a contagem de organizações voltou a 0. Não há backup restaurável confirmado. Por isso não houve login, CRUD pela aplicação, upload, download nem processo Next apontando para o banco. A porta 5432 não foi publicada. O Florescer Web e `NEXT_PUBLIC_CASA_AUTH` não mudaram. A API `api.thvp.cloud` permanece.
 
+## C090 — código local, sem cópia isolada
+
+O prompt da VPS não estava aberto. Não houve contêiner, não houve escrita em `casa_hml` e a porta 5432 não foi aberta. O Florescer Web não recebeu a flag. A prova desta etapa é local: TypeScript e os testes de fonte `uat-c090-casa-mode` e `uat-c086-agenda`.
+
 ## C089 — plano de corte, sem executar
 
 As fases A a F estão em `docs/c089-auditoria.md`. Nesta data nenhuma foi executada. O Florescer Web não recebeu variável da casa. A porta 5432 não foi aberta. O backup registrado permanece o de 1343810 bytes. O estado vivo do BancoFlorescerPP não foi relido.
@@ -351,6 +355,7 @@ Na rodada complementar, a imagem `casa-hml-web:c086b` subiu de novo só em `127.
 
 ## Histórico
 
+- 2026-10-31 — C090: sem contêiner isolado. Porta 5432 fechada. Florescer Web sem as variáveis da casa.
 - 2026-10-31 — C089: plano de corte escrito e não executado. Sem variável da casa no Florescer Web e sem porta 5432.
 - 2026-10-31 — C086: imagem `casa-hml-web:c086c` em `127.0.0.1:3017`, depois removida. Porta 3017 e 5432 fechadas. Backup conferido de novo. Florescer Web sem as variáveis da casa.
 - 2026-10-31 — C086 complementar: imagem `casa-hml-web:c086b` em `127.0.0.1:3017`, depois removida. Porta 3017 e 5432 fechadas. Backup conferido de novo. Florescer Web sem as variáveis da casa. Etapa bloqueada.

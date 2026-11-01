@@ -6,6 +6,14 @@ O commit homologado da C086, `53b452682c0b04d12cad18e9c55586adcded47fb`, já é 
 
 A produção continua com `NEXT_PUBLIC_CASA_AUTH` ausente. `lib/auth/casa-mode.ts` só liga o modo do browser quando o valor é exatamente `1`. Sem isso, o browser fala com o cliente em `lib/supabase/client.ts`.
 
+## C090 — ramos fechados, sem prova HTTP nova
+
+O commit documental desta auditoria, `a3c723c`, foi publicado em `origin/main` em fast-forward. Não houve deploy.
+
+No modo da casa, a remoção da foto passou a usar `DELETE /api/casa/files`, com `can_access_patient_photo`, limpeza de `photo_path` e apagamento só no volume `CASA_FILES_ROOT`. A conversão que cria gestação nova aceita cliente nulo e usa `savePregnancyCasa` e `link_encounter_to_pregnancy`. Cadastro, edição e busca de paciente, encerramento e retaguarda da gestação, permissões de interface, profissionais, funcionários, notificações, portal, orientações e buscas de paciente, profissional e procedimento também seguem o servidor quando a flag é `1`. O cliente publicado permanece para quando a flag está ausente.
+
+Isso não é homologação. `npx tsc --noEmit` passou. `scripts/uat-c090-casa-mode.mjs` e `scripts/uat-c086-agenda.mjs` passaram, 8 testes. O prompt da VPS não estava aberto, então não houve HTTP em `casa_hml`. A previsão do dia depois do término clínico continua no cliente publicado. A flag de produção não foi ligada.
+
 ## Como ler a classificação
 
 Uma tabela no Postgres não torna o módulo migrado. “Migrada e homologada” exige prova HTTP ou de tela na cópia `casa_hml`, registrada em `docs/Infraestrutura.md` e `docs/Progresso.md`. Código com ramo `isCasaBrowserAuth()` sem essa prova fica “implementada, mas não homologada” ou “parcialmente migrada”. O estado vivo do BancoFlorescerPP e de `casa_hml` não foi relido nesta sessão: fica “não verificável”, com a última prova citada.
@@ -20,7 +28,7 @@ Uma tabela no Postgres não torna o módulo migrado. “Migrada e homologada” 
 | Auth GoTrue | `app/(shell)/login/ui.tsx`, `lib/auth/sign-out.ts`, `components/auth/AuthProvider.tsx` | Login publicado | executada em produção | `app/api/casa/session/route.ts` |
 | Realtime | nenhum `.channel(` no código da aplicação | o gateway publicado ainda inclui o serviço | infraestrutura, sem chamada do app | nenhuma chamada a desligar no app |
 | Storage `patient-photos` | `lib/patients/directory.ts` `uploadPatientPhoto` com cliente | upload publicado | executada em produção | `POST /api/casa/files` com `kind=photo` quando o cliente é nulo |
-| Remoção da foto | `removePatientPhoto` exige `SupabaseClient` | só o caminho publicado | executada em produção | ausência: a remoção não tem ramo da casa |
+| Remoção da foto | `removePatientPhoto` com cliente no caminho publicado | `DELETE /api/casa/files` quando o cliente é nulo | ramo no código, sem prova HTTP da C090 | volume privado e `can_access_patient_photo` |
 | Storage `clinical-documents` | `lib/documents/directory.ts` upload com cliente | caminho publicado | executada em produção | `POST /api/casa/files` no ramo da casa |
 | Buckets no schema | migrations `0009`, `0027`, `0030`, `0041`, `0046` | `patient-photos`, `clinical-orientations`, `clinical-exams`, `encounter-recordings`, `clinical-documents` | schema | volume `CASA_FILES_ROOT`, fora de `public/` |
 | SDK em testes e seeds | `scripts/uat-*.mjs`, `scripts/seed-c070-demo.mjs` | prova antiga e semente | teste, não é o caminho publicado | não remover nesta etapa |
@@ -34,10 +42,10 @@ Objetos reais do Storage não foram listados. Não há inventário de órfãos.
 | --- | --- | --- | --- | --- | --- |
 | Autenticação e sessão | GoTrue no browser | `app/api/casa/session`, cookie `casa_session`, Argon2id em `staff_credentials` | Migrada e homologada na cópia: login 200, senha errada 401, logout 200, sem cookie 401 | Flag ausente na produção. Cookie `Secure` exige HTTPS | Alto se a flag for ligada sem o segredo de sessão |
 | Cadastro de usuários | Admin API do Auth no bootstrap | `POST /api/casa/staff` só para `SYSTEM_ADMIN` | Migrada e homologada: principal criou; administradora recebeu 403 | Edição de vínculo existe em `createMembershipCasa` e não entrou na prova HTTP | Médio |
-| Pacientes | cliente Supabase em `lib/patients/directory.ts` | `listPatientsCasa`, `createPatientCasa`, `searchPatientsCasa` | Parcialmente migrada. A paciente da prova foi inserida em SQL, não pelo HTTP de cadastro | Cadastro e edição sem prova HTTP. `removePatientPhoto` não aceita cliente nulo | Médio |
+| Pacientes | cliente Supabase em `lib/patients/directory.ts` | `listPatientsCasa`, `createPatientCasa`, `searchPatientsCasa`, `getPatientCasa`, `updatePatientCasa` e `DELETE` da foto | Implementada, mas não homologada. A paciente da prova da C086 foi inserida em SQL | Sem prova HTTP do cadastro, da edição e da remoção da foto | Médio |
 | Agenda | cliente na tela quando a flag está ausente | `app/api/casa/appointments` | Migrada e homologada na imagem `c086c`: criar, ler, alterar e cancelar 200; outra médica 404; sem cookie 401; secretária criou; linha ficou `cancelled`; “Salvando…” pintou | Produção continua no cliente | Alto no corte, baixo na cópia |
 | Prontuário e ficha | ação antiga virava HTTP 500 | `GET` e `POST /api/casa/clinical` | Migrada e homologada na ficha: 401, 403, 404 e 200; autor da sessão; `DELETE` 405 | Notas, assinatura e o restante do atendimento têm ramo no código e não foram repetidos na `c086c` | Alto se a ficha for tratada como o prontuário inteiro |
-| Gestações | cliente no browser | `savePregnancyCasa`, `listVisiblePregnanciesCasa` | Parcialmente migrada | A conversão que cria gestação nova continua no cliente publicado. Sem prova HTTP | Alto |
+| Gestações | cliente no browser quando a flag está ausente | `savePregnancyCasa`, `getPregnancyCasa`, conversão com cliente nulo, encerramento e retaguarda | Implementada, mas não homologada | Sem prova HTTP. O agendamento original permanece na conversão | Alto |
 | Exames | cliente e bucket `clinical-exams` | `lib/exams/directory.ts` e `lib/casa/module-data.ts` | Parcialmente migrada | Pedido, catálogo e painel sem prova HTTP da C086 | Médio |
 | Documentos e anexos | buckets do Storage | `app/api/casa/files` | Parcialmente migrada. Na primeira imagem, upload e download autorizados passaram e a outra médica foi recusada | Ciclo completo de emissão não foi repetido na `c086c`. Órfãos do Storage não verificados | Alto na cópia de arquivos |
 | Faturamento particular | policy `invoices_select` no cliente publicado | `loadFinanceCasa`, `createInvoiceCasa` | Parcialmente migrada. A primeira imagem mostrou a fatura só para a médica dona e para a administradora | A gravação HTTP da fatura não está descrita nessa prova | Alto |

@@ -115,12 +115,13 @@ Lê e grava a ficha da prática. O prontuário do navegador usa esta rota, não 
 
 Na cópia `casa_hml`, com a imagem `casa-hml-web:c086c`, o `GET` e o `POST` sem cookie, com cookie inválido, com sessão vencida e com sessão revogada responderam 401. A outra médica recebeu 404. A secretária recebeu 403. A médica da prática recebeu 200 e o autor gravado foi a sessão, mesmo com autor forjado no corpo. As recusas não gravaram. O `DELETE` respondeu 405 e a ficha ficou.
 
-### `GET /api/casa/files` e `POST /api/casa/files`
+### `GET`, `POST` e `DELETE /api/casa/files`
 
 Grava e lê foto, exame e PDF no volume privado. Sem `CASA_DATABASE_URL` ou sem `CASA_FILES_ROOT` responde 503. A resposta não traz o diretório raiz.
 
 - `GET` recebe `kind` (`photo`, `exam`, `document`, `orientation` ou `recording`) e `id`. O caminho lido é o gravado na linha. Exame, documento e áudio de orientação passam por `can_read_exam_file`. Foto passa por `can_access_patient_photo`. A gravação clínica exige a dona do atendimento, pela função já existente, e o caminho gravado no segmento. Sem permissão ou sem arquivo: 404.
 - `POST` recebe `multipart` com `kind` e `file`. Foto aceita JPEG, PNG ou WebP até 2 MB. Documento e exame aceitam PDF, JPEG, PNG ou WebP até 15 MB. Áudio de orientação e gravação clínica aceitam WebM, Ogg, MPEG, MP4 ou WAV até 15 MB. A gravação envia `segmentId` e só grava o caminho que a função já registrou. Tipo ou tamanho fora disso responde 400 e não grava. Se o banco recusar depois da escrita, o arquivo novo é apagado. No exame, o formulário também leva `organizationId`, `practiceId`, `patientId`, `title`, `source`, e pode levar `observation`, `documentDate` e `encounterId`. Esses campos seguem para `exam_order_submit`. Na orientação, o formulário leva `organizationId`, `patientId`, `orientationId` e `versionId`. O caminho gravado precisa ser o da versão.
+- `DELETE` com `kind=photo`, `id` da paciente e `organizationId` confere `can_access_patient_photo`, zera `photo_path` e apaga o arquivo no volume privado. Outro `kind` responde 400.
 - 200, 400, 403, 404 ou 503.
 
 ### `POST /api/encounters/transcribe` e `POST /api/orientations/transcribe`
@@ -129,6 +130,7 @@ Com `CASA_DATABASE_URL` e sem cliente Supabase, o áudio sai de `CASA_FILES_ROOT
 
 ## Histórico
 
+- 2026-10-31 — C090: `DELETE /api/casa/files` remove a foto no volume privado. Sem prova HTTP nesta etapa.
 - 2026-10-31 — C089: nenhuma rota nova. A matriz de quais rotas têm prova HTTP está em `docs/c089-auditoria.md`.
 - 2026-10-31 — C086: `GET` e `POST /api/casa/clinical` passaram a ser o caminho do prontuário. Na cópia, 401, 403, 404 e 200 ficaram distintos. O `DELETE` respondeu 405.
 - 2026-10-31 — C086 complementar: a rota de agenda respondeu 200, 401 e 404 na cópia. O cancelamento conservou a linha. A ação da ficha sem cookie respondeu 500. Sem rota nova de exclusão.

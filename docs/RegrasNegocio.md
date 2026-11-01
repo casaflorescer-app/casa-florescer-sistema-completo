@@ -110,8 +110,16 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 - **Enunciado:** A tela lista o que a policy já devolve. Fatura e pagamento gravam só onde `invoices_write` e `payments_via_invoice` já permitem. O rateio é somente leitura e mostra `amount_cents` já gravado. Nenhum percentual é calculado. Despesa compartilhada é centro `is_shared` com `practice_id` nulo. Despesa particular leva `practice_id`. A administradora grava. A médica lê a compartilhada e a particular da própria prática. A secretária não lê. Se a policy recusar, a tela mostra a recusa.
 - **Rastreio:** `components/finance/FinanceDesk.tsx`, `lib/casa/writes.ts`, `0056` e `0057`. A prova `supabase/tests/c084_module_isolation.sql` rodou no BancoFlorescerPP em 2026-10-31, terminou em `ROLLBACK` e deixou organizações em 0. A tela publicada não foi ligada a esse banco.
 
+### RN-CASA-015 — Agenda cancela; ficha não se apaga
+
+- **Status:** `⚠ inferida`
+- **Enunciado:** Criar, ler e alterar um agendamento seguem `can_schedule_in_org`. Quem não pode agendar naquela prática não vê o registro. A retirada do agendamento é o cancelamento já existente, por `appointment_set_status` com `cancelled`. A linha permanece. A ficha `patient_clinical_data` não tem policy de exclusão e é o histórico da prática. Não há exclusão física. A médica da prática cria, lê e altera a própria linha. O autor gravado sai da sessão. A outra médica e a secretária não leem essa linha. No formulário, paciente, profissional e sala vazios são barrados pelo campo obrigatório do navegador antes da frase da aplicação.
+- **Rastreio:** `lib/casa/writes.ts`, `app/api/casa/appointments/route.ts`, `appointment_set_status` em `0018`, policies de `patient_clinical_data` em `0056`. Sem policy de `delete` nessa tabela.
+
 ## Histórico
 
+- 2026-10-31 — C086 complementar: RN-CASA-015 segue inferida. O envio vazio do formulário foi barrado pelo campo obrigatório. A frase da aplicação não apareceu.
+- 2026-10-31 — C086: RN-CASA-015 inferida. A agenda passa a criar pelo modo da casa e o cancelamento continua sendo a retirada. A ficha não ganhou exclusão física.
 - 2026-10-31 — C088: a prova de isolamento foi repetida no BancoFlorescerPP, terminou em `ROLLBACK` e deixou organizações em 0. RN-CASA-013 segue inferida. A aplicação publicada não foi ligada.
 - 2026-10-31 — C088: RN-CASA-013 segue inferida e passou a citar linha do tempo, vínculo de gestação na tela, vínculo de prática e organização. A aplicação publicada não foi ligada. Não houve gravação HTTP.
 - 2026-10-31 — C087.1: RN-CASA-013 segue inferida e passou a citar queixa, anamnese, exame físico, retorno, feedback, IA, contratos, salas, especialidades, políticas e auditoria no modo da casa. A aplicação publicada não foi ligada.

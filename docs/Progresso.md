@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-10-31 — C086 complementar: agenda criada, lida, alterada e cancelada na cópia; a linha cancelada permaneceu. Ficha criada, lida e alterada, sem exclusão física. Isolamento entre as médicas e a secretária comprovado. A agenda sem sessão respondeu 401. A ficha sem sessão respondeu 500. Na tela, o formulário abriu nos três tamanhos, o envio vazio foi barrado e o agendamento apareceu na lista. “Salvando…” não pintou. Limpeza: agendamentos 0, fichas 0, organizações da prova 0. Contêiner removido. Portas 3017 e 5432 fechadas. Backup intacto. Florescer Web sem as variáveis da casa. Status bloqueada. A C089 não começou.
 - 2026-10-31 — C086: imagem `casa-hml-web:c086` subiu em `127.0.0.1:3017` contra `casa_hml` e foi removida. Login, sessão, recusa de criação de usuário, fatura, despesa compartilhada, arquivo e ficha responderam como as regras já confirmadas. Criar, atualizar e apagar agendamento, e apagar a ficha, não têm ação HTTP e não rodaram. Navegador ausente no host. Linhas fictícias apagadas. Florescer Web sem as variáveis da casa. Porta 5432 fechada. Status bloqueada. A C089 não começou.
 - 2026-10-31 — C086: homologação HTTP não executada. O código foi clonado na VPS, fora do Florescer Web, e a sessão fechou antes da imagem isolada. Status bloqueada. A C089 não começou.
 - 2026-10-31 — C086: backup do BancoFlorescerPP restaurado com sucesso e cópia `casa_hml` criada. Organizações da origem continuaram 0. Homologação HTTP não executada: sem encaminhamento SSH neste processo. Status bloqueada. A C089 não começou.

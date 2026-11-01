@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Casa Florescer",
+    "subtitle": "Produção no Auth. O modo da casa existe no código e não está no ar.",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "views": [
+      {
+        "id": "publicado",
+        "label": "Caminho publicado",
+        "focus": ["navegador", "next", "auth"],
+        "note": "O site publicado entra pelo Next e segue no Auth. As variáveis da casa não estão nesse processo."
+      },
+      {
+        "id": "modo-casa",
+        "label": "Modo da casa, desligado",
+        "focus": ["next", "agenda", "ficha", "postgres"],
+        "note": "Agenda e ficha só gravam por esse caminho quando a flag está ligada. A cópia de prova já foi removida."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 4,
+    "gapX": 56,
+    "gapY": 40,
+    "cellW": 168,
+    "cellH": 76
+  },
+  "components": [
+    {
+      "id": "navegador",
+      "type": "external",
+      "label": "Navegador",
+      "sublabel": "sistema.thvp.cloud",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "next",
+      "type": "backend",
+      "label": "Next.js",
+      "sublabel": "Florescer Web",
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Auth",
+      "sublabel": "GoTrue no ar",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "agenda",
+      "type": "backend",
+      "label": "Agenda",
+      "sublabel": "cria e cancela",
+      "tag": "desligada",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "ficha",
+      "type": "backend",
+      "label": "Ficha",
+      "sublabel": "ação da sessão",
+      "tag": "desligada",
+      "row": 2,
+      "col": 2
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "Postgres",
+      "sublabel": "RLS por prática",
+      "row": 1,
+      "col": 3
+    },
+    {
+      "id": "arquivos",
+      "type": "database",
+      "label": "Arquivos",
+      "sublabel": "volume privado",
+      "row": 2,
+      "col": 1
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Publicado",
+      "wraps": ["next", "auth"]
+    },
+    {
+      "kind": "region",
+      "label": "Modo da casa, fora do ar",
+      "wraps": ["agenda", "ficha", "postgres", "arquivos"]
+    }
+  ],
+  "connections": [
+    { "id": "entrada", "from": "navegador", "to": "next", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "auth-atual", "from": "next", "to": "auth", "label": "sessão publicada", "variant": "security" },
+    { "id": "agenda-desligada", "from": "next", "to": "agenda", "label": "flag ausente", "variant": "dashed" },
+    { "id": "ficha-desligada", "from": "next", "to": "ficha", "label": "flag ausente", "variant": "dashed" },
+    { "id": "agenda-sql", "from": "agenda", "to": "postgres", "label": "sessão e RLS" },
+    { "id": "ficha-sql", "from": "ficha", "to": "postgres", "label": "autor da sessão" },
+    { "id": "arquivos-next", "from": "next", "to": "arquivos", "label": "volume", "variant": "dashed", "labelDy": 24 }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "No ar",
+      "items": ["O Florescer Web continua no Auth", "As variáveis da casa não foram gravadas"]
+    },
+    {
+      "dot": "emerald",
+      "title": "No código",
+      "items": ["A agenda cria, altera e cancela sem apagar a linha", "A ficha não tem exclusão física"]
+    },
+    {
+      "dot": "rose",
+      "title": "Prova encerrada",
+      "items": ["A cópia isolada foi removida", "A etapa permanece bloqueada"]
+    }
+  ]
+}

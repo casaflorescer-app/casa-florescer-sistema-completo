@@ -115,8 +115,13 @@ A prova `supabase/tests/c084_module_isolation.sql` não voltou do console do Ban
 
 A tentativa de SSH para `2.25.151.136` não abriu sessão. Não repetir esse acesso para “confirmar” a prova. O comando fica no console do container, com `psql -U postgre -d "BancoFlorescerPP"`. Arquivo clínico do modo da casa não vai para `public/` nem para URL estática: só `CASA_FILES_ROOT`, e essa variável não entra no Florescer Web neste ciclo.
 
+## 2026-10-31 — C086 complementar
+
+A imagem que rodou a rota nova é `casa-hml-web:c086b`, não a `c086`. O identificador da ação de servidor fica no texto imediatamente antes de `()=>`; uma janela para a frente pega a ação errada. O cookie da casa é `Secure` quando `NODE_ENV` é `production`, e o Chromium em HTTP o descarta. Profissional, depois da C074, exige `display_name`, `category` e `is_active`. A limpeza da cópia tirou 3 agendamentos e 1 ficha e deixou a organização da prova em 0. O backup conferido de novo tem 1343810 bytes e SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`.
+
 ## Histórico
 
+- 2026-10-31 — C086 complementar: a rota de agenda rodou na imagem `c086b`. O cookie seguro não gruda em HTTP. A ficha sem sessão respondeu 500. A cópia foi esvaziada e o contêiner saiu.
 - 2026-10-31 — C086: clone em `/root/casa-hml-src`. A sessão caiu antes do build da imagem isolada. Homologação HTTP não executada.
 - 2026-10-31 — C086: o dump de 1343810 bytes restaurou. `casa_hml` substituiu o database temporário. Sem túnel, a homologação HTTP não rodou. A etapa segue bloqueada.
 - 2026-10-31 — C086: a sessão da VPS caiu antes do backup. Sem arquivo, sem restauração e sem homologação HTTP. A etapa segue bloqueada.

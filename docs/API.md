@@ -95,6 +95,18 @@ Cria um usuário da casa. Só o administrador principal passa. A rota não devol
 - Body: `email`, `fullName`, `password` (mínimo 8), `organizationId` e `memberships` com `practiceId` e `role` (`admin`, `physician` ou `secretary`).
 - 200 `{ "id": "<uuid>" }`. 400 pedido inválido. 401 sem sessão. 403 a criação foi recusada. 503 sessão da casa desligada.
 
+### `POST`, `GET`, `PATCH` e `DELETE /api/casa/appointments`
+
+Cria, lê, altera e cancela um agendamento. O cancelamento é o `DELETE`: a linha fica com status `cancelled` e não é apagada. Quem cria é o usuário da sessão. O corpo não escolhe o autor. Sem `CASA_DATABASE_URL` responde 503.
+
+- `POST` recebe `organizationId`, `practiceId`, `roomId`, `patientId`, `professionalId`, `startsAt`, `endsAt` e, se houver, `kind`, `procedureId`, `urgencyNote` e `source`.
+- `GET` recebe `id` na query.
+- `PATCH` recebe `appointmentId`, `patientId`, `professionalId`, `roomId`, `kind`, `startsAt`, `endsAt` e, se houver, `urgencyNote`. Vale para consulta ainda editável, sem procedimento.
+- `DELETE` recebe `{ "appointmentId": "<uuid>" }` e chama o cancelamento já existente.
+- 200 devolve `id`, prática, paciente, profissional, sala, horários, status, nota e `createdBy` gravado. 400 pedido inválido. 401 sem sessão. 404 quando a policy não devolve a linha ou o cancelamento é recusado. 409 horário já ocupado. 503 sessão da casa desligada.
+
+Não há rota para apagar `patient_clinical_data`. A ficha continua em criar, ler e alterar pela ação já existente. Quem grava a ficha é a sessão. O identificador de autor enviado no pedido não escolhe a linha nem a permissão. Na cópia isolada, essa ação sem cookie respondeu 500. A agenda, na rota acima, respondeu 401.
+
 ### `GET /api/casa/files` e `POST /api/casa/files`
 
 Grava e lê foto, exame e PDF no volume privado. Sem `CASA_DATABASE_URL` ou sem `CASA_FILES_ROOT` responde 503. A resposta não traz o diretório raiz.
@@ -109,6 +121,8 @@ Com `CASA_DATABASE_URL` e sem cliente Supabase, o áudio sai de `CASA_FILES_ROOT
 
 ## Histórico
 
+- 2026-10-31 — C086 complementar: a rota de agenda respondeu 200, 401 e 404 na cópia. O cancelamento conservou a linha. A ação da ficha sem cookie respondeu 500. Sem rota nova de exclusão.
+- 2026-10-31 — C086: `/api/casa/appointments` cria, lê, altera e cancela. O `DELETE` cancela e conserva a linha. A ficha não ganhou rota de exclusão.
 - 2026-10-31 — C087.1: `/api/casa/files` grava e lê a gravação clínica no volume privado. `/api/encounters/clinical-ai` usa as funções já existentes quando a sessão da casa está ligada.
 - 2026-10-31 — C087: `/api/casa/files` grava e lê o áudio da orientação no volume privado, com o caminho da versão.
 - 2026-10-31 — C086: o `POST` de exame em `/api/casa/files` encaminha origem, observação, data e atendimento para a função já existente.

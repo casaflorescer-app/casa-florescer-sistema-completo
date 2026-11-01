@@ -236,6 +236,58 @@ export async function createExpenseCasa(input: {
   });
 }
 
+export async function createAppointmentCasa(input: {
+  organizationId: string;
+  practiceId: string;
+  roomId: string;
+  patientId: string;
+  professionalId: string;
+  startsAt: string;
+  endsAt: string;
+  kind: string;
+  procedureId: string | null;
+  urgencyNote: string | null;
+  source: string | null;
+}): Promise<SqlRow | null> {
+  if (input.endsAt <= input.startsAt) {
+    throw new Error("O horário de término deve ser após o início.");
+  }
+  if (input.kind !== "consultation" && input.kind !== "procedure") {
+    throw new Error("Tipo de agendamento inválido.");
+  }
+  if (input.kind === "procedure" && !input.procedureId) {
+    throw new Error("Informe o procedimento para agendamentos deste tipo.");
+  }
+  const note = (input.urgencyNote ?? "").trim().slice(0, 2000);
+  const source = (input.source ?? "reception").trim().slice(0, 40) || "reception";
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<{ data: SqlRow | null }>(
+      `insert into public.appointments (
+         organization_id, practice_id, room_id, patient_id, professional_id, procedure_id,
+         kind, starts_at, ends_at, urgency_note, source, created_by, status
+       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'scheduled')
+       returning to_jsonb(appointments.*) as data`,
+      [
+        input.organizationId,
+        input.practiceId,
+        input.roomId,
+        input.patientId,
+        input.professionalId,
+        input.kind === "consultation" ? null : input.procedureId,
+        input.kind,
+        input.startsAt,
+        input.endsAt,
+        note || null,
+        source,
+        userId,
+      ],
+    );
+    const data = result.rows[0]?.data;
+    return data ? plain(data) : null;
+  });
+}
+
 export async function updateAppointmentOpenCasa(input: {
   appointmentId: string;
   patientId: string;
@@ -347,7 +399,7 @@ export async function upsertPatientClinicalCasa(input: {
         input.allergies,
         input.continuousMedications,
         input.comorbidities,
-        input.updatedBy,
+        userId,
       ],
     );
     if ((updated.rowCount ?? 0) > 0) return;
@@ -362,7 +414,7 @@ export async function upsertPatientClinicalCasa(input: {
         input.allergies,
         input.continuousMedications,
         input.comorbidities,
-        input.updatedBy,
+        userId,
       ],
     );
   });

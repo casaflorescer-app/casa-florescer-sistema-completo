@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { callCasaRpc } from "@/lib/casa/rpc";
-import { updateAppointmentOpenCasa } from "@/lib/casa/writes";
+import { createAppointmentCasa, updateAppointmentOpenCasa } from "@/lib/casa/writes";
 import {
   listEncountersForPatientCasa,
   listReturnsOfEncounterCasa,
@@ -557,12 +557,53 @@ export async function getAppointment(
   return toAppointmentRow(data as Record<string, unknown>);
 }
 
+function appointmentWriteError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("appointments_professional_no_overlap")) {
+    return "A profissional já possui agendamento neste horário.";
+  }
+  if (message.includes("appointments_room_no_overlap")) {
+    return "Já existe agendamento nesta sala no mesmo horário.";
+  }
+  if (message === "O horário de término deve ser após o início.") return message;
+  if (message === "Informe o procedimento para agendamentos deste tipo.") return message;
+  if (message === "Tipo de agendamento inválido.") return message;
+  if (message === "Sem sessão.") return message;
+  if (message.includes("ainda não está ligada")) return message;
+  return fallback;
+}
+
 export async function createAppointment(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: CreateAppointmentInput,
 ): Promise<{ row: AppointmentRow | null; error: string | null }> {
   if (input.endsAt <= input.startsAt) {
     return { row: null, error: "O horário de término deve ser após o início." };
+  }
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { row: null, error: "Autenticação não configurada neste ambiente." };
+    try {
+      const data = await createAppointmentCasa({
+        organizationId: input.organizationId,
+        practiceId: input.practiceId,
+        roomId: input.roomId,
+        patientId: input.patientId,
+        professionalId: input.professionalId,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        kind: input.kind ?? "consultation",
+        procedureId: input.procedureId ?? null,
+        urgencyNote: input.urgencyNote ?? null,
+        source: input.source ?? null,
+      });
+      const row = data ? toAppointmentRow(data) : null;
+      return {
+        row,
+        error: row ? null : "A política de acesso do banco recusou esta operação.",
+      };
+    } catch (error) {
+      return { row: null, error: appointmentWriteError(error, "Não foi possível criar o agendamento.") };
+    }
   }
   const { data, error } = await supabase
     .from("appointments")

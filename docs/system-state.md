@@ -214,3 +214,7 @@ Aplicação pelo Bash do container do serviço `bancoflorescer`, usuário de con
 | `casa_login` | login em `127.0.0.1`, `rolsuper` falso, `rolbypassrls` falso. Saída `casa_login\|false\|false` | COMPROVADO |
 | Senha de `casa_login` | definida no papel. O valor não está no Git. Um valor anterior apareceu no console e foi substituído | CONFIRMADO |
 | Teste `supabase/tests/c083_login_and_staff.sql` | executado e desfeito. Saída `BEGIN` … `DO` `ROLLBACK`. Organizações 0 | COMPROVADO |
+
+## C086 — cópia e homologação isolada (2026-10-31)
+
+O BancoFlorescerPP não recebeu escrita desta etapa. O dump `bancoflorescerpp-20261031T215302Z.dump` foi conferido de novo: 1343810 bytes, modo 600, SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`. A cópia `casa_hml` existe. A imagem `casa-hml-web:c086b` falou só com essa cópia, em `127.0.0.1:3017`, e foi removida. A porta 3017 e a 5432 fecharam. As linhas fictícias saíram. O Florescer Web publicado ficou com zero ocorrências de `NEXT_PUBLIC_CASA_AUTH` e de `CASA_DATABASE_URL`. A etapa está bloqueada: a ação da ficha sem sessão respondeu 500, e o texto “Salvando…” não pintou na tela. A C089 não começou.

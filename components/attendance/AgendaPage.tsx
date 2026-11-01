@@ -500,7 +500,8 @@ export function AgendaPage() {
     });
   }
 
-  const canCreate = Boolean(supabase && organizationId && selectedPracticeId && userId);
+  const casa = isCasaBrowserAuth();
+  const canCreate = Boolean((supabase || casa) && organizationId && selectedPracticeId && userId);
   const canStartEncounter = authorization ? hasStaffRole(authorization, "physician") : false;
   const editingRow = editingId ? labeledRows.find((item) => item.id === editingId) ?? null : null;
   const primaryBlock = blocks[0] ?? null;
@@ -535,7 +536,7 @@ export function AgendaPage() {
             <button
               type="button"
               className={ghostButtonClass}
-              disabled={!canCreate || formBusy || Boolean(editingId) || showForm}
+              disabled={!supabase || formBusy || Boolean(editingId) || showForm}
               onClick={() => {
                 setEditingId(null);
                 setShowForm(false);
@@ -687,7 +688,7 @@ export function AgendaPage() {
         />
       ) : null}
 
-      {showForm && supabase && organizationId && selectedPracticeId && userId ? (
+      {showForm && (supabase || casa) && organizationId && selectedPracticeId && userId ? (
         <AppointmentForm
           supabase={supabase}
           organizationId={organizationId}
@@ -726,7 +727,7 @@ export function AgendaPage() {
         />
       ) : null}
 
-      {editingRow && supabase && organizationId && selectedPracticeId ? (
+      {editingRow && (supabase || casa) && organizationId && selectedPracticeId ? (
         <EditAppointmentForm
           key={editingRow.id}
           supabase={supabase}

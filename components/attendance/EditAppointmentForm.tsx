@@ -3,6 +3,8 @@
 import { useCallback, useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { updateAppointment, type AppointmentRow } from "@/lib/attendance/directory";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { searchPatientsCasa } from "@/lib/casa/actions";
 import type { ProfessionalLabel } from "@/lib/pregnancies/directory";
 import type { AppointmentKind } from "@/lib/types/database";
 import { fieldClass } from "@/components/platform/Ui";
@@ -22,14 +24,22 @@ import { EntityCombobox } from "@/components/ui/EntityCombobox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FormActions } from "@/components/ui/FormActions";
 import {
+  patientToSearchOption,
   searchPatientOptions,
   searchProcedureOptions,
   searchProfessionalOptions,
   searchRoomOptions,
+  type EntitySearchOption,
 } from "@/lib/search/entity-search";
 import { friendlyError } from "@/lib/ui/friendly-error";
 
 const labelClass = "text-sm font-medium text-lotus-800";
+
+function matchLabels(items: { id: string; label: string }[], query: string): EntitySearchOption[] {
+  const needle = query.trim().toLowerCase();
+  if (needle.length < 2) return [];
+  return items.filter((item) => item.label.toLowerCase().includes(needle)).slice(0, 30);
+}
 
 export function EditAppointmentForm({
   supabase,
@@ -44,7 +54,7 @@ export function EditAppointmentForm({
   onSaved,
   onCancel,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   organizationId: string;
   practiceId: string;
   appointment: AppointmentRow;
@@ -80,26 +90,39 @@ export function EditAppointmentForm({
   } | null>(null);
 
   const searchPatients = useCallback(
-    (query: string) => searchPatientOptions(supabase, query, { limit: 30 }),
+    async (query: string) => {
+      if (!supabase) {
+        if (!isCasaBrowserAuth()) return [];
+        const rows = await searchPatientsCasa(query);
+        return rows.slice(0, 30).map(patientToSearchOption);
+      }
+      return searchPatientOptions(supabase, query, { limit: 30 });
+    },
     [supabase],
   );
   const searchProfessionalsCb = useCallback(
-    (query: string) =>
-      searchProfessionalOptions(supabase, query, { practiceId, limit: 30 }),
-    [practiceId, supabase],
+    async (query: string): Promise<EntitySearchOption[]> => {
+      if (!supabase) return matchLabels(professionals.map((item) => ({ id: item.id, label: item.fullName })), query);
+      return searchProfessionalOptions(supabase, query, { practiceId, limit: 30 });
+    },
+    [practiceId, professionals, supabase],
   );
   const searchRoomsCb = useCallback(
-    (query: string) =>
-      searchRoomOptions(supabase, query, { organizationId, limit: 40 }),
-    [organizationId, supabase],
+    async (query: string): Promise<EntitySearchOption[]> => {
+      if (!supabase) return matchLabels(rooms.map((item) => ({ id: item.id, label: item.name })), query);
+      return searchRoomOptions(supabase, query, { organizationId, limit: 40 });
+    },
+    [organizationId, rooms, supabase],
   );
   const searchProceduresCb = useCallback(
-    (query: string) =>
-      searchProcedureOptions(supabase, query, {
+    async (query: string) => {
+      if (!supabase) return [];
+      return searchProcedureOptions(supabase, query, {
         organizationId,
         practiceId,
         limit: 30,
-      }),
+      });
+    },
     [organizationId, practiceId, supabase],
   );
 

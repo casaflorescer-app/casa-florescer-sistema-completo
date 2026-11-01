@@ -333,7 +333,13 @@ Em 2026-10-31 a sessão SSH deste processo foi recusada. A conferência seguiu n
 
 ## C090 — código local, sem cópia isolada
 
-O prompt da VPS não estava aberto. Não houve contêiner, não houve escrita em `casa_hml` e a porta 5432 não foi aberta. O Florescer Web não recebeu a flag. A prova desta etapa é local: TypeScript e os testes de fonte `uat-c090-casa-mode` e `uat-c086-agenda`, incluindo o recálculo da previsão com cliente nulo. A C090 não está homologada.
+Esta seção ficou para trás. A prova na cópia e a remoção do contêiner estão no histórico de 2026-11-01.
+
+## C091 — prontidão do corte, sem trocar o Florescer Web
+
+Em 2026-11-01 o database `postgres` de `supabase-db` tinha 1 organização, 1 prática, 1 perfil, 1 paciente, 4 vínculos de papel, 1 administrador ativo, 8 auditorias e 1 objeto em `patient-photos`. Agendamentos, gestações e faturas: 0. O BancoFlorescerPP estava em 0. Antes da cópia, dois dumps novos, modo 600, em `/root/casa-backups`: `supabase-postgres-20261101T230539Z.dump`, 1881584 bytes, SHA-256 `43327a8866c876f2029ffcd639135c6aab08f20b91290e3d63479c0403994963`; `bancoflorescerpp-20261101T230539Z.dump`, 1343810 bytes, SHA-256 `1524ad96b50606a18377d829116ef0d20cca33288308fbefdf90a0363eae22db`. A origem não foi apagada. Depois da cópia as mesmas contagens apareceram no BancoFlorescerPP. O arquivo, 496021 bytes, modo 600, ficou em `/root/casa-files`, diretório modo 700. `casa_login` segue sem superusuário e sem `BYPASSRLS`. A porta 5432 segue fechada.
+
+A conta copiada não tem linha em `staff_credentials`. O login da casa não autentica essa pessoa até existir um hash Argon2id. Nenhum segredo foi gravado neste documento. O arquivo de ambiente da cópia antiga aponta para `casa_hml` e não serve para o corte. A imagem em execução do Florescer Web é `sha256:13d80a36ff7b8b50085fd3617de5fcc90c6fd4c32ccce40b80ed81f349e69ffb`. Ela não recebeu `NEXT_PUBLIC_CASA_AUTH`. A imagem candidata, quando construída, fica fora do proxy. A troca proposta, ainda sem autorização, é parar só o Florescer Web, subir a imagem nova na mesma rede, provar login, um agendamento, uma ficha, a tela financeira e o arquivo, e só então considerar o corte feito. Voltar atrás é recolocar a imagem acima e tirar as variáveis da casa. `api.thvp.cloud` permanece.
 
 ## C089 — plano de corte, sem executar
 
@@ -355,6 +361,7 @@ Na rodada complementar, a imagem `casa-hml-web:c086b` subiu de novo só em `127.
 
 ## Histórico
 
+- 2026-11-01 — C091: backups novos dos dois bancos, cópia reconciliada para o BancoFlorescerPP e arquivo fora de `public/`. Porta 5432 fechada. Florescer Web ainda na imagem anterior, sem a flag. Sem corte.
 - 2026-11-01 — C090: imagem `casa-hml-web:c090e` em `127.0.0.1:3017`, depois removida com as imagens `c090` a `c090d` e o volume `casa-c090-files`. Porta 3017 fechada. Linhas fictícias em 0. `casa_hml` e BancoFlorescerPP permaneceram. Backup 1343810 bytes, SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`. Florescer Web sem variável da casa. Sem deploy.
 - 2026-10-31 — C090: a previsão do término ficou no ramo da casa, ainda sem contêiner isolado. Porta 5432 fechada. Florescer Web sem as variáveis da casa.
 - 2026-10-31 — C089: plano de corte escrito e não executado. Sem variável da casa no Florescer Web e sem porta 5432.

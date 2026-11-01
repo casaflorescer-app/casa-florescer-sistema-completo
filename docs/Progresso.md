@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-11-01 — C091 preparada, sem corte. O argumento de build da flag entrou no `Dockerfile`, com padrão vazio. TypeScript, build sem `CASA_DATABASE_URL` e 7 testes do modo da casa. O database publicado tinha 1 organização, 1 prática, 1 perfil, 1 paciente, 4 papéis, 1 administrador, 8 auditorias e 1 foto; agendamentos, gestações e faturas em 0. O BancoFlorescerPP recebeu as mesmas contagens. Arquivo de 496021 bytes em `/root/casa-files`. Sem hash Argon2id para a conta. Florescer Web ainda na imagem anterior. Porta 5432 fechada. `api.thvp.cloud` no ar.
 - 2026-11-01 — C090 homologada na cópia `casa_hml` e removida em seguida. Previsão, busca, conversão, orientação, financeiro, botão de criar usuário e foto nos três tamanhos tiveram prova de tela. Linhas fictícias em 0. Porta 3017 fechada. Backup intacto. Florescer Web sem variável da casa. Sem deploy.
 - 2026-10-31 — C090 complementar: a previsão do término clínico roda com cliente nulo no modo da casa. TypeScript passou. Testes de fonte 9/9. HTTP e Playwright não rodaram: o prompt da VPS não estava aberto. Sem deploy e sem flag na produção. A C090 não está homologada. O commit fica local.
 - 2026-10-31 — C089: auditoria do Supabase em `docs/c089-auditoria.md`. Inventário, matriz e fases A–F escritos. Sem deploy, sem desativação e sem leitura viva do banco. A C086 já estava em `origin/main`.

@@ -52,6 +52,10 @@ Dependências do Supabase:
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
 
+## C091 — prontidão, sem corte
+
+O Postgres que o Florescer API usa hoje é o database `postgres` do contêiner `supabase-db`. Em 2026-11-01 ele tinha 1 organização, 1 prática, 1 perfil, 1 paciente, 4 vínculos, 1 administrador ativo, 8 eventos de auditoria e 1 objeto no bucket `patient-photos`. Agendamentos, gestações e faturas estavam em 0. O BancoFlorescerPP estava em 0 nessas tabelas. A cópia levou essas mesmas contagens, mais o arquivo de 496021 bytes para `/root/casa-files`, fora de `public/`. A origem não foi apagada. `staff_credentials` continua em 0: a conta existente não tem hash Argon2id, então o login da casa ainda não autentica essa pessoa. O `Dockerfile` declara `NEXT_PUBLIC_CASA_AUTH` com padrão vazio. A flag só entra na imagem que for construída com o argumento `1`. O Florescer Web publicado não recebeu essa imagem nem as variáveis. `api.thvp.cloud` continua no ar. O corte não foi executado.
+
 ## C090 — prova na cópia, sem corte
 
 O argumento `jsonb` entra em `callCasaRpc` serializado uma vez. Uma lista `SETOF`, como `clinical_orientation_versions_list`, volta inteira; `appointment_predictions_append` continua no caso que já existia. Se a previsão não grava, a tela diz que o término foi registrado e a previsão não. A rota `/app/finance` aceita owner, admin ou caixa. `/app/admin/users` aceita o administrador principal, owner ou admin; o layout de `/app/admin` só abre essa exceção nesse caminho. A imagem isolada `casa-hml-web:c090e` rodou em `127.0.0.1:3017` contra `casa_hml` e foi removida, com as imagens anteriores da mesma prova e o volume de arquivos. O Florescer Web não recebeu a flag. O corte não foi executado.
@@ -70,6 +74,7 @@ A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de 
 
 ## Histórico
 
+- 2026-11-01 — C091: cadastro real copiado para o BancoFlorescerPP e arquivo fora de `public/`. A flag passou a ser argumento de build, com padrão vazio. Sem corte.
 - 2026-11-01 — C090: jsonb uma vez, lista de orientações completa e portões de `/app/finance` e `/app/admin/users`. A imagem isolada foi removida. Sem corte.
 - 2026-10-31 — C090: a previsão do término clínico deixou de exigir o cliente no modo da casa. Sem prova HTTP nova e sem corte.
 - 2026-10-31 — C089: inventário e matriz em `docs/c089-auditoria.md`. Código com ramo da casa não foi tratado como homologado. Sem corte.

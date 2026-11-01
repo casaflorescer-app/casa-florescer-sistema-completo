@@ -4,7 +4,8 @@
 FROM node:20.19.5-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN apk add --no-cache python3 make g++ \
+  && npm ci
 
 FROM node:20.19.5-alpine AS builder
 WORKDIR /app

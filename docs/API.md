@@ -129,6 +129,7 @@ Com `CASA_DATABASE_URL` e sem cliente Supabase, o áudio sai de `CASA_FILES_ROOT
 
 ## Histórico
 
+- 2026-10-31 — C089: nenhuma rota nova. A matriz de quais rotas têm prova HTTP está em `docs/c089-auditoria.md`.
 - 2026-10-31 — C086: `GET` e `POST /api/casa/clinical` passaram a ser o caminho do prontuário. Na cópia, 401, 403, 404 e 200 ficaram distintos. O `DELETE` respondeu 405.
 - 2026-10-31 — C086 complementar: a rota de agenda respondeu 200, 401 e 404 na cópia. O cancelamento conservou a linha. A ação da ficha sem cookie respondeu 500. Sem rota nova de exclusão.
 - 2026-10-31 — C086: `/api/casa/appointments` cria, lê, altera e cancela. O `DELETE` cancela e conserva a linha. A ficha não ganhou rota de exclusão.

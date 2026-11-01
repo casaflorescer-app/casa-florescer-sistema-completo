@@ -12,6 +12,7 @@ Quando `NEXT_PUBLIC_CASA_AUTH` é `1`, a lista e o cadastro de pacientes, a agen
 
 ## Histórico
 
+- 2026-10-31 — C089: a flag continua desligada. Telas com ramo da casa sem prova HTTP não foram marcadas como homologadas. A remoção da foto segue no cliente.
 - 2026-10-31 — C086: “Salvando…” pintou com o botão desabilitado e um único envio pendente. O prontuário passou a chamar `/api/casa/clinical`. O modo continua desligado na produção.
 - 2026-10-31 — C086 complementar: o formulário abriu nos três tamanhos na cópia isolada, o envio vazio foi barrado e o agendamento criado apareceu na lista. “Salvando…” não pintou. O modo continua desligado na produção.
 - 2026-10-31 — C086: o formulário de novo atendimento abre no modo da casa sem o cliente Supabase. A ficha continua sem exclusão. O modo continua desligado na produção.

@@ -17,7 +17,7 @@
         "id": "modo-casa",
         "label": "Modo da casa, desligado",
         "focus": ["next", "agenda", "ficha", "postgres"],
-        "note": "Agenda e ficha só gravam por esse caminho quando a flag está ligada. A cópia de prova já foi removida."
+        "note": "Agenda e ficha só gravam por esse caminho quando a flag está ligada. A ficha usa a rota. A cópia de prova já foi removida."
       }
     ]
   },
@@ -67,7 +67,7 @@
       "id": "ficha",
       "type": "backend",
       "label": "Ficha",
-      "sublabel": "ação da sessão",
+      "sublabel": "rota da sessão",
       "tag": "desligada",
       "row": 2,
       "col": 2
@@ -119,12 +119,12 @@
     {
       "dot": "emerald",
       "title": "No código",
-      "items": ["A agenda cria, altera e cancela sem apagar a linha", "A ficha não tem exclusão física"]
+      "items": ["A agenda cria, altera e cancela sem apagar a linha", "A ficha usa a rota e não tem exclusão física"]
     },
     {
       "dot": "rose",
       "title": "Prova encerrada",
-      "items": ["A cópia isolada foi removida", "A etapa permanece bloqueada"]
+      "items": ["A revalidação passou na cópia", "O contêiner isolado foi removido"]
     }
   ]
 }

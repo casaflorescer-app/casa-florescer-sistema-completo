@@ -12,7 +12,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
-import { loadPatientChartCasa } from "@/lib/casa/actions";
 import { createClient } from "@/lib/supabase/client";
 import { hasStaffRole } from "@/lib/auth/access";
 import { formatIsoDateBr, formatPhone } from "@/lib/patients/format";
@@ -117,10 +116,34 @@ export function PatientChart({ patientId }: { patientId: string }) {
     setError(null);
     if (casa) {
       try {
-        const chart = await loadPatientChartCasa({
-          patientId,
-          practiceId: membership.practiceId,
-        });
+        const response = await fetch(
+          `/api/casa/clinical?patientId=${encodeURIComponent(patientId)}&practiceId=${encodeURIComponent(membership.practiceId)}`,
+          { credentials: "same-origin" },
+        );
+        if (response.status === 401) {
+          setError("Sem sessão.");
+          return;
+        }
+        if (response.status === 403) {
+          setError("O prontuário clínico está disponível apenas para médicas autorizadas.");
+          return;
+        }
+        if (!response.ok) {
+          setPatient(null);
+          setSummary(null);
+          setEncounters([]);
+          setError("Paciente não encontrada ou sem permissão para visualização.");
+          return;
+        }
+        const chart = (await response.json()) as {
+          patient: PatientDetailRow | null;
+          summary: PatientClinicalSummaryData | null;
+          encounters: EncounterRow[];
+          prescriptions: { id: string; status: string; when: string }[];
+          exams: { id: string; title: string; when: string }[];
+          examRequests: { id: string; status: string; when: string; indication: string | null; itemCount: number }[];
+          orientations: { id: string; title: string; when: string }[];
+        };
         if (!chart.patient) {
           setPatient(null);
           setSummary(null);

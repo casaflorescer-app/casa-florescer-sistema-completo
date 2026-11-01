@@ -1,5 +1,11 @@
 # Memória
 
+## 2026-10-31 — C086 revalidada na cópia
+
+- No Next 14, uma ação de servidor que lança “Sem sessão.” vira HTTP 500. O status real sai de um route handler. A ficha do navegador passou a usar `GET` e `POST /api/casa/clinical`.
+- “Salvando…” só pinta se o estado ocupado for aplicado com `flushSync` antes do `await`. Um segundo envio é barrado pelo botão desabilitado e por uma ref. O clique forçado do teste, que ignora o desabilitado, não vale como segundo envio do usuário.
+- A imagem isolada desta rodada é `casa-hml-web:c086c`. O hash de senha dentro dela usa o pacote `argon2`, não `@node-rs/argon2`. O contêiner foi removido. A limpeza tirou 4 agendamentos e 1 ficha e deixou a prova em 0. O backup continuou com 1343810 bytes e o mesmo SHA-256. A C089 não começa.
+
 ## 2026-10-31 — C086 imagem isolada e homologação incompleta
 
 - A imagem é `casa-hml-web:c086`, só na VPS. O build precisou de `python3`, `make` e `g++` no estágio de dependências de `/root/casa-hml-src/Dockerfile.hml`: o pacote `argon2` compila código nativo e a imagem `node:20.19.5-alpine` não traz Python. O `Dockerfile` do Git não ganhou esses pacotes.
@@ -121,6 +127,7 @@ A imagem que rodou a rota nova é `casa-hml-web:c086b`, não a `c086`. O identif
 
 ## Histórico
 
+- 2026-10-31 — C086: a rota da ficha devolveu 401, 403, 404 e 200 na imagem `c086c`. “Salvando…” pintou. A cópia foi esvaziada e o contêiner saiu.
 - 2026-10-31 — C086 complementar: a rota de agenda rodou na imagem `c086b`. O cookie seguro não gruda em HTTP. A ficha sem sessão respondeu 500. A cópia foi esvaziada e o contêiner saiu.
 - 2026-10-31 — C086: clone em `/root/casa-hml-src`. A sessão caiu antes do build da imagem isolada. Homologação HTTP não executada.
 - 2026-10-31 — C086: o dump de 1343810 bytes restaurou. `casa_hml` substituiu o database temporário. Sem túnel, a homologação HTTP não rodou. A etapa segue bloqueada.

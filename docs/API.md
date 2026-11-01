@@ -105,7 +105,15 @@ Cria, lê, altera e cancela um agendamento. O cancelamento é o `DELETE`: a linh
 - `DELETE` recebe `{ "appointmentId": "<uuid>" }` e chama o cancelamento já existente.
 - 200 devolve `id`, prática, paciente, profissional, sala, horários, status, nota e `createdBy` gravado. 400 pedido inválido. 401 sem sessão. 404 quando a policy não devolve a linha ou o cancelamento é recusado. 409 horário já ocupado. 503 sessão da casa desligada.
 
-Não há rota para apagar `patient_clinical_data`. A ficha continua em criar, ler e alterar pela ação já existente. Quem grava a ficha é a sessão. O identificador de autor enviado no pedido não escolhe a linha nem a permissão. Na cópia isolada, essa ação sem cookie respondeu 500. A agenda, na rota acima, respondeu 401.
+### `GET` e `POST /api/casa/clinical`
+
+Lê e grava a ficha da prática. O prontuário do navegador usa esta rota, não a ação de servidor. Sem `CASA_DATABASE_URL` responde 503. Não há `DELETE`: a linha permanece.
+
+- `GET` recebe `patientId` e `practiceId`.
+- `POST` recebe `patientId`, `organizationId`, `practiceId` e, se houver, `allergies`, `continuousMedications` e `comorbidities`. O corpo não escolhe o autor. Quem grava é a sessão.
+- 200 devolve a ficha no `GET` e `{ "ok": true }` no `POST`. 400 pedido inválido. 401 sem sessão, cookie inválido ou sessão vencida ou revogada. 403 para secretária, com a frase “Acesso negado.” e sem campo clínico. 404 para outra médica, administradora ou administrador principal, e quando a policy recusa. 500 em falha interna, com log sem dado clínico. 503 sessão da casa desligada.
+
+Na cópia `casa_hml`, com a imagem `casa-hml-web:c086c`, o `GET` e o `POST` sem cookie, com cookie inválido, com sessão vencida e com sessão revogada responderam 401. A outra médica recebeu 404. A secretária recebeu 403. A médica da prática recebeu 200 e o autor gravado foi a sessão, mesmo com autor forjado no corpo. As recusas não gravaram. O `DELETE` respondeu 405 e a ficha ficou.
 
 ### `GET /api/casa/files` e `POST /api/casa/files`
 
@@ -121,6 +129,7 @@ Com `CASA_DATABASE_URL` e sem cliente Supabase, o áudio sai de `CASA_FILES_ROOT
 
 ## Histórico
 
+- 2026-10-31 — C086: `GET` e `POST /api/casa/clinical` passaram a ser o caminho do prontuário. Na cópia, 401, 403, 404 e 200 ficaram distintos. O `DELETE` respondeu 405.
 - 2026-10-31 — C086 complementar: a rota de agenda respondeu 200, 401 e 404 na cópia. O cancelamento conservou a linha. A ação da ficha sem cookie respondeu 500. Sem rota nova de exclusão.
 - 2026-10-31 — C086: `/api/casa/appointments` cria, lê, altera e cancela. O `DELETE` cancela e conserva a linha. A ficha não ganhou rota de exclusão.
 - 2026-10-31 — C087.1: `/api/casa/files` grava e lê a gravação clínica no volume privado. `/api/encounters/clinical-ai` usa as funções já existentes quando a sessão da casa está ligada.

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useRef, useState, type FormEvent } from "react";
+import { flushSync } from "react-dom";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAppointment } from "@/lib/attendance/directory";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
@@ -100,6 +101,7 @@ export function AppointmentForm({
       : "",
   );
   const [error, setError] = useState<string | null>(null);
+  const submitting = useRef(false);
 
   const searchPatients = useCallback(
     async (query: string) => {
@@ -140,48 +142,59 @@ export function AppointmentForm({
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!patientId || !professionalId || !roomId) {
-      setError("Informe paciente, profissional e sala.");
-      return;
-    }
-    if (kind === "procedure" && !procedureId) {
-      setError("Informe o procedimento para este tipo de agendamento.");
-      return;
-    }
-    const startIso = localDateTimeIso(date, startsAt);
-    const endIso = localDateTimeIso(date, endsAt);
-    if (!startIso || !endIso) {
-      setError("Informe data e horários válidos.");
-      return;
-    }
-    if (endIso <= startIso) {
-      setError("O horário de término deve ser após o início.");
-      return;
-    }
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      if (!patientId || !professionalId || !roomId) {
+        setError("Informe paciente, profissional e sala.");
+        return;
+      }
+      if (kind === "procedure" && !procedureId) {
+        setError("Informe o procedimento para este tipo de agendamento.");
+        return;
+      }
+      const startIso = localDateTimeIso(date, startsAt);
+      const endIso = localDateTimeIso(date, endsAt);
+      if (!startIso || !endIso) {
+        setError("Informe data e horários válidos.");
+        return;
+      }
+      if (endIso <= startIso) {
+        setError("O horário de término deve ser após o início.");
+        return;
+      }
 
-    onBusy(true);
-    setError(null);
-    const result = await createAppointment(supabase, {
-      organizationId,
-      practiceId,
-      roomId,
-      patientId,
-      professionalId,
-      startsAt: startIso,
-      endsAt: endIso,
-      kind,
-      procedureId: kind === "procedure" ? procedureId : null,
-      urgencyNote: urgencyNote.trim() || null,
-      createdBy,
-    });
-    onBusy(false);
-    if (result.error || !result.row) {
-      setError(
-        friendlyError(result.error, "Não foi possível criar o agendamento. Tente novamente."),
-      );
-      return;
+      flushSync(() => {
+        onBusy(true);
+        setError(null);
+      });
+      const result = await createAppointment(supabase, {
+        organizationId,
+        practiceId,
+        roomId,
+        patientId,
+        professionalId,
+        startsAt: startIso,
+        endsAt: endIso,
+        kind,
+        procedureId: kind === "procedure" ? procedureId : null,
+        urgencyNote: urgencyNote.trim() || null,
+        createdBy,
+      });
+      flushSync(() => onBusy(false));
+      if (result.error || !result.row) {
+        setError(
+          friendlyError(result.error, "Não foi possível criar o agendamento. Tente novamente."),
+        );
+        return;
+      }
+      onCreated("Agendamento criado.", date);
+    } catch (caught) {
+      flushSync(() => onBusy(false));
+      setError(friendlyError(caught, "Não foi possível criar o agendamento. Tente novamente."));
+    } finally {
+      submitting.current = false;
     }
-    onCreated("Agendamento criado.", date);
   }
 
   const procedureRoom = rooms.filter((room) => room.roomKind === "procedure");

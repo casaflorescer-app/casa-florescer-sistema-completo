@@ -20,6 +20,7 @@ O schema `0000`–`0059` e a C074 estão no BancoFlorescerPP. O navegador de pro
 
 ## Histórico
 
+- 2026-10-31 — C086: a ficha do navegador passou a usar a rota da casa. A imagem `c086c` foi removida. O Caddy e o Florescer Web não mudaram.
 - 2026-10-31 — C086 complementar: a segunda imagem isolada também foi removida. Agenda e ficha no modo da casa continuam fora do ar. O Caddy e o Florescer Web não mudaram.
 - 2026-10-31 — C086: contêiner isolado falou com `casa_hml` e foi removido. O Caddy e o Florescer Web não mudaram.
 - 2026-10-31 — C088: linha do tempo, vínculo de gestação, vínculo de prática e organizações no segundo caminho. O modo da casa não foi ligado.

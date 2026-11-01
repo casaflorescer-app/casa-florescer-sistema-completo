@@ -68,12 +68,17 @@ Sem a variável pública, a produção segue no Auth. A variável não foi ligad
 
 O Studio acompanha o gateway. Não há porta 54323 neste pin. O acesso é `ssh -L 8000:127.0.0.1:8000 usuario@2.25.151.136` e, na sua máquina, `http://127.0.0.1:8000`. O gateway pede o usuário e a senha `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD`.
 
+## C086 — ficha com status real da sessão
+
+Na imagem `casa-hml-web:c086c`, já removida, `GET` e `POST /api/casa/clinical` responderam 401 sem cookie, com cookie inválido, com sessão vencida e com sessão revogada. A secretária recebeu 403. A outra médica recebeu 404. A médica da prática recebeu 200. O cookie continuou `Secure`. O teste de tela usou HTTPS só dentro do contêiner de teste. O Florescer Web publicado continua no Auth.
+
 ## C086 — login isolado, produção no Auth
 
 No contêiner `casa-hml-web`, já removido, o login válido respondeu 200, a senha errada 401, a sessão 200 com o identificador do administrador principal, o logout 200 e o pedido sem cookie 401. O administrador principal criou os outros perfis. A administradora da clínica recebeu 403 ao tentar criar usuário. Na imagem seguinte, também removida, o cookie continuou `Secure` porque o processo estava em produção. O Chromium em HTTP descartou esse cookie; o teste de tela usou HTTPS só dentro do contêiner de teste. A agenda sem cookie respondeu 401. A ação da ficha sem cookie respondeu 500 e não gravou. O Florescer Web publicado continua no Auth. `sistema.thvp.cloud` não recebeu esse modo.
 
 ## Histórico
 
+- 2026-10-31 — C086: a rota da ficha devolveu 401 sem sessão. O cookie `Secure` continuou exigindo HTTPS no teste. A produção continua no Auth.
 - 2026-10-31 — C086 complementar: o cookie `Secure` segurou a sessão só em HTTPS. A agenda sem cookie respondeu 401 e a ficha sem cookie respondeu 500. A produção continua no Auth.
 - 2026-10-31 — C086: login, sessão, logout e recusa de criação de usuário rodaram só no contêiner isolado, depois removido. A produção continua no Auth.
 - 2026-10-31 — a senha de `casa_login` foi definida no BancoFlorescerPP. A prova devolveu `casa_login|false|false`. `CASA_DATABASE_URL` continua ausente na produção.

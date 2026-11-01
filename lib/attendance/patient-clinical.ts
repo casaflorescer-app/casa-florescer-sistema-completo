@@ -3,7 +3,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { readPatientClinicalCasa } from "@/lib/casa/reads";
-import { upsertPatientClinicalCasa } from "@/lib/casa/writes";
 
 export type PatientClinicalCadastro = {
   patientId: string;
@@ -92,20 +91,25 @@ export async function upsertPatientClinicalCadastro(
   if (!supabase) {
     if (!isCasaBrowserAuth()) return { ok: false, error: "Autenticação não configurada neste ambiente." };
     if (!input.practiceId) return { ok: false, error: "A ficha desta prática não foi informada." };
-    try {
-      await upsertPatientClinicalCasa({
+    const response = await fetch("/api/casa/clinical", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
         patientId: input.patientId,
         organizationId: input.organizationId,
         practiceId: input.practiceId,
         allergies: input.allergies,
         continuousMedications: input.continuousMedications,
         comorbidities: input.comorbidities,
-        updatedBy: input.updatedBy,
-      });
-      return { ok: true, error: null };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : "Não foi possível atualizar a ficha." };
+      }),
+    });
+    if (response.status === 401) return { ok: false, error: "Sem sessão." };
+    if (response.status === 403) {
+      return { ok: false, error: "O prontuário clínico está disponível apenas para médicas autorizadas." };
     }
+    if (!response.ok) return { ok: false, error: "Não foi possível atualizar a ficha." };
+    return { ok: true, error: null };
   }
   const existing = await getPatientClinicalCadastro(supabase, input.patientId);
   if (existing) {

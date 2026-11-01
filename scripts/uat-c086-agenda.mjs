@@ -39,4 +39,22 @@ test("o formulário da agenda abre sem o cliente Supabase", () => {
   assert.match(page, /showForm && \(supabase \|\| casa\)/);
   assert.match(form, /supabase: SupabaseClient \| null/);
   assert.match(form, /searchPatientsCasa/);
+  assert.match(form, /flushSync\(\(\) => \{\s*onBusy\(true\)/);
+  assert.match(form, /if \(submitting\.current\) return/);
+});
+
+test("a ficha do navegador usa a rota e distingue 401 de 500", () => {
+  const route = read("app/api/casa/clinical/route.ts");
+  const chart = read("components/attendance/PatientChart.tsx");
+  const clinical = read("lib/attendance/patient-clinical.ts");
+  assert.match(route, /status: 401/);
+  assert.match(route, /status: 403/);
+  assert.match(route, /status: 404/);
+  assert.match(route, /status: 500/);
+  assert.match(route, /if \(message === "Sem sessão\."\) return anonymous\(\)/);
+  assert.doesNotMatch(route, /updatedBy: uuid/);
+  assert.match(chart, /\/api\/casa\/clinical\?/);
+  assert.doesNotMatch(chart, /loadPatientChartCasa/);
+  assert.match(clinical, /fetch\("\/api\/casa\/clinical"/);
+  assert.doesNotMatch(clinical, /upsertPatientClinicalCasa/);
 });

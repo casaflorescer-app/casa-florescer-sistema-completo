@@ -52,12 +52,17 @@ Dependências do Supabase:
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
 
+## C086 — revalidação da ficha e do “Salvando…”
+
+A imagem `casa-hml-web:c086c` foi construída no clone da VPS, escutou em `127.0.0.1:3017` e falou só com `casa_hml`. O prontuário passou a chamar `GET` e `POST /api/casa/clinical`. Ausência de sessão, cookie inválido, sessão vencida e sessão revogada responderam 401. A secretária recebeu 403. A outra médica recebeu 404. A médica da prática leu e gravou com 200, e o autor foi a sessão. O formulário da agenda, com o pedido de criação segurado, mostrou “Salvando…”, deixou o botão desabilitado e manteve um único envio pendente. Depois da resposta, “Agendamento criado.” apareceu, a paciente ficou na lista e o botão voltou a “Novo atendimento”. O contêiner foi removido. As linhas fictícias saíram: 4 agendamentos e 1 ficha antes; 0 depois. O Florescer Web continuou sem as variáveis da casa. O corte não foi executado. A C089 não começa.
+
 ## C086 complementar — rota de agenda na cópia
 
 A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de criar agendamento, escutou em `127.0.0.1:3017` e falou só com `casa_hml`. `POST`, `GET`, `PATCH` e `DELETE` de `/api/casa/appointments` rodaram. O `DELETE` cancelou e a linha ficou. A ficha foi criada, lida e alterada pela ação já existente; o autor gravado foi a sessão. A outra médica não viu o agendamento nem a alergia. A secretária agendou e não leu a alergia. A agenda sem cookie respondeu 401. A ação da ficha sem cookie respondeu 500. O contêiner foi removido, as linhas fictícias saíram e o Florescer Web continuou sem `CASA_DATABASE_URL` e sem `NEXT_PUBLIC_CASA_AUTH`. O corte não foi executado. A etapa permanece bloqueada. A C089 não começa.
 
 ## Histórico
 
+- 2026-10-31 — C086: a ficha passou a responder pela rota, com 401, 403 e 404 distintos. “Salvando…” pintou na cópia. A imagem `casa-hml-web:c086c` foi removida. Sem corte.
 - 2026-10-31 — C086 complementar: a rota de agenda rodou na cópia `casa_hml` e o contêiner `casa-hml-web:c086b` foi removido. A ficha sem sessão respondeu 500. O Florescer Web não recebeu o modo. Sem corte.
 - 2026-10-31 — C086: imagem `casa-hml-web:c086` falou com `casa_hml` em `127.0.0.1:3017` e foi removida. O Florescer Web não a recebeu. A etapa segue bloqueada. Sem corte.
 - 2026-10-31 — C086: backup restaurado e cópia `casa_hml` criada. Sem processo Next e sem corte. A aplicação publicada não aponta para a cópia.

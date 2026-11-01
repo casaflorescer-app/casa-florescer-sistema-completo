@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import {
   dismissStaffNotification,
   listUnreadStaffNotifications,
@@ -21,7 +22,7 @@ export function StaffAgendaNotifications({
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     let cancelled = false;
     void (async () => {
       const rows = await listUnreadStaffNotifications(supabase, 8);
@@ -34,7 +35,7 @@ export function StaffAgendaNotifications({
     };
   }, [supabase, reloadKey]);
 
-  if (!supabase || items.length === 0) return null;
+  if ((!supabase && !isCasaBrowserAuth()) || items.length === 0) return null;
 
   const latest = items[0];
 

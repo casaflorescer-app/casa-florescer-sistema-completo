@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { getPatientPhotoUrl } from "@/lib/patients/directory";
 
@@ -96,8 +97,9 @@ export function PatientPhotoThumb({
       setStatus("empty");
       return;
     }
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setStatus("error");
       return;
     }

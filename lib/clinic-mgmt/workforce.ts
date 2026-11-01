@@ -1,5 +1,7 @@
 "use client";
 
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
 import { createClient } from "@/lib/supabase/client";
 import type {
   ClinicWorkforceMember,
@@ -35,6 +37,19 @@ export async function listClinicWorkforce(
   organizationId: string,
   opts?: { q?: string; status?: WorkforceStatus; engagementKind?: WorkforceEngagement },
 ) {
+  if (isCasaBrowserAuth()) {
+    const { listClinicWorkforceCasa } = await import("@/lib/casa/reads");
+    let rows = (await listClinicWorkforceCasa(organizationId)).map((row) => mapMember(row));
+    if (opts?.status) rows = rows.filter((row) => row.status === opts.status);
+    if (opts?.engagementKind) rows = rows.filter((row) => row.engagementKind === opts.engagementKind);
+    const needle = opts?.q?.trim().toLowerCase();
+    if (needle) {
+      rows = rows.filter((row) =>
+        [row.fullName, row.roleTitle, row.email, row.phone].some((value) => value?.toLowerCase().includes(needle)),
+      );
+    }
+    return rows;
+  }
   const supabase = requireClient();
   let query = supabase
     .from("clinic_workforce")
@@ -72,23 +87,33 @@ export async function upsertClinicWorkforce(input: {
   endsOn?: string;
   notes?: string;
 }) {
+  const payload = {
+    organization_id: input.organizationId,
+    id: input.id ?? null,
+    full_name: input.fullName,
+    role_title: input.roleTitle,
+    engagement_kind: input.engagementKind,
+    status: input.status,
+    document_cpf: input.documentCpf ?? null,
+    phone: input.phone ?? null,
+    email: input.email ?? null,
+    starts_on: input.startsOn || null,
+    ends_on: input.endsOn || null,
+    notes: input.notes ?? null,
+  };
+  if (isCasaBrowserAuth()) {
+    try {
+      return String(await callCasaRpc("clinic_workforce_upsert", [payload]));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (/CLINIC_WORKFORCE_FORBIDDEN/i.test(message)) {
+        throw new Error("Você não tem permissão para administrar funcionários.");
+      }
+      throw new Error("Não foi possível salvar o cadastro.");
+    }
+  }
   const supabase = requireClient();
-  const { data, error } = await supabase.rpc("clinic_workforce_upsert", {
-    p_payload: {
-      organization_id: input.organizationId,
-      id: input.id ?? null,
-      full_name: input.fullName,
-      role_title: input.roleTitle,
-      engagement_kind: input.engagementKind,
-      status: input.status,
-      document_cpf: input.documentCpf ?? null,
-      phone: input.phone ?? null,
-      email: input.email ?? null,
-      starts_on: input.startsOn || null,
-      ends_on: input.endsOn || null,
-      notes: input.notes ?? null,
-    },
-  });
+  const { data, error } = await supabase.rpc("clinic_workforce_upsert", { p_payload: payload });
   if (error) {
     if (/CLINIC_WORKFORCE_FORBIDDEN/i.test(error.message)) {
       throw new Error("Você não tem permissão para administrar funcionários.");

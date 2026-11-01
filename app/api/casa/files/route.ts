@@ -336,3 +336,43 @@ export async function POST(request: Request) {
   }
   return NextResponse.json({ path: relative });
 }
+
+export async function DELETE(request: Request) {
+  const user = await actor();
+  if (!user) return unavailable();
+  const url = new URL(request.url);
+  if (url.searchParams.get("kind") !== "photo") {
+    return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
+  }
+  const organizationId = url.searchParams.get("organizationId") ?? "";
+  const patientId = url.searchParams.get("id") ?? "";
+  if (!UUID.test(organizationId) || !UUID.test(patientId)) {
+    return NextResponse.json({ error: "Pedido recusado." }, { status: 400 });
+  }
+  const removed = await withCasaUser(user.userId, async (client) => {
+    const allowed = await client.query<{ allowed: boolean }>(
+      "select public.can_access_patient_photo($1, $2) as allowed",
+      [patientId, organizationId],
+    );
+    if (allowed.rows[0]?.allowed !== true) return { status: 403 as const, path: null };
+    const current = await client.query<{ photo_path: string | null }>(
+      "select photo_path from public.patients where id = $1 and organization_id = $2",
+      [patientId, organizationId],
+    );
+    if (!current.rows[0]) return { status: 404 as const, path: null };
+    const updated = await client.query(
+      "update public.patients set photo_path = null where id = $1 and organization_id = $2",
+      [patientId, organizationId],
+    );
+    if ((updated.rowCount ?? 0) === 0) return { status: 404 as const, path: null };
+    return { status: 200 as const, path: current.rows[0].photo_path };
+  });
+  if (removed.status !== 200) {
+    return NextResponse.json(
+      { error: removed.status === 403 ? "Pedido recusado." : "Arquivo não encontrado." },
+      { status: removed.status },
+    );
+  }
+  if (removed.path && safeRelativePath(removed.path)) await removePrivateFile(removed.path);
+  return NextResponse.json({ ok: true });
+}

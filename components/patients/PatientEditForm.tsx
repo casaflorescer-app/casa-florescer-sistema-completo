@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { formatCep, formatCpf, formatPhone } from "@/lib/patients/format";
 import {
@@ -26,8 +27,9 @@ export function PatientEditForm({ patientId }: { patientId: string }) {
   const detailHref = `/app/patients/${patientId}`;
 
   useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -71,8 +73,9 @@ export function PatientEditForm({ patientId }: { patientId: string }) {
       return;
     }
 
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       return;
     }

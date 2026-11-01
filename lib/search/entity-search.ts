@@ -46,7 +46,7 @@ export function patientToSearchOption(row: PatientListRow): EntitySearchOption {
 }
 
 export async function searchPatientOptions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   query: string,
   options?: { limit?: number },
 ): Promise<EntitySearchOption[]> {
@@ -55,15 +55,31 @@ export async function searchPatientOptions(
 }
 
 export async function searchProfessionalOptions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   query: string,
   options?: { practiceId?: string; organizationId?: string; limit?: number },
 ): Promise<EntitySearchOption[]> {
   const q = escapeIlike(query);
   if (q.length < 2) return [];
   const limit = clampLimit(options?.limit);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listProfessionalLabels } = await import("@/lib/pregnancies/directory");
+    const labels = await listProfessionalLabels(null, options?.practiceId);
+    const needle = q.toLowerCase();
+    return labels
+      .filter((item) => item.fullName.toLowerCase().includes(needle) || item.councilNumber.toLowerCase().includes(needle))
+      .slice(0, limit)
+      .map((item) => ({
+        id: item.id,
+        label: item.fullName,
+        description: item.councilNumber ? `${item.councilType} ${item.councilNumber}` : item.councilType,
+      }));
+  }
+  if (!supabase) return [];
+  const client = supabase;
   function build(selectCols: string) {
-    let b = supabase
+    let b = client
       .from("professional_labels")
       .select(selectCols)
       .or(
@@ -161,7 +177,7 @@ export async function searchRoomOptions(
 }
 
 export async function searchProcedureOptions(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   query: string,
   options: {
     organizationId: string;
@@ -172,6 +188,22 @@ export async function searchProcedureOptions(
   const q = escapeIlike(query);
   if (q.length < 2) return [];
   const limit = clampLimit(options.limit);
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { searchProceduresCasa } = await import("@/lib/casa/reads");
+    const data = await searchProceduresCasa(options.organizationId, q, Math.min(limit * 3, 80));
+    return data
+      .flatMap((row) => {
+        const id = typeof row.id === "string" ? row.id : null;
+        const name = typeof row.name === "string" ? row.name.trim() : "";
+        if (!id || !name) return [];
+        const practiceId = typeof row.practice_id === "string" ? row.practice_id : null;
+        if (options.practiceId && practiceId !== options.practiceId && row.is_shared !== true) return [];
+        const code = typeof row.code === "string" ? row.code.trim() : "";
+        return [{ id, label: name, description: code || undefined, keywords: code }];
+      })
+      .slice(0, limit);
+  }
   const { data, error } = await supabase
     .from("procedures")
     .select("id, name, code, practice_id, is_shared, organization_id")

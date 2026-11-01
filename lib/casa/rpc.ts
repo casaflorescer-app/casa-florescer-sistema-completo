@@ -111,6 +111,13 @@ const ALLOWED: Record<string, number> = {
   set_secretary_care_policy_view: 2,
   grant_system_admin: 2,
   revoke_system_admin: 2,
+  grant_pregnancy_backup_access: 1,
+  revoke_pregnancy_backup_access: 1,
+  professional_upsert: 1,
+  clinic_workforce_upsert: 1,
+  patient_notification_dismiss: 1,
+  patient_notification_mark_read: 1,
+  staff_notification_dismiss: 1,
 };
 
 const JSONB_AT: Record<string, number[]> = {
@@ -124,6 +131,8 @@ const JSONB_AT: Record<string, number[]> = {
   procedure_agreement_cancel: [0],
   clinic_specialty_upsert: [0],
   professional_specialty_set: [0],
+  professional_upsert: [0],
+  clinic_workforce_upsert: [0],
 };
 
 function assertName(name: string, args: unknown[]) {

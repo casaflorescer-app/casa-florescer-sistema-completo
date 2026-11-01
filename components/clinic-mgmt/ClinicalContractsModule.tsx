@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { StatusMessage, buttonClass, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
 import {
   OBS_STATUS_LABEL,
@@ -92,14 +93,14 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
 
   const searchPatientsCb = useCallback(
     async (query: string) => {
-      if (!supabase) return [];
+      if (!supabase && !isCasaBrowserAuth()) return [];
       return searchPatientOptions(supabase, query, { limit: 30 });
     },
     [supabase],
   );
   const searchProfessionalsCb = useCallback(
     async (query: string) => {
-      if (!supabase || !orgId) return [];
+      if ((!supabase && !isCasaBrowserAuth()) || !orgId) return [];
       return searchProfessionalOptions(supabase, query, {
         organizationId: orgId,
         limit: 30,
@@ -109,7 +110,7 @@ export function ClinicalContractsModule({ initialTab = "obstetric" }: { initialT
   );
   const searchProceduresCb = useCallback(
     async (query: string) => {
-      if (!supabase || !orgId) return [];
+      if ((!supabase && !isCasaBrowserAuth()) || !orgId) return [];
       return searchProcedureOptions(supabase, query, {
         organizationId: orgId,
         limit: 30,

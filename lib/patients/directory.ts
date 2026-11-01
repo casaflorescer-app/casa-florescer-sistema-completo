@@ -602,13 +602,18 @@ export async function listPatients(supabase: SupabaseClient): Promise<PatientLis
  * Não retorna dados clínicos. Limite padrão evita carregar a tabela inteira.
  */
 export async function searchPatients(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   rawQuery: string,
   options?: { limit?: number },
 ): Promise<PatientListRow[]> {
   const limit = Math.min(Math.max(options?.limit ?? 30, 1), 50);
   const query = rawQuery.trim();
   if (query.length < 2) return [];
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { searchPatientsCasa } = await import("@/lib/casa/actions");
+    return (await searchPatientsCasa(rawQuery)).slice(0, limit);
+  }
 
   const digits = onlyDigits(query);
   const pattern = `%${query.replace(/[%_]/g, "")}%`;
@@ -676,9 +681,14 @@ export function patientChartHref(patientId: string): string {
 }
 
 export async function getPatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<PatientDetailRow | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const { getPatientCasa } = await import("@/lib/casa/actions");
+    return getPatientCasa(patientId);
+  }
   const primary = await supabase
     .from("patients")
     .select(PATIENT_DETAIL_COLUMNS)
@@ -740,7 +750,7 @@ export async function createPatient(
 }
 
 export async function updatePatient(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
   input: PatientUpdateInput,
 ): Promise<PatientDetailRow> {
@@ -748,6 +758,11 @@ export async function updatePatient(
   if (message) throw new Error(message);
   if (!patientId) {
     throw new Error("Não foi possível identificar a paciente.");
+  }
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const { updatePatientCasa } = await import("@/lib/casa/actions");
+    return updatePatientCasa(patientId, input);
   }
 
   const { data, error } = await supabase
@@ -846,10 +861,19 @@ export async function uploadPatientPhoto(
 }
 
 export async function removePatientPhoto(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   organizationId: string,
   patientId: string,
 ): Promise<void> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const response = await fetch(
+      `/api/casa/files?kind=photo&id=${patientId}&organizationId=${organizationId}`,
+      { method: "DELETE" },
+    );
+    if (!response.ok) throw new Error("Não foi possível alterar a fotografia. Tente novamente.");
+    return;
+  }
   const path = patientPhotoObjectPath(organizationId, patientId);
   const { error: storageError } = await supabase.storage.from(PATIENT_PHOTO_BUCKET).remove([path]);
   if (storageError) {

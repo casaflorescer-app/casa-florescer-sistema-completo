@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { listPermissionProfilesCasa } from "@/lib/casa/reads";
+import { setProfilePermissionsCasa } from "@/lib/casa/writes";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { APP_MODULES, type ModuleId } from "@/lib/permissions";
@@ -57,11 +60,39 @@ export function ClinicPermissionsPanel() {
 
   useEffect(() => {
     if (!orgId) return;
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     setLoading(true);
+    if (casa) {
+      void listPermissionProfilesCasa(orgId)
+        .then((data) => {
+          const next = data.map((row) => ({
+            id: String(row.id),
+            full_name: String(row.full_name ?? ""),
+            email: String(row.email ?? ""),
+            permissions: row.permissions,
+          }));
+          setRows(next);
+          const nextDrafts: Record<string, ModuleId[]> = {};
+          for (const row of next) nextDrafts[row.id] = parseModules(row.permissions);
+          setDrafts(nextDrafts);
+          setPhysicianIds(
+            new Set(
+              data
+                .filter((row) => Array.isArray(row.roles) && row.roles.includes("physician"))
+                .map((row) => String(row.id)),
+            ),
+          );
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : "Não foi possível carregar as permissões.");
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
     void (async () => {
-      const { data, error: queryError } = await supabase
+      const { data, error: queryError } = await supabase!
         .from("profiles")
         .select("id, full_name, email, permissions")
         .eq("organization_id", orgId)
@@ -84,7 +115,7 @@ export function ClinicPermissionsPanel() {
         return;
       }
 
-      const { data: roles, error: rolesError } = await supabase
+      const { data: roles, error: rolesError } = await supabase!
         .from("user_practice_roles")
         .select("user_id, role")
         .in("user_id", ids)
@@ -127,8 +158,9 @@ export function ClinicPermissionsPanel() {
   }
 
   async function save(userId: string) {
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     const payload = drafts[userId] ?? [];
     if (!physicianIds.has(userId)) {
       const blocked = payload.filter((id) => isPhysicianOnlyModule(id));
@@ -139,6 +171,20 @@ export function ClinicPermissionsPanel() {
         setNotice(null);
         return;
       }
+    }
+    if (!supabase) {
+      try {
+        await setProfilePermissionsCasa(userId, payload);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Não foi possível salvar as permissões.");
+        setNotice(null);
+        return;
+      }
+      setNotice(
+        "Módulos de interface atualizados. Isso não altera o RLS nem substitui o papel Médica necessário ao prontuário.",
+      );
+      setError(null);
+      return;
     }
     const { error: updateError } = await supabase
       .from("profiles")

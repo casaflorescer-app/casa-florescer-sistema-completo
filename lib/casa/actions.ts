@@ -594,6 +594,61 @@ export async function getPatientCasa(patientId: string): Promise<PatientDetailRo
   });
 }
 
+export async function updatePatientCasa(
+  patientId: string,
+  input: PatientCreateInput,
+): Promise<PatientDetailRow> {
+  const message = validatePatientCreateInput(input);
+  if (message) throw new Error(message);
+  const userId = await actorId();
+  const payload = toPersistPayload(input);
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `update public.patients set
+         full_name = $2, social_name = $3, cpf = $4, birth_date = $5, phone = $6, email = $7,
+         preferred_channel = $8, address_street = $9, address_number = $10,
+         address_complement = $11, address_district = $12, address_city = $13,
+         address_state = $14, address_cep = $15, reception_notes = $16,
+         care_specialties = $17, billing_modality = $18, private_payment_method = $19,
+         insurance_name = $20, insurance_card_number = $21, insurance_valid_until = $22
+       where id = $1
+       returning id, organization_id, full_name, social_name, cpf, birth_date, phone, email,
+                 created_by, created_at, photo_path, care_specialties, preferred_channel,
+                 address_street, address_number, address_complement, address_district,
+                 address_city, address_state, address_cep, reception_notes, billing_modality,
+                 private_payment_method, insurance_name, insurance_card_number, insurance_valid_until`,
+      [
+        patientId,
+        payload.full_name,
+        payload.social_name,
+        payload.cpf,
+        payload.birth_date,
+        payload.phone,
+        payload.email,
+        payload.preferred_channel,
+        payload.address_street,
+        payload.address_number,
+        payload.address_complement,
+        payload.address_district,
+        payload.address_city,
+        payload.address_state,
+        payload.address_cep,
+        payload.reception_notes,
+        payload.care_specialties,
+        payload.billing_modality,
+        payload.private_payment_method,
+        payload.insurance_name,
+        payload.insurance_card_number,
+        payload.insurance_valid_until,
+      ],
+    );
+    const row = result.rows[0];
+    const mapped = row ? patientDetail(plain(row)) : null;
+    if (!mapped) throw new Error("Não foi possível alterar o cadastro da paciente. Tente novamente.");
+    return mapped;
+  });
+}
+
 export type PatientChartCasa = {
   patient: PatientDetailRow | null;
   summary: PatientClinicalSummaryData | null;

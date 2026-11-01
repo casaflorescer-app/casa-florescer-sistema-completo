@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import {
@@ -167,7 +168,7 @@ export function PatientPortalHome() {
     "bem-vinda";
 
   const reload = useCallback(async () => {
-    if (!supabase || !authorization?.patientAccount?.patientId) {
+    if ((!supabase && !isCasaBrowserAuth()) || !authorization?.patientAccount?.patientId) {
       setLoading(false);
       return;
     }
@@ -213,7 +214,7 @@ export function PatientPortalHome() {
   const unreadHome = notifications.filter((item) => !item.dismissedAt && !item.readAt).slice(0, 5);
 
   async function dismiss(id: string) {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     await dismissPatientNotification(supabase, id);
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, dismissedAt: new Date().toISOString() } : item)),
@@ -221,7 +222,7 @@ export function PatientPortalHome() {
   }
 
   async function markRead(id: string) {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     await markPatientNotificationRead(supabase, id);
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item)),
@@ -229,7 +230,7 @@ export function PatientPortalHome() {
   }
 
   async function onArrive(appointmentId: string) {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setArrivingId(appointmentId);
     setError(null);
     setNotice(null);

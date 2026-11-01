@@ -366,6 +366,34 @@ export async function createPrescriptionDraftCasa(input: {
   });
 }
 
+export async function closePregnancyCasa(
+  pregnancyId: string,
+  status: string,
+  reason: string,
+): Promise<void> {
+  const userId = await actorId();
+  const updated = await withCasaUser(userId, (client) =>
+    client.query(
+      `update public.pregnancies
+          set status = $2, status_reason = $3
+        where id = $1`,
+      [pregnancyId, status, reason],
+    ),
+  );
+  if ((updated.rowCount ?? 0) === 0) throw new Error("A política de acesso do banco recusou esta operação.");
+}
+
+export async function setProfilePermissionsCasa(profileId: string, permissions: string[]): Promise<void> {
+  const userId = await actorId();
+  const updated = await withCasaUser(userId, (client) =>
+    client.query("update public.profiles set permissions = $2::jsonb where id = $1", [
+      profileId,
+      JSON.stringify(permissions),
+    ]),
+  );
+  if ((updated.rowCount ?? 0) === 0) throw new Error("A política de acesso do banco recusou esta operação.");
+}
+
 export async function setProfileActiveCasa(profileId: string, isActive: boolean): Promise<void> {
   const userId = await actorId();
   const updated = await withCasaUser(userId, (client) =>

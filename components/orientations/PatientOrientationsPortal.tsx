@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { StatusMessage, buttonClass, ghostButtonClass } from "@/components/platform/Ui";
 import { formatDateTime } from "@/lib/platform/format";
@@ -56,7 +57,7 @@ export function PatientOrientationsPortal({ embedded = false }: { embedded?: boo
 
   useEffect(() => {
     if (authorizationLoading) return;
-    if (!supabase || !patientId) {
+    if ((!supabase && !isCasaBrowserAuth()) || !patientId) {
       setLoading(false);
       return;
     }
@@ -89,7 +90,7 @@ export function PatientOrientationsPortal({ embedded = false }: { embedded?: boo
     orientation: ClinicalOrientationRow;
     version: ClinicalOrientationVersionRow;
   }) {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setSelected(item);
     setSelectedRx(null);
     setError(null);
@@ -209,7 +210,7 @@ export function PatientOrientationsPortal({ embedded = false }: { embedded?: boo
             type="button"
             className={`${ghostButtonClass} mt-2`}
             onClick={() => {
-              if (!supabase) return;
+              if (!supabase && !isCasaBrowserAuth()) return;
               void dismissPatientNotification(supabase, notifications[0].id).then(() => {
                 setNotifications((current) => current.filter((item) => item.id !== notifications[0].id));
               });
@@ -305,7 +306,7 @@ export function PatientOrientationsPortal({ embedded = false }: { embedded?: boo
                   type="button"
                   className={`${buttonClass} mt-2`}
                   onClick={() => {
-                    if (!supabase) return;
+                    if (!supabase && !isCasaBrowserAuth()) return;
                     setSelected(null);
                     setSelectedRx(rx);
                     void markPrescriptionViewed(supabase, rx.id);
@@ -344,7 +345,7 @@ export function PatientOrientationsPortal({ embedded = false }: { embedded?: boo
                 controls
                 src={audioUrl}
                 onPlay={() => {
-                  if (!supabase) return;
+                  if (!supabase && !isCasaBrowserAuth()) return;
                   void markOrientationAudioPlayed(supabase, selected.version.id);
                 }}
               />

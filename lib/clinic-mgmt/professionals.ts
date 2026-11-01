@@ -1,5 +1,7 @@
 "use client";
 
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { callCasaRpc } from "@/lib/casa/rpc";
 import { createClient } from "@/lib/supabase/client";
 import type { ClinicProfessional, ProfessionalCategory } from "@/lib/clinic-mgmt/types";
 
@@ -85,6 +87,26 @@ export async function listClinicProfessionals(
     practiceId?: string | null;
   },
 ): Promise<ClinicProfessional[]> {
+  if (isCasaBrowserAuth()) {
+    const { listClinicProfessionalsCasa } = await import("@/lib/casa/reads");
+    let rows = (await listClinicProfessionalsCasa(organizationId)).map((row) => mapRow(row));
+    if (opts?.category && opts.category !== "all") rows = rows.filter((row) => row.category === opts.category);
+    if (opts?.practiceId) rows = rows.filter((row) => row.practiceId === opts.practiceId);
+    if (opts?.status === "active") rows = rows.filter((row) => row.isActive);
+    if (opts?.status === "inactive") rows = rows.filter((row) => !row.isActive);
+    if (opts?.specialtyId) {
+      rows = rows.filter((row) => row.specialties.some((item) => item.id === opts.specialtyId));
+    }
+    const needle = opts?.q?.trim().toLowerCase();
+    if (needle) {
+      rows = rows.filter((row) =>
+        [row.displayName, row.councilNumber, row.councilType, row.email, row.phone].some((value) =>
+          value?.toLowerCase().includes(needle),
+        ),
+      );
+    }
+    return rows;
+  }
   const supabase = requireClient();
   let query = supabase
     .from("professionals")
@@ -139,25 +161,37 @@ export async function upsertClinicProfessional(input: {
   specialtyIds: string[];
   primarySpecialtyId?: string | null;
 }) {
+  const payload = {
+    organization_id: input.organizationId,
+    id: input.id ?? null,
+    practice_id: input.practiceId,
+    display_name: input.displayName,
+    category: input.category,
+    council_type: input.councilType,
+    council_number: input.councilNumber ?? null,
+    council_uf: input.councilUf ?? null,
+    professional_phone: input.phone ?? null,
+    professional_email: input.email ?? null,
+    notes: input.notes ?? null,
+    is_active: input.isActive ?? true,
+    profile_id: input.profileId ?? null,
+    specialty_ids: input.specialtyIds,
+    primary_specialty_id: input.primarySpecialtyId ?? null,
+  };
+  if (isCasaBrowserAuth()) {
+    try {
+      return String(await callCasaRpc("professional_upsert", [payload]));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (/PROFESSIONAL_UPSERT_FORBIDDEN|42501/i.test(message)) {
+        throw new Error("Você não tem permissão para administrar profissionais.");
+      }
+      throw new Error(message || "Não foi possível salvar o profissional.");
+    }
+  }
   const supabase = requireClient();
   const { data, error } = await supabase.rpc("professional_upsert", {
-    p_payload: {
-      organization_id: input.organizationId,
-      id: input.id ?? null,
-      practice_id: input.practiceId,
-      display_name: input.displayName,
-      category: input.category,
-      council_type: input.councilType,
-      council_number: input.councilNumber ?? null,
-      council_uf: input.councilUf ?? null,
-      professional_phone: input.phone ?? null,
-      professional_email: input.email ?? null,
-      notes: input.notes ?? null,
-      is_active: input.isActive ?? true,
-      profile_id: input.profileId ?? null,
-      specialty_ids: input.specialtyIds,
-      primary_specialty_id: input.primarySpecialtyId ?? null,
-    },
+    p_payload: payload,
   });
   if (error) {
     if (/PROFESSIONAL_UPSERT_FORBIDDEN|42501/i.test(error.message)) {
@@ -174,6 +208,13 @@ export async function upsertClinicProfessional(input: {
 }
 
 export async function listHousePracticeOptions(organizationId: string) {
+  if (isCasaBrowserAuth()) {
+    const { listHousePracticesCasa } = await import("@/lib/casa/reads");
+    return (await listHousePracticesCasa(organizationId)).map((row) => ({
+      id: String(row.id),
+      label: String(row.name ?? "Prática"),
+    }));
+  }
   const supabase = requireClient();
   const { data, error } = await supabase
     .from("practice_units")
@@ -193,6 +234,13 @@ export async function listHousePracticeOptions(organizationId: string) {
 }
 
 export async function listOrgProfileOptions(organizationId: string, q: string) {
+  if (isCasaBrowserAuth()) {
+    const { listOrgProfilesCasa } = await import("@/lib/casa/reads");
+    return (await listOrgProfilesCasa(organizationId, q)).map((row) => ({
+      id: String(row.id),
+      label: `${String(row.full_name ?? "")}${row.email ? ` · ${String(row.email)}` : ""}`,
+    }));
+  }
   const supabase = requireClient();
   const needle = q.trim();
   if (needle.length < 2) return [] as Array<{ id: string; label: string }>;

@@ -594,7 +594,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
 
   /** C070-C2 — abre confirmação amigável (sem window.confirm). */
   function openObstetricConversion() {
-    if (!supabase || !encounter || !canOfferPregnancyLink || busy || linkBusy) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || !canOfferPregnancyLink || busy || linkBusy) return;
     if (pregnancyLinked) {
       setNotice("Este atendimento já está no contexto obstétrico.");
       return;
@@ -604,7 +604,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function continueObstetricConversion() {
-    if (!supabase || !encounter || !canOfferPregnancyLink || linkBusy) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || !canOfferPregnancyLink || linkBusy) return;
     setLinkBusy(true);
     setConversionError(null);
     setError(null);
@@ -651,7 +651,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function onConversionLink(pregnancyId: string) {
-    if (!supabase || !encounter || linkBusy) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || linkBusy) return;
     setLinkBusy(true);
     setConversionError(null);
     try {
@@ -681,7 +681,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
     clinicalEdd: string;
     careStartedOn: string;
   }) {
-    if (!supabase || !encounter || linkBusy) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || linkBusy) return;
     setLinkBusy(true);
     setConversionError(null);
     try {
@@ -729,7 +729,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function onSave() {
-    if (!supabase || !encounter || locked) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || locked) return;
     if (!soapHasContent(soap)) {
       setError("Preencha ao menos um campo da evolução.");
       setNotice(null);
@@ -753,7 +753,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function onSign() {
-    if (!supabase || !encounter || locked) return;
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter || locked) return;
     if (!sameSoap(soap, savedSoap)) {
       setError("Salve a evolução antes de assinar.");
       setNotice(null);
@@ -779,7 +779,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
   }
 
   async function onEndAttendance() {
-    if (!supabase || !encounter?.appointmentId) {
+    if ((!supabase && !isCasaBrowserAuth()) || !encounter?.appointmentId) {
       setError("Este atendimento não está vinculado a um agendamento.");
       return;
     }
@@ -814,7 +814,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
         timeZone: "America/Sao_Paulo",
       }).format(new Date(result.row.startsAt));
       const bounds = dayBoundsIso(dayKey);
-      if (bounds) {
+      if (bounds && supabase) {
         const dayAppts = await listAppointments(supabase, {
           practiceId: encounter.practiceId,
           from: bounds.from,
@@ -1338,7 +1338,7 @@ export function EncounterWorkspace({ encounterId }: { encounterId: string }) {
           actualEndAt: appointmentRow?.actualEndAt ?? null,
         }}
         onReviewStarted={() => {
-          if (!supabase || reviewAudited) return;
+          if ((!supabase && !isCasaBrowserAuth()) || reviewAudited) return;
           setReviewAudited(true);
           void markEncounterAuditEvent(supabase, encounter.id, "encounter_review_started");
         }}

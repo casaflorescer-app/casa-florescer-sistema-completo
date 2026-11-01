@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { formatGestationalAge, formatIsoDateBr } from "@/lib/patients/format";
 import { formatDateTime } from "@/lib/platform/format";
@@ -61,8 +62,9 @@ export function PregnancyDetail({
   const currentGrant = useMemo(() => activeBackupGrant(grants), [grants]);
 
   async function load() {
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       return;
     }
@@ -111,8 +113,9 @@ export function PregnancyDetail({
   async function handleClose(event: React.FormEvent) {
     event.preventDefault();
     if (!row || closing) return;
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     setClosing(true);
     setError(null);
     try {
@@ -130,8 +133,9 @@ export function PregnancyDetail({
 
   async function handleGrant() {
     if (!row || grantBusy) return;
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     setGrantBusy(true);
     setError(null);
     try {
@@ -147,8 +151,9 @@ export function PregnancyDetail({
 
   async function handleRevoke() {
     if (!row || grantBusy) return;
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     setGrantBusy(true);
     setError(null);
     try {

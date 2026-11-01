@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
-import { savePregnancyCasa } from "@/lib/casa/writes";
+import { closePregnancyCasa, savePregnancyCasa } from "@/lib/casa/writes";
 import { eddFromLmp } from "@/lib/patients/format";
 import type { PregnancyEventKind, PregnancyRisk, PregnancyStatus } from "@/lib/types/database";
 
@@ -492,9 +492,23 @@ export async function listVisiblePregnancies(supabase: SupabaseClient): Promise<
 }
 
 export async function getPregnancy(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
 ): Promise<PregnancyRow | null> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return null;
+    const { getPregnancyCasa } = await import("@/lib/casa/reads");
+    const raw = await getPregnancyCasa(pregnancyId);
+    if (!raw) return null;
+    const names = new Map<string, string>();
+    const primaryId = asString(raw.primary_professional_id);
+    const primaryName = asString(raw.primary_full_name);
+    if (primaryId && primaryName) names.set(primaryId, primaryName);
+    const backupId = asString(raw.backup_professional_id);
+    const backupName = asString(raw.backup_full_name);
+    if (backupId && backupName) names.set(backupId, backupName);
+    return withNames(raw, names, { patientName: nestedName(raw.patients) });
+  }
   const result = await supabase
     .from("pregnancies")
     .select(`${PREGNANCY_COLUMNS}, practice_units ( name ), patients ( full_name )`)
@@ -511,9 +525,18 @@ export async function getPregnancy(
 }
 
 export async function listPregnancyEvents(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
 ): Promise<PregnancyEventRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listPregnancyEventsCasa } = await import("@/lib/casa/reads");
+    const raw = await listPregnancyEventsCasa(pregnancyId);
+    return raw.flatMap((item) => {
+      const row = toEventRow(item);
+      return row ? [row] : [];
+    });
+  }
   const result = await supabase
     .from("pregnancy_events")
     .select("id, pregnancy_id, kind, actor_id, occurred_at, reason, from_value, to_value")
@@ -530,9 +553,14 @@ export async function listPregnancyEvents(
 }
 
 export async function suggestPregnancyNumber(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<number> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return 1;
+    const rows = await listPatientPregnancies(null, patientId);
+    return rows.length + 1;
+  }
   const result = await supabase.from("pregnancies").select("id").eq("patient_id", patientId);
   if (result.error) return 1;
   return (result.data?.length ?? 0) + 1;
@@ -609,7 +637,7 @@ export async function updatePregnancy(
 }
 
 export async function closePregnancy(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
   status: (typeof TERMINAL_PREGNANCY_STATUSES)[number],
   reason: string,
@@ -617,6 +645,11 @@ export async function closePregnancy(
   const trimmed = reason.trim();
   if (trimmed.length < 3) {
     throw new Error("Informe o motivo com pelo menos 3 caracteres.");
+  }
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    await closePregnancyCasa(pregnancyId, status, trimmed);
+    return;
   }
   const result = await supabase
     .from("pregnancies")
@@ -652,9 +685,18 @@ function toGrantRow(value: Record<string, unknown>): PregnancyBackupGrant | null
 }
 
 export async function listBackupGrants(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
 ): Promise<PregnancyBackupGrant[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listBackupGrantsCasa } = await import("@/lib/casa/reads");
+    const raw = await listBackupGrantsCasa(pregnancyId);
+    return raw.flatMap((item) => {
+      const row = toGrantRow(item);
+      return row ? [row] : [];
+    });
+  }
   const result = await supabase
     .from("pregnancy_backup_grants")
     .select(
@@ -676,7 +718,13 @@ export function activeBackupGrant(grants: PregnancyBackupGrant[]) {
   return grants.find((item) => !item.revokedAt) ?? null;
 }
 
-export async function grantBackupAccess(supabase: SupabaseClient, pregnancyId: string) {
+export async function grantBackupAccess(supabase: SupabaseClient | null, pregnancyId: string) {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const { callCasaRpc } = await import("@/lib/casa/rpc");
+    await callCasaRpc("grant_pregnancy_backup_access", [pregnancyId]);
+    return;
+  }
   const result = await supabase.rpc("grant_pregnancy_backup_access", { p_pregnancy: pregnancyId });
   if (result.error) {
     logError("grant", result.error);
@@ -684,7 +732,13 @@ export async function grantBackupAccess(supabase: SupabaseClient, pregnancyId: s
   }
 }
 
-export async function revokeBackupAccess(supabase: SupabaseClient, pregnancyId: string) {
+export async function revokeBackupAccess(supabase: SupabaseClient | null, pregnancyId: string) {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) throw new Error("Autenticação não configurada neste ambiente.");
+    const { callCasaRpc } = await import("@/lib/casa/rpc");
+    await callCasaRpc("revoke_pregnancy_backup_access", [pregnancyId]);
+    return;
+  }
   const result = await supabase.rpc("revoke_pregnancy_backup_access", { p_pregnancy: pregnancyId });
   if (result.error) {
     logError("revoke", result.error);
@@ -717,12 +771,22 @@ export function describePregnancyEvent(
 }
 
 export async function listProfileNames(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   ids: string[],
 ): Promise<Map<string, string>> {
   const names = new Map<string, string>();
   const unique = [...new Set(ids.filter(Boolean))];
   if (unique.length === 0) return names;
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return names;
+    const { listProfileNamesCasa } = await import("@/lib/casa/reads");
+    for (const row of await listProfileNamesCasa(unique)) {
+      const id = asString(row.id);
+      const name = asTrimmed(row.full_name);
+      if (id && name) names.set(id, name);
+    }
+    return names;
+  }
   const result = await supabase.from("profiles").select("id, full_name").in("id", unique);
   if (result.error) {
     logError("profiles", result.error);

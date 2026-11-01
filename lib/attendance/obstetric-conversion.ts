@@ -77,10 +77,37 @@ export function toConversionChoices(
 }
 
 async function appendConversionNote(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   pregnancyId: string,
   encounterId: string,
+  patientId: string,
 ): Promise<void> {
+  if (!supabase) {
+    const rows = await listPatientPregnancies(null, patientId);
+    const row = rows.find((item) => item.id === pregnancyId);
+    if (!row || notesHasConversionForEncounter(row.notes, encounterId)) return;
+    const line = buildConversionNote({ encounterId, atIso: new Date().toISOString() });
+    const next = row.notes?.trim() ? `${row.notes.trim()}\n${line}` : line;
+    const { updatePregnancy } = await import("@/lib/pregnancies/directory");
+    await updatePregnancy(
+      null,
+      pregnancyId,
+      emptyPregnancyForm({
+        practiceId: row.practiceId,
+        primaryProfessionalId: row.primaryProfessionalId,
+        backupProfessionalId: row.backupProfessionalId ?? "",
+        lmpDate: row.lmpDate ?? "",
+        clinicalEdd: row.clinicalEdd ?? "",
+        pregnancyNumber: row.pregnancyNumber != null ? String(row.pregnancyNumber) : "",
+        risk: row.risk ?? "",
+        careStartedOn: row.careStartedOn ?? "",
+        notes: next,
+        changeReason: "Conversão de atendimento ginecológico para obstétrico",
+      }),
+      { patientId: row.patientId, organizationId: row.organizationId },
+    );
+    return;
+  }
   const { data } = await supabase
     .from("pregnancies")
     .select("notes")
@@ -103,7 +130,7 @@ async function appendConversionNote(
 }
 
 async function ensureObstetricsSpecialty(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   patientId: string,
 ): Promise<{ previous: string[]; error: string | null }> {
   const patient = await getPatient(supabase, patientId);
@@ -143,7 +170,7 @@ export type ConvertResult = {
  * na criação, gestação → link → especialidade.
  */
 export async function resolveObstetricConversion(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     patientId: string;
@@ -212,7 +239,7 @@ export async function resolveObstetricConversion(
 }
 
 async function finishLink(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     patientId: string;
@@ -237,7 +264,7 @@ async function finishLink(
     };
   }
 
-  await appendConversionNote(supabase, input.pregnancyId, input.encounterId);
+  await appendConversionNote(supabase, input.pregnancyId, input.encounterId, input.patientId);
   const specialty = await ensureObstetricsSpecialty(supabase, input.patientId);
   if (specialty.error) {
     return {
@@ -263,7 +290,7 @@ async function finishLink(
 }
 
 export async function linkChosenPregnancyForConversion(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     patientId: string;
@@ -277,7 +304,7 @@ export async function linkChosenPregnancyForConversion(
 }
 
 export async function createPregnancyAndConvert(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   input: {
     encounterId: string;
     patientId: string;

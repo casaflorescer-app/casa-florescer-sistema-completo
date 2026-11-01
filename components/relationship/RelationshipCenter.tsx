@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { buttonClass, fieldClass, ghostButtonClass, StatusMessage } from "@/components/platform/Ui";
 import { formatDateTime } from "@/lib/platform/format";
@@ -208,7 +209,7 @@ export function RelationshipCenter({
   }
 
   async function onDismissAttention() {
-    if (!supabase || !stats?.attentionFingerprint) {
+    if ((!supabase && !isCasaBrowserAuth()) || !stats?.attentionFingerprint) {
       setShowAttention(false);
       return;
     }
@@ -217,7 +218,7 @@ export function RelationshipCenter({
   }
 
   async function onRefreshOpportunities() {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -235,7 +236,7 @@ export function RelationshipCenter({
   }
 
   async function onApplyQueueFilters() {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -274,7 +275,7 @@ export function RelationshipCenter({
   }
 
   async function onCreateTemplate() {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -298,7 +299,7 @@ export function RelationshipCenter({
   }
 
   async function onCreateCampaignFromSelection() {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     const patientIds = queue
       .filter((row) => selectedIds.has(row.opportunityId) && row.patientId)
       .map((row) => row.patientId as string);
@@ -348,7 +349,7 @@ export function RelationshipCenter({
   }
 
   async function onCreateCampaign() {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     setBusy(true);
     setError(null);
     try {
@@ -407,7 +408,7 @@ export function RelationshipCenter({
   }
 
   async function onSearchPatients() {
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     const rows = await searchPatientsForAudience(supabase, organizationId, patientQuery);
     setPatientHits(rows);
   }

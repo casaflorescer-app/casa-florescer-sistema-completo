@@ -440,3 +440,215 @@ export async function listCarePolicyVersionsCasa(policyId: string): Promise<SqlR
     return result.rows.map(plain);
   });
 }
+
+const PREGNANCY_SQL = `
+  select p.id, p.organization_id, p.practice_id, p.patient_id, p.primary_professional_id,
+         p.backup_professional_id, p.lmp_date, p.calculated_edd, p.clinical_edd, p.pregnancy_number,
+         p.risk, p.care_started_on, p.notes, p.status, p.status_reason, p.status_changed_at,
+         p.status_changed_by, p.created_by, p.created_at, p.updated_at,
+         jsonb_build_object('name', pu.name) as practice_units,
+         jsonb_build_object('full_name', pat.full_name) as patients,
+         prim.full_name as primary_full_name,
+         back.full_name as backup_full_name
+  from public.pregnancies p
+  left join public.practice_units pu on pu.id = p.practice_id
+  left join public.patients pat on pat.id = p.patient_id
+  left join public.professional_labels prim on prim.id = p.primary_professional_id
+  left join public.professional_labels back on back.id = p.backup_professional_id
+`;
+
+export async function getPregnancyCasa(pregnancyId: string): Promise<SqlRow | null> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(`${PREGNANCY_SQL} where p.id = $1`, [pregnancyId]);
+    return result.rows[0] ? plain(result.rows[0]) : null;
+  });
+}
+
+export async function listPregnancyEventsCasa(pregnancyId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, pregnancy_id, kind, actor_id, occurred_at, reason, from_value, to_value
+       from public.pregnancy_events
+       where pregnancy_id = $1
+       order by occurred_at desc`,
+      [pregnancyId],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listBackupGrantsCasa(pregnancyId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, pregnancy_id, principal_professional_id, backup_professional_id,
+              granted_by, granted_at, revoked_at, revoked_by
+       from public.pregnancy_backup_grants
+       where pregnancy_id = $1
+       order by granted_at desc`,
+      [pregnancyId],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listProfileNamesCasa(ids: string[]): Promise<SqlRow[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return [];
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      "select id, full_name from public.profiles where id = any($1::uuid[])",
+      [unique],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listPermissionProfilesCasa(organizationId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const profiles = await client.query<SqlRow>(
+      `select id, full_name, email, permissions
+       from public.profiles
+       where organization_id = $1
+       order by full_name`,
+      [organizationId],
+    );
+    const ids = profiles.rows.map((row) => String(row.id));
+    const roles = ids.length
+      ? await client.query<SqlRow>(
+          `select user_id, role from public.user_practice_roles where user_id = any($1::uuid[])`,
+          [ids],
+        )
+      : { rows: [] as SqlRow[] };
+    return profiles.rows.map((row) =>
+      plain({
+        ...row,
+        roles: roles.rows.filter((role) => role.user_id === row.id).map((role) => role.role),
+      }),
+    );
+  });
+}
+
+export async function listClinicProfessionalsCasa(organizationId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select p.id, p.organization_id, p.practice_id, p.profile_id, p.display_name, p.category,
+              p.council_type, p.council_number, p.council_uf, p.professional_phone,
+              p.professional_email, p.notes, p.is_active,
+              jsonb_build_object('id', pu.id, 'name', pu.name) as practice_units,
+              jsonb_build_object('id', pr.id, 'full_name', pr.full_name) as profiles,
+              coalesce((
+                select jsonb_agg(jsonb_build_object(
+                  'specialty_id', ps.specialty_id,
+                  'is_primary', ps.is_primary,
+                  'clinic_specialties', jsonb_build_object('id', cs.id, 'name', cs.name)
+                ))
+                from public.professional_specialties ps
+                join public.clinic_specialties cs on cs.id = ps.specialty_id
+                where ps.professional_id = p.id
+              ), '[]'::jsonb) as professional_specialties
+       from public.professionals p
+       left join public.practice_units pu on pu.id = p.practice_id
+       left join public.profiles pr on pr.id = p.profile_id
+       where p.organization_id = $1
+       order by p.display_name`,
+      [organizationId],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listHousePracticesCasa(organizationId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, name from public.practice_units
+       where organization_id = $1 and kind = 'house' and is_active
+       order by name`,
+      [organizationId],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listOrgProfilesCasa(organizationId: string, query: string): Promise<SqlRow[]> {
+  const needle = query.trim().replace(/[%_]/g, "");
+  if (needle.length < 2) return [];
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, full_name, email
+       from public.profiles
+       where organization_id = $1
+         and is_active
+         and (full_name ilike $2 or coalesce(email, '') ilike $2)
+       order by full_name
+       limit 20`,
+      [organizationId, `%${needle}%`],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listClinicWorkforceCasa(organizationId: string): Promise<SqlRow[]> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, organization_id, full_name, document_cpf, phone, email, role_title,
+              engagement_kind, status, starts_on, ends_on, notes, created_at
+       from public.clinic_workforce
+       where organization_id = $1
+       order by full_name`,
+      [organizationId],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function searchProceduresCasa(
+  organizationId: string,
+  query: string,
+  limit: number,
+): Promise<SqlRow[]> {
+  const needle = query.trim().replace(/[%_]/g, "");
+  if (needle.length < 2) return [];
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, name, code, practice_id, is_shared, organization_id
+       from public.procedures
+       where organization_id = $1
+         and (name ilike $2 or coalesce(code, '') ilike $2)
+       order by name
+       limit $3`,
+      [organizationId, `%${needle}%`, limit],
+    );
+    return result.rows.map(plain);
+  });
+}
+
+export async function listUnreadNotificationsCasa(
+  table: "staff_notifications" | "patient_notifications",
+  limit: number,
+): Promise<SqlRow[]> {
+  if (table !== "staff_notifications" && table !== "patient_notifications") return [];
+  const userId = await actorId();
+  const patientColumn = table === "patient_notifications" ? ", patient_id" : "";
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<SqlRow>(
+      `select id, organization_id, practice_id, event_type, title, message, reference_type,
+              reference_id, read_at, dismissed_at, created_at${patientColumn}
+       from public.${table}
+       where dismissed_at is null
+       order by created_at desc
+       limit $1`,
+      [limit],
+    );
+    return result.rows.map(plain);
+  });
+}

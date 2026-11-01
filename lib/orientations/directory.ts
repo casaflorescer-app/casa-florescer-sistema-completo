@@ -556,9 +556,18 @@ export async function createSignedOrientationAudioUrl(
 }
 
 export async function markOrientationViewed(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   versionId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("clinical_orientation_mark_viewed", [versionId]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível registrar a leitura." };
+    }
+  }
   const { error } = await supabase.rpc("clinical_orientation_mark_viewed", {
     p_version_id: versionId,
   });
@@ -566,9 +575,18 @@ export async function markOrientationViewed(
 }
 
 export async function markOrientationAudioPlayed(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   versionId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("clinical_orientation_mark_audio_played", [versionId]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível registrar a reprodução." };
+    }
+  }
   const { error } = await supabase.rpc("clinical_orientation_mark_audio_played", {
     p_version_id: versionId,
   });
@@ -576,9 +594,40 @@ export async function markOrientationAudioPlayed(
 }
 
 export async function listPatientNotifications(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   limit = 20,
 ): Promise<PatientNotificationRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listUnreadNotificationsCasa } = await import("@/lib/casa/reads");
+    const data = await listUnreadNotificationsCasa("patient_notifications", limit);
+    return data.flatMap((value) => {
+      const id = asString(value.id);
+      const organizationId = asString(value.organization_id);
+      const patientId = asString(value.patient_id);
+      const eventType = asString(value.event_type);
+      const title = asString(value.title);
+      const message = asString(value.message);
+      const createdAt = asString(value.created_at);
+      if (!id || !organizationId || !patientId || !eventType || !title || !message || !createdAt) return [];
+      return [
+        {
+          id,
+          organizationId,
+          practiceId: asString(value.practice_id),
+          patientId,
+          eventType,
+          title,
+          message,
+          referenceType: asString(value.reference_type),
+          referenceId: asString(value.reference_id),
+          readAt: asString(value.read_at),
+          dismissedAt: asString(value.dismissed_at),
+          createdAt,
+        },
+      ];
+    });
+  }
   const { data, error } = await supabase
     .from("patient_notifications")
     .select(
@@ -620,9 +669,18 @@ export async function listPatientNotifications(
 }
 
 export async function dismissPatientNotification(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   notificationId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("patient_notification_dismiss", [notificationId]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível dispensar o aviso." };
+    }
+  }
   const { error } = await supabase.rpc("patient_notification_dismiss", {
     p_notification_id: notificationId,
   });
@@ -630,9 +688,18 @@ export async function dismissPatientNotification(
 }
 
 export async function markPatientNotificationRead(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   notificationId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("patient_notification_mark_read", [notificationId]);
+      return { error: null };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Não foi possível registrar a leitura." };
+    }
+  }
   const { error } = await supabase.rpc("patient_notification_mark_read", {
     p_notification_id: notificationId,
   });

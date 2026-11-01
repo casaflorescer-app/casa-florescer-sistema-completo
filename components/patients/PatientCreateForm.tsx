@@ -85,11 +85,7 @@ export function PatientCreateForm() {
       const created = casa
         ? await createPatientCasa(payload)
         : await createPatient(supabase!, payload, { organizationId, createdBy });
-      if (photoFile && !supabase) {
-        router.replace(`/app/patients/${created.id}?foto=falhou`);
-        return;
-      }
-      if (photoFile && supabase) {
+      if (photoFile) {
         try {
           await uploadPatientPhoto(supabase, created.organizationId, created.id, photoFile);
         } catch (photoErr: unknown) {

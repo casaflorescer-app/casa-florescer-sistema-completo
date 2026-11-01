@@ -77,8 +77,9 @@ export function PatientDetail({
   const [showDetails, setShowDetails] = useState(false);
 
   async function loadPatient() {
-    const supabase = createClient();
-    if (!supabase) {
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -142,8 +143,9 @@ export function PatientDetail({
       setError(validation);
       return;
     }
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     setBusy(true);
     setError(null);
     try {
@@ -160,8 +162,9 @@ export function PatientDetail({
 
   async function handleRemove() {
     if (!row || busy) return;
-    const supabase = createClient();
-    if (!supabase) return;
+    const casa = isCasaBrowserAuth();
+    const supabase = casa ? null : createClient();
+    if (!casa && !supabase) return;
     setBusy(true);
     setError(null);
     try {

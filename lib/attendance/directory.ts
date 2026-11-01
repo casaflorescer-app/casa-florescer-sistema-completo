@@ -1826,9 +1826,38 @@ export function summarizeBlockImpact(
 }
 
 export async function listUnreadStaffNotifications(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   limit = 20,
 ): Promise<StaffNotificationRow[]> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return [];
+    const { listUnreadNotificationsCasa } = await import("@/lib/casa/reads");
+    const data = await listUnreadNotificationsCasa("staff_notifications", limit);
+    return data.flatMap((value) => {
+      const id = asString(value.id);
+      const organizationId = asString(value.organization_id);
+      const eventType = asString(value.event_type);
+      const title = asString(value.title);
+      const message = asString(value.message);
+      const createdAt = asString(value.created_at);
+      if (!id || !organizationId || !eventType || !title || !message || !createdAt) return [];
+      return [
+        {
+          id,
+          organizationId,
+          practiceId: asString(value.practice_id),
+          eventType,
+          title,
+          message,
+          referenceType: asString(value.reference_type),
+          referenceId: asString(value.reference_id),
+          readAt: asString(value.read_at),
+          dismissedAt: asString(value.dismissed_at),
+          createdAt,
+        },
+      ];
+    });
+  }
   const { data, error } = await supabase
     .from("staff_notifications")
     .select(
@@ -1866,9 +1895,18 @@ export async function listUnreadStaffNotifications(
 }
 
 export async function dismissStaffNotification(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient | null,
   notificationId: string,
 ): Promise<{ error: string | null }> {
+  if (!supabase) {
+    if (!isCasaBrowserAuth()) return { error: "Autenticação não configurada neste ambiente." };
+    try {
+      await callCasaRpc("staff_notification_dismiss", [notificationId]);
+      return { error: null };
+    } catch (error) {
+      return { error: rpcFailure(error) };
+    }
+  }
   const { error } = await supabase.rpc("staff_notification_dismiss", {
     p_notification_id: notificationId,
   });

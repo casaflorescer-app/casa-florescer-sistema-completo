@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
+import { loadPlatformStatsCasa } from "@/lib/casa/reads";
 import { createClient } from "@/lib/supabase/client";
 import { loadPlatformStats } from "@/lib/platform/stats";
 import type { PlatformStats } from "@/lib/platform/types";
@@ -33,6 +35,15 @@ export function PlatformStatsCards() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isCasaBrowserAuth()) {
+      void loadPlatformStatsCasa()
+        .then(setStats)
+        .catch(() => {
+          setError("Não foi possível carregar os indicadores.");
+          setStats({ organizations: null, users: null, systemAdmins: null, auditEvents: null });
+        });
+      return;
+    }
     const supabase = createClient();
     if (!supabase) {
       setError("Autenticação não configurada neste ambiente.");

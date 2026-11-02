@@ -106,8 +106,15 @@ A página `/app` e `/app/dashboard`, para quem já é da clínica, deixam a grad
 
 A casca autenticada continua em `AppShell` e `AppSidebar`. O menu segue `navSectionsFor`. Enquanto a autorização não chega, a casca de esqueleto permanece e o miolo espera. A miniatura da foto é gerada na hora em `GET /api/casa/files` e não grava outro arquivo.
 
+## C113 — cartões da plataforma e CPF
+
+Com a flag `1`, os cartões de `/app/system` contam organizações, perfis, administradores ativos e auditoria por `loadPlatformStatsCasa`. Falha de leitura mostra “Não foi possível carregar os indicadores.” A frase “Autenticação não configurada neste ambiente.” fica só quando a flag não é `1`.
+
+O CPF repetido no cadastro e na alteração da paciente responde “Já existe um paciente cadastrado com este CPF.” O índice `unique (organization_id, cpf)` não muda.
+
 ## Histórico
 
+- 2026-11-02 — C113: os cartões da plataforma leem pela sessão da casa. O CPF repetido ganha frase operacional. Sem cópia de banco e sem deploy. A imagem publicada continua `casa-web:c093`.
 - 2026-11-02 — C112: a visão geral lê um recorte curto e a casca autenticada muda de cor. Sem deploy. A imagem publicada continua `casa-web:c093`.
 - 2026-11-02 — C110: `auth`, `rest`, `realtime`, `storage` e `porta-api` ficaram no perfil `legado-off`. O `compose up` padrão não os inclui. RN-CASA-013 e RN-CASA-014 passaram a confirmadas.
 - 2026-11-02 — C094: a conversão de gestação rodou no navegador contra a cópia restaurada do backup novo. O banco publicado permaneceu com 1 paciente e 0 gestações. Auth, REST, Storage, Realtime e a porta da API seguem parados, com reinício `no`.

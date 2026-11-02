@@ -401,9 +401,13 @@ Na revalidação, a imagem `casa-hml-web:c086c` subiu só em `127.0.0.1:3017`, c
 
 Na rodada complementar, a imagem `casa-hml-web:c086b` subiu de novo só em `127.0.0.1:3017`, ainda contra `casa_hml`. Criar, ler, alterar e cancelar agendamento responderam. O cancelamento conservou a linha. A outra médica recebeu 404. A secretária criou um horário e não leu a alergia. A ficha foi criada, lida e alterada; a exclusão física não existe. A agenda sem cookie respondeu 401. A ação da ficha sem cookie respondeu 500. O navegador do host não foi usado: o Chromium rodou num contêiner temporário, com HTTPS só dentro dele. O formulário abriu em três tamanhos, o envio vazio foi barrado e o agendamento criado apareceu na lista. O texto “Salvando…” não pintou. Ao fim, o contêiner foi removido, as linhas fictícias saíram de `casa_hml` (3 agendamentos e 1 ficha antes da limpeza; 0 depois), o volume de arquivos foi apagado e a porta 3017 fechou. O backup permaneceu com 1343810 bytes, modo 600 e o mesmo SHA-256. O BancoFlorescerPP permaneceu. A porta 5432 continuou fechada. O Florescer Web ficou com zero variáveis da casa. A C086 fica bloqueada. A C089 não começa.
 
+## C113 — candidata no banco existente (2026-11-02)
+
+A imagem candidata `casa-web:c113` usa o ambiente que já aponta para o BancoFlorescerPP. Não há database novo nem restauração. O volume das fotos entra somente leitura. O contêiner escuta só em `127.0.0.1` na VPS, sem rótulo de proxy. O Mac chega por túnel SSH; a porta local é a que estiver livre, porque a 3000 já tem um Next antigo. Não houve `docker service update`. A publicada continua `casa-web:c093`, `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`.
+
 ## Histórico
 
-- 2026-11-02 — C110: perfil `legado-off` nos cinco serviços já parados. Hashes do backup de 2026-11-02 conferidos de novo. Sem exclusão e sem redeploy.
+- 2026-11-02 — C113: candidata `casa-web:c113` no BancoFlorescerPP, só em `127.0.0.1`, fotos somente leitura. Sem deploy. A publicada continua `casa-web:c093`.
 - 2026-11-02 — C094: backup novo do BancoFlorescerPP restaurado e conferido; a cópia foi apagada. Reinício `no` nos cinco serviços já parados. O banco antigo, os dumps anteriores e as imagens de retorno permanecem. Porta 5432 fechada.
 - 2026-11-02 — C093: `cap-romao_florescerweb` executa `casa-web:c093`. Volume gravável. Auth, REST, Storage, Realtime e a porta da API parados, sem apagar volume nem o banco antigo. `api.thvp.cloud` em 502. Porta 5432 fechada. Dumps preservados; o dump do BancoFlorescerPP de 2026-11-01 não semeia dados.
 - 2026-11-02 — C092: `cap-romao_florescerweb` executa `casa-web:c091`. Volume somente leitura. Rollback e dumps preservados. Porta 5432 fechada. `api.thvp.cloud` no ar.

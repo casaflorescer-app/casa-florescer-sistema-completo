@@ -94,7 +94,52 @@ Sem fluxo local além da regra global do Cursor.
 6. `docs/infrastructure-history.md` (contexto Vercel → VPS)
 7. `supabase/migrations/` quando a tarefa mexer em dados
 
+## Diretriz de agilidade
+
+Vale em todas as implementações, salvo instrução expressa em contrário ou risco técnico concreto. O objetivo é concluir a Casa Florescer e deixar a versão definitiva pronta para produção, preservando os dados reais e a segurança clínica. Deploy só com autorização expressa.
+
+### Banco de dados
+
+- Não criar cópia isolada do banco automaticamente.
+- Utilizar o BancoFlorescerPP.
+- Reaproveitar homologações anteriores.
+- Ambiente isolado só com necessidade técnica comprovada, em especial operação destrutiva.
+- Nunca executar teste destrutivo na produção.
+
+### Testes e homologação
+
+- Não repetir homologação completa já aprovada sem justificativa.
+- Alteração visual: build e verificação direcionada.
+- Alteração funcional: o fluxo modificado e as dependências relevantes.
+- Alteração de autenticação, permissão ou banco: teste de segurança específico.
+- Não repetir migração, restauração ou teste extenso sem necessidade.
+
+### Implementação
+
+- Concluir a funcionalidade pedida.
+- Não refazer análise quando a decisão já está documentada.
+- Reutilizar componente, configuração e estrutura existentes.
+- Não modificar funcionalidade aprovada sem necessidade.
+- Não interromper para confirmação desnecessária.
+
+### Segurança
+
+- Preservar os dados reais.
+- Manter o isolamento clínico entre as médicas.
+- Preservar o acesso por perfil.
+- Não comprometer autenticação, prontuário ou financeiro.
+- Não executar deploy sem autorização expressa.
+
+### Entrega
+
+Ao concluir, informar o que foi implementado, os testes executados, os bloqueios reais, o commit e se está pronto para deploy.
+
+### Tempo
+
+Evitar processo repetitivo que alongue a implementação em 15 a 20 minutos. Preferir verificação incremental, evidência já válida e execução direta.
+
 ## Histórico
 
+- 2026-11-02 — Diretriz de agilidade: o banco de trabalho é o BancoFlorescerPP. Cópia isolada só com necessidade comprovada. Sem deploy sem autorização expressa.
 - 2026-10-30 — Hosped.1: baseline produção thvp.cloud / EasyPanel; system-state e infrastructure-history.
 - 2026-10-21 — criado para a hospedagem self-hosted na VPS.

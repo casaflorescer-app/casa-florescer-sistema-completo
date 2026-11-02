@@ -258,7 +258,7 @@ function mapListError(error: { code?: string; message?: string }): string {
 function mapCreateError(error: { code?: string; message?: string }): string {
   const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
   if (error.code === "23505" || text.includes("duplicate") || text.includes("unique")) {
-    return "Já existe uma paciente cadastrada com este CPF.";
+    return "Já existe um paciente cadastrado com este CPF.";
   }
   if (error.code === "23514" || text.includes("check constraint") || text.includes("patients_billing_shape")) {
     return "Os dados de faturamento estão incompletos ou incompatíveis.";
@@ -286,7 +286,7 @@ function mapPhotoError(error: { code?: string; message?: string }): string {
 function mapUpdateError(error: { code?: string; message?: string }): string {
   const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
   if (error.code === "23505" || text.includes("duplicate") || text.includes("unique")) {
-    return "Já existe uma paciente cadastrada com este CPF.";
+    return "Já existe um paciente cadastrado com este CPF.";
   }
   if (error.code === "23514" || text.includes("check constraint") || text.includes("patients_billing_shape")) {
     return "Os dados de faturamento estão incompletos ou incompatíveis.";

@@ -24,6 +24,7 @@ import {
   type PatientDetailRow,
   type PatientListRow,
 } from "@/lib/patients/directory";
+import { patientWriteError } from "@/lib/patients/patient-write-error";
 import type { PregnancyRow } from "@/lib/pregnancies/directory";
 
 type SqlRow = Record<string, unknown>;
@@ -35,6 +36,10 @@ async function actorId() {
   const user = await getAuthUser();
   if (!user) throw new Error("Sem sessão.");
   return user.userId;
+}
+
+function rethrowPatientWrite(err: unknown): never {
+  throw patientWriteError(err);
 }
 
 function asText(value: unknown): string | null {
@@ -132,7 +137,9 @@ export async function createPatientCasa(input: PatientCreateInput): Promise<Pati
     );
     const organizationId = org.rows[0]?.organization_id;
     if (!organizationId) throw new Error("Não foi possível identificar o vínculo da sessão atual.");
-    const result = await client.query<SqlRow>(
+    let result;
+    try {
+      result = await client.query<SqlRow>(
       `insert into public.patients (
          organization_id, created_by, full_name, social_name, cpf, birth_date, phone, email,
          preferred_channel, address_street, address_number, address_complement, address_district,
@@ -173,6 +180,9 @@ export async function createPatientCasa(input: PatientCreateInput): Promise<Pati
         payload.insurance_valid_until,
       ],
     );
+    } catch (err) {
+      rethrowPatientWrite(err);
+    }
     const base = listRow(plain(result.rows[0] ?? {}));
     if (!base) throw new Error("Não foi possível cadastrar a paciente. Tente novamente.");
     const row = plain(result.rows[0] ?? {});
@@ -603,7 +613,9 @@ export async function updatePatientCasa(
   const userId = await actorId();
   const payload = toPersistPayload(input);
   return withCasaUser(userId, async (client) => {
-    const result = await client.query<SqlRow>(
+    let result;
+    try {
+      result = await client.query<SqlRow>(
       `update public.patients set
          full_name = $2, social_name = $3, cpf = $4, birth_date = $5, phone = $6, email = $7,
          preferred_channel = $8, address_street = $9, address_number = $10,
@@ -642,6 +654,9 @@ export async function updatePatientCasa(
         payload.insurance_valid_until,
       ],
     );
+    } catch (err) {
+      rethrowPatientWrite(err);
+    }
     const row = result.rows[0];
     const mapped = row ? patientDetail(plain(row)) : null;
     if (!mapped) throw new Error("Não foi possível alterar o cadastro da paciente. Tente novamente.");

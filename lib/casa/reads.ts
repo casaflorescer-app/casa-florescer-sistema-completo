@@ -878,6 +878,37 @@ export async function loadHomeCasa(input: {
   });
 }
 
+export async function loadPlatformStatsCasa(): Promise<{
+  organizations: number | null;
+  users: number | null;
+  systemAdmins: number | null;
+  auditEvents: number | null;
+}> {
+  const userId = await actorId();
+  return withCasaUser(userId, async (client) => {
+    const result = await client.query<{
+      organizations: number | null;
+      users: number | null;
+      system_admins: number | null;
+      audit_events: number | null;
+    }>(
+      `select
+         (select count(*)::int from public.organizations) as organizations,
+         (select count(*)::int from public.profiles) as users,
+         (select count(*)::int from public.system_admins where revoked_at is null) as system_admins,
+         (select count(*)::int from public.audit_events) as audit_events`,
+    );
+    const row = result.rows[0];
+    const asCount = (value: number | null | undefined) => (typeof value === "number" ? value : null);
+    return {
+      organizations: asCount(row?.organizations),
+      users: asCount(row?.users),
+      systemAdmins: asCount(row?.system_admins),
+      auditEvents: asCount(row?.audit_events),
+    };
+  });
+}
+
 export async function listAgendaBlocksCasa(practiceId: string, from: string, to: string): Promise<SqlRow[]> {
   const userId = await actorId();
   return withCasaUser(userId, async (client) => {

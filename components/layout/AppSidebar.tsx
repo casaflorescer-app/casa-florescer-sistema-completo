@@ -172,13 +172,14 @@ export function AppSidebar({
 
 function SidebarBloom() {
   return (
-    <img
-      src={publicAsset("/brand/gestante-contorno.png")}
-      alt=""
-      width={324}
-      height={548}
-      className="pointer-events-none mt-auto h-56 w-full shrink-0 object-contain object-bottom"
-      aria-hidden
-    />
+    <div className="pointer-events-none mt-auto w-full shrink-0 px-3 pb-4" aria-hidden>
+      <img
+        src={publicAsset("/brand/gestante-menu.png")}
+        alt=""
+        width={682}
+        height={1024}
+        className="pointer-events-none h-auto w-full"
+      />
+    </div>
   );
 }

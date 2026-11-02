@@ -215,8 +215,19 @@ A C113 tinha começado um envio longo para restaurar o dump num database `casa_c
 
 `public/brand/gestante.webp` é RGB 864×1152, sem canal alfa. Os cantos medem cerca de rgb(118, 62, 95) e o centro cerca de rgb(188, 124, 127). O degradê da página ao lado fica perto de rgb(215, 154, 187). Máscara radial esconde o retângulo e desenha a área esfumada que a inspeção rejeitou. O arquivo a substituir é esse, com o mesmo enquadramento, fundo transparente e os anéis luminosos. `public/brand/logo-florescer.png` tem cantos transparentes; a flor visível é ameixa escura, perto de rgb(75, 31, 52). No menu ameixa ela some. O recorte da flor, invertido para branco, é o símbolo com contraste. O texto do PNG não entra no menu.
 
+## 2026-11-02 — Poucas curvas apagam a gestante
+
+O contorno do menu não se acerta enxugando o traço anterior. Com poucos Bézier a cabeça vira um laço, o cabelo cola no tronco e a mão vira zigue-zague. O traço precisa passar pela testa, pelo nariz, pelos lábios e pelo queixo, descer pelo pescoço até o ombro, e o antebraço precisa continuar numa concha sob a barriga. Coração e ondas ficam em caminhos separados.
+
+## 2026-11-02 — A prévia preta da gestante do menu não é fundo
+
+`public/brand/gestante-menu.png` é RGBA 682×1024. Os cantos medem alfa 0. O preto visto na prévia do anexo é a área transparente, não uma chapa opaca. Os traços fortes ficam em rosa, com alfa até 252. O arquivo foi copiado sem filtro.
+
 ## Histórico
 
+- 2026-11-02 — A prévia da ilustração aprovada mostra preto onde o PNG é transparente. Os cantos têm alfa 0.
+- 2026-11-02 — Poucas curvas transformam a cabeça em laço e a mão em zigue-zague. O contorno precisa passar pelo perfil e terminar a mão em concha.
+- 2026-11-02 — Ampliar o recorte da referência manteve o serrilhado, a linha vertical e as ondas duplicadas. O contorno do menu precisa ser SVG desenhado, não o PNG ampliado.
 - 2026-11-02 — O recorte por degradê de `gestante.webp` comeu o vestido e deixou halo. A versão transparente, com a mesma pose e os arcos, ainda não existe. O contorno do menu veio da região inferior esquerda da referência; o vestido encosta no corte da captura.
 - 2026-11-02 — A gestante grande expunha o retângulo do arquivo opaco. No tamanho de cerca de 280 px, a máscara oval é o enquadramento pedido.
 - 2026-11-02 — `gestante.webp` não tem transparência. A máscara recria o recorte esfumado. A flor do PNG é ameixa sobre ameixa; o contraste pede o recorte em branco.

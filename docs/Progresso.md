@@ -2,6 +2,9 @@
 
 ## Histórico
 
+- 2026-11-02 — A ilustração aprovada entrou no menu como `public/brand/gestante-menu.png`. O arquivo é RGBA, com cantos transparentes. O SVG anterior foi removido. Sem deploy.
+- 2026-11-02 — O SVG do menu foi refeito com perfil, cabelo, pescoço, barriga e mão apoiada. Isolado sobre ameixa, a silhueta segue legível sem o coração e sem as ondas. O painel autenticado não abriu: a porta local 15432 recusou a conexão. Sem deploy.
+- 2026-11-02 — O contorno do menu passou de `gestante-contorno.png` para um SVG contínuo. A pose permanece. No menu, em 1280, a imagem fica em 204×224, sem clique, e a navegação continua rolando. Sem deploy.
 - 2026-11-02 — Ilustrações locais do painel, sem deploy. A base do menu usa o recorte `gestante-contorno.png`. A gestante principal mede 280×390 em 1280×960, sem máscara oval; o retângulo do `gestante.webp` opaco permanece. Em 390×844 a rolagem horizontal ficou em 390. A marca oficial não foi trocada.
 - 2026-11-02 — Gestante do painel local reduzida para 210×280, com máscara oval. O restante da composição nova permanece. Sem deploy. Em 1280×960 não houve rolagem horizontal; “Programação obstétrica” e “Central de Relacionamentos” seguem inteiros.
 - 2026-11-02 — Correção visual local do painel, sem deploy. O site publicado em `sistema.thvp.cloud` não foi atualizado. No `127.0.0.1:3014`, a gestante ocupa 380×460, o cabeçalho do painel fica no degradê, a marca floral fica centralizada, “Programação obstétrica” e “Central de Relacionamentos” aparecem inteiros, os painéis ficam em duas linhas e o resumo vira uma faixa. `public/brand/gestante.webp` é RGB opaco: o retângulo permanece. Sem busca, sem percentual e sem gráfico. TypeScript passou. Capturas em 1280×960, 1440×900, 768×1024 e 390×844, sem rolagem horizontal.

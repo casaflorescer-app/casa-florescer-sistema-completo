@@ -33,7 +33,7 @@ export function AppShell({
 
   return (
     <PracticeUiProvider memberships={authorization.memberships}>
-      <div className="min-h-screen bg-casa-mist text-casa-ink lg:grid lg:grid-cols-[minmax(240px,260px)_minmax(0,1fr)]">
+      <div className="min-h-screen bg-casa-mist text-casa-ink lg:grid lg:grid-cols-[204px_minmax(0,1fr)]">
         {menuOpen ? (
           <button
             type="button"
@@ -53,7 +53,7 @@ export function AppShell({
             menuOpen={menuOpen}
             onMenuToggle={() => setMenuOpen((open) => !open)}
           />
-          <main className="view-enter min-w-0 w-full overflow-x-clip px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:px-8">
+          <main className="view-enter min-w-0 w-full overflow-x-clip px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-3.5">
             {children}
           </main>
         </div>
@@ -64,7 +64,7 @@ export function AppShell({
 
 export function AppLoadingShell({ message = "Carregando acesso…" }: { message?: string }) {
   return (
-    <div className="min-h-screen bg-casa-mist text-casa-ink lg:grid lg:grid-cols-[minmax(240px,260px)_minmax(0,1fr)]">
+    <div className="min-h-screen bg-casa-mist text-casa-ink lg:grid lg:grid-cols-[204px_minmax(0,1fr)]">
       <aside className="hidden bg-casa-plum lg:block" aria-hidden>
         <p className="px-4 py-5 text-sm font-semibold uppercase tracking-[0.16em] text-white">
           Casa Florescer

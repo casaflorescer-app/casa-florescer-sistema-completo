@@ -36,7 +36,7 @@ export function AppHeader({
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-casa-mist/90 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 bg-casa-mist/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"

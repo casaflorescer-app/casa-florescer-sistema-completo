@@ -203,12 +203,17 @@ A miniatura é gerada na memória com `sharp`, 96 px, WebP. O teste local `scrip
 
 O Chromium em `127.0.0.1:3013`, com o CSS já compilado, mediu a sidebar em `rgb(87, 54, 110)` e o hero no degradê ameixa, lilás e rosa. Em 1280 px a ilustração ficou à direita do hero, com 191×255 e o arquivo carregado. Em 390 px o menu ficou oculto e a ilustração entrou no fluxo, 168×224. Não houve contêiner candidato nesta etapa: `ssh-add -l` não tinha identidade e o BatchMode recusou a chave. Sem esse contêiner, o tempo de navegação autenticada não foi medido.
 
+## 2026-11-02 — Fonte da casca caía em Times
+
+`font-sans` apontava para `var(--font-sans)` e o layout do grupo `(shell)` não definia essa variável. A declaração inteira era descartada e o navegador usava Times New Roman na agenda, nos exames e no título do painel. Nunito entra como `--font-sans`. O Playfair continua só no título do login.
+
 ## 2026-11-02 — Diretriz de agilidade, sem cópia automática
 
 A C113 tinha começado um envio longo para restaurar o dump num database `casa_c113`. A diretriz nova manda usar o BancoFlorescerPP e só criar ambiente isolado quando a operação for destrutiva e a necessidade estiver comprovada. O envio foi interrompido antes de criar esse database. O BancoFlorescerPP não recebeu restauração nem teste destrutivo. Deploy continua dependendo de autorização expressa.
 
 ## Histórico
 
+- 2026-11-02 — `--font-sans` sem valor invalida `font-family` e o navegador cai em Times New Roman. A casca precisa definir a variável com uma fonte sem serifa.
 - 2026-11-02 — C113: sem database novo. A candidata usa o BancoFlorescerPP. O Mac vê o contêiner por túnel, não pelo localhost da VPS. Samara, Thais e sala não foram gravados.
 - 2026-11-02 — Diretriz de agilidade: o envio da cópia `casa_c113` foi interrompido. O banco de trabalho é o BancoFlorescerPP. Sem teste destrutivo e sem deploy.
 - 2026-11-02 — C112: a foto inteira segue em 496021 bytes e `private, no-store`. A miniatura é outra resposta, privada, sem arquivo novo. Percentual não entra por causa da RN-CASA-014. Sem cronômetro de navegação anterior. A chave SSH não estava carregada, então o contêiner autenticado não abriu.

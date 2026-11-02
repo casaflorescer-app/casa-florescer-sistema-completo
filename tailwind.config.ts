@@ -10,10 +10,10 @@ const config: Config = {
     extend: {
       colors: {
         casa: {
-          plum: "#57366E",
-          lilac: "#8662A4",
-          rose: "#C884A5",
-          mist: "#F5F0F5",
+          plum: "#602747",
+          lilac: "#AD79AB",
+          rose: "#CE619F",
+          mist: "#FCF7FA",
           ink: "#292334",
         },
         lotus: {

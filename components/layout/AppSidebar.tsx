@@ -83,7 +83,7 @@ export function AppSidebar({
       ref={asideRef}
       id="app-sidebar"
       aria-hidden={exposed ? undefined : true}
-      className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col bg-casa-plum text-white shadow-lg transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-screen lg:w-auto lg:translate-x-0 lg:shadow-none lg:sticky lg:top-0 lg:overflow-y-auto ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col bg-casa-plum text-white shadow-lg transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-screen lg:w-[204px] lg:translate-x-0 lg:shadow-none lg:sticky lg:top-0 lg:overflow-y-auto ${
         open ? "translate-x-0" : "-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0"
       }`}
       style={{
@@ -91,8 +91,11 @@ export function AppSidebar({
         paddingBottom: "max(0px, env(safe-area-inset-bottom))",
       }}
     >
-      <div className="flex items-center justify-between gap-2 px-4 py-5">
-        <BrandMark tone="light" subtitle="Ginecologia e Obstetrícia" />
+      <div className="flex items-center justify-between gap-2 px-3 py-4">
+        <div className="min-w-0">
+          <LotusMark />
+          <BrandMark tone="light" subtitle="Ginecologia e Obstetrícia" />
+        </div>
         <button
           type="button"
           className="min-h-11 min-w-11 rounded-lg border border-white/20 px-3 text-sm text-white lg:hidden"
@@ -102,7 +105,7 @@ export function AppSidebar({
           Fechar
         </button>
       </div>
-      <nav className="flex flex-col gap-5 overflow-y-auto px-3 pb-6" aria-label="Navegação principal">
+      <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-4" aria-label="Navegação principal">
         {sections.map((section) => (
           <div key={section.id}>
             <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
@@ -162,6 +165,34 @@ export function AppSidebar({
           </div>
         ))}
       </nav>
+      <SidebarBloom />
     </aside>
+  );
+}
+
+function LotusMark() {
+  return (
+    <svg viewBox="0 0 64 28" className="mb-1 h-6 w-14 text-white/80" aria-hidden>
+      <path
+        d="M32 26C32 26 18 16 18 9c0-4 3-7 7-7 3 0 5 2 7 5 2-3 4-5 7-5 4 0 7 3 7 7 0 7-14 17-14 17Z"
+        fill="currentColor"
+        opacity="0.9"
+      />
+    </svg>
+  );
+}
+
+function SidebarBloom() {
+  return (
+    <svg viewBox="0 0 204 160" className="pointer-events-none mt-auto h-28 w-full text-white/25" aria-hidden>
+      <path
+        d="M40 150c20-40 40-70 62-78 8 18 18 40 22 70"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <circle cx="102" cy="70" r="16" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M78 118c12-18 24-28 36-30 4 12 10 24 14 36" fill="none" stroke="currentColor" strokeWidth="2" />
+    </svg>
   );
 }

@@ -20,7 +20,7 @@ export function NavItem({
   icon?: ReactNode;
   tone?: "paper" | "plum";
 }) {
-  const className = `flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-casa-rose ${
+  const className = `flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
     tone === "plum"
       ? active
         ? "bg-casa-rose font-medium text-white"

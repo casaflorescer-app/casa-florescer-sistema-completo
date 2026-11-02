@@ -21,7 +21,7 @@ export function BrandMark({
         className="h-10 w-10 shrink-0 object-contain"
       />
       {!compact ? (
-        <div>
+        <div className="min-w-0">
           <p className={`text-[11px] font-semibold uppercase tracking-brand ${title}`}>
             Casa Florescer
           </p>

@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-11-02 — Fidelidade visual local: composição do painel, Nunito e tokens ameixa/rosa. Sem busca, sem percentual, sem gráfico e sem deploy.
 - 2026-11-02 — Visão geral alinhada ao desenho: gestante, cartões com números reais, sino e identificação de quem entrou. Sem percentual, sem gráfico e sem deploy.
 - 2026-11-02 — C113: cartões da plataforma pela sessão da casa e frase de CPF duplicado. Sem cópia de banco. A candidata `casa-web:c113` usa o BancoFlorescerPP e não é publicada. A imagem publicada continua `casa-web:c093`.
 - 2026-11-02 — Diretriz de agilidade registrada em `AGENTS.md`. O envio da cópia isolada `casa_c113` foi interrompido e o database não foi criado. O BancoFlorescerPP permanece o banco de trabalho. Sem teste destrutivo e sem deploy.

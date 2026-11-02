@@ -177,8 +177,13 @@ O dump `bancoflorescerpp-20261101T230539Z.dump` continua com as seções COPY va
 
 O Compose do Supabase é compartilhado com `db`. Trocar `restart` só em `auth`, `rest`, `realtime` e `storage` não impede um `docker compose up` de subi-los uma vez. O arquivo do EasyPanel da porta da API também declara outros serviços; por isso não foi editado. `restart: "no"` impede a volta sozinha depois de `docker stop`, não um redeploy do painel.
 
+## 2026-11-02 — C110, o perfil segura o compose up
+
+`restart: "no"` não impede `docker compose up` nem um redeploy do painel de criar o serviço uma vez. `profiles: ["legado-off"]` tira o serviço do `up` padrão e não para o que já está no ar. A prova é `docker compose config --services`, com e sem `--profile legado-off`. A saída completa de `docker compose config` interpola o ambiente e não se imprime. No arquivo do EasyPanel, `casa-api` e `easypanel` são redes, não serviços; o único serviço era `porta-api`. `functions` e `supavisor` já estavam no perfil `manual` do override e continuam de fora dos dois `config --services`.
+
 ## Histórico
 
+- 2026-11-02 — C110: `restart: "no"` não segura o `compose up`; o perfil `legado-off` segura. O config completo não se imprime.
 - 2026-11-02 — C094: o backup que restaura dados é o dump de 2026-11-02, não o de 2026-11-01. Globals não entram no cluster vivo. A conversão de navegador fica na cópia. `restart: "no"` não segura um redeploy do painel.
 - 2026-11-02 — C093: middleware sem `getUser()` quando o banco da casa existe. Volume gravável exigiu um segundo `mount-add`. O dump de 2026-11-01 do BancoFlorescerPP não semeia dados. A API antiga foi parada; o banco antigo permanece.
 - 2026-11-02 — C092: o corte é `service update` sem pull. Logout apaga `casa_sessions`. `api.thvp.cloud` ficou para o retorno.

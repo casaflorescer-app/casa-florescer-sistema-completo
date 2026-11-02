@@ -52,6 +52,10 @@ Dependências do Supabase:
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime pelo app. Com `CASA_DATABASE_URL`, o middleware não consulta o Auth antigo. Auth, REST, Storage, Realtime e a porta da API foram parados; o banco antigo e o envoy permanecem. O SDK continua no código para o ramo sem a variável da casa.
 
+## C110 — os cinco ficam fora do compose padrão
+
+Em 2026-11-02 `auth`, `rest`, `realtime`, `storage` e `porta-api` receberam `profiles: ["legado-off"]`. Um `docker compose config --services` sem esse perfil lista `studio`, `api-gw`, `db`, `imgproxy` e `meta`. Com `--profile legado-off`, entram também `realtime`, `rest`, `storage` e `auth`. No Compose do EasyPanel, o padrão não lista serviço; com o perfil, só `porta-api`. `functions` e `supavisor` continuam no perfil `manual` do override. Nenhum `docker compose up` foi executado e o serviço Swarm não foi atualizado. Os cinco containers seguem parados. `supabase-db`, o envoy e o Florescer Web, imagem `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`, seguem no ar. RN-CASA-013 e RN-CASA-014 passaram a `confirmada`, com o enunciado da C109.
+
 ## C094 — conversão no navegador, na cópia restaurada
 
 Em 2026-11-02 o backup novo do BancoFlorescerPP foi restaurado em `casa_c094` e depois apagado. O Chromium abriu o atendimento de prova nessa cópia, em `127.0.0.1`, com a imagem `casa-web:c093`. O botão “Alterar para atendimento obstétrico” apareceu, a confirmação seguiu e a frase “Acompanhamento obstétrico criado” ficou na tela. A gestação `in_care` ficou vinculada ao atendimento só em `casa_c094`. O BancoFlorescerPP permaneceu com 1 paciente e 0 gestações. O domínio publicado não recebeu essa gravação. RN-CASA-013 e RN-CASA-014 continuam inferidas.
@@ -98,6 +102,7 @@ A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de 
 
 ## Histórico
 
+- 2026-11-02 — C110: `auth`, `rest`, `realtime`, `storage` e `porta-api` ficaram no perfil `legado-off`. O `compose up` padrão não os inclui. RN-CASA-013 e RN-CASA-014 passaram a confirmadas.
 - 2026-11-02 — C094: a conversão de gestação rodou no navegador contra a cópia restaurada do backup novo. O banco publicado permaneceu com 1 paciente e 0 gestações. Auth, REST, Storage, Realtime e a porta da API seguem parados, com reinício `no`.
 - 2026-11-02 — C093: o middleware deixa de consultar o Auth antigo quando `CASA_DATABASE_URL` existe. A imagem publicada passou a `casa-web:c093`. Auth, REST, Storage, Realtime e a porta da API foram parados; o banco antigo e o envoy permanecem.
 - 2026-11-02 — C092: o Florescer Web publicado passou para `casa-web:c091` e o BancoFlorescerPP. `api.thvp.cloud` permaneceu.

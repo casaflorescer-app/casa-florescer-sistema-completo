@@ -159,8 +159,13 @@ A imagem etiquetada e sem contêiner pode sumir do host. A etiqueta `casa-web:c0
 
 `docker run --entrypoint id -u node IMAGEM` não pede o uid numérico: o `-u` é a opção `--user` do Docker. O argumento do `id` tem de vir depois do nome da imagem. O usuário `node` também não atravessa o `/root` da imagem, modo 700. Montar o volume em `/root/casa-files` dentro do contêiner não deixa o processo ler a foto. O caminho que funcionou foi `CASA_FILES_ROOT=/casa-files` com `-v /root/casa-files:/casa-files:ro`, dono 1000 e modos 700/600. O nome da rede não pode ser a concatenação de todas as redes do contêiner; a prova usou `easypanel-cap-romao`.
 
+## 2026-11-02 — C092, parar o contêiner não troca o serviço
+
+O Florescer Web publicado é o serviço Swarm `cap-romao_florescerweb`. `docker stop` faz o Swarm recriar a imagem antiga. A troca que ficou de pé foi `docker service update --no-resolve-image`, porque `casa-web` não existe em registro público e um pull derruba a atualização. `casa_sessions` não tem `revoked_at`: o logout apaga a linha. Uma consulta a essa coluna fez o script devolver a imagem antiga mesmo com o HTTP aprovado; a segunda atualização, sem essa coluna, ficou.
+
 ## Histórico
 
+- 2026-11-02 — C092: o corte é `service update` sem pull. Logout apaga `casa_sessions`. `api.thvp.cloud` ficou para o retorno.
 - 2026-11-02 — C092: `casa_password_replace` não cria a primeira linha. O hash sai do `hash()` da imagem candidata. O volume da foto não pode ficar sob o `/root` da imagem. Sem corte.
 - 2026-11-01 — C091: o database publicado tinha cadastro real; a cópia foi para o BancoFlorescerPP. A flag é de build. Sem corte.
 - 2026-11-01 — C090: lista `SETOF`, porta do financeiro, layout de usuários, sessão SSH e limpeza da gestação de prova. A cópia foi esvaziada e o contêiner saiu. Sem deploy.

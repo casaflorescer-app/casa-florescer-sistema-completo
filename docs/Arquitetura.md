@@ -52,6 +52,10 @@ Dependências do Supabase:
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
 
+## C092 — corte do Florescer Web
+
+Em 2026-11-02, às 06:02 no horário de Brasília, o serviço `cap-romao_florescerweb` passou a executar `casa-web:c091`, digest `sha256:493cb8e34e576d485d5a74153f64a12e86d1f24b64a0edd388903f69e63afae2`. O volume é `/root/casa-files` em `/casa-files`, somente leitura. O processo lê o BancoFlorescerPP com `casa_login`. `https://sistema.thvp.cloud` respondeu login 200, senha errada 401, sessão 200, logout 200 e sessão seguinte 401. A ficha respondeu 200. A foto respondeu 200 com 496021 bytes. A agenda sem cookie respondeu 401 e, com cookie, 404 para um identificador inexistente, com 0 linhas. `/app/finance` respondeu 200 e as faturas continuaram em 0. A origem `supabase-db` permaneceu com 1 organização, 1 paciente e 1 objeto. O destino permaneceu com as mesmas contagens e 1 credencial. A etiqueta `florescerweb:c091-rollback` permanece `sha256:13d80a36ff7b8b50085fd3617de5fcc90c6fd4c32ccce40b80ed81f349e69ffb`. `api.thvp.cloud` continua no ar. A porta 5432 continua fechada. Os dumps não foram apagados.
+
 ## C092 — credencial e prova isolada, sem corte
 
 Em 2026-11-02 a conta já migrada ganhou uma linha em `staff_credentials`. O hash foi gerado por `hash()` do `argon2` dentro da imagem candidata, sem parâmetros extras, e inserido para o administrador ativo que já existia. `casa_password_replace` não cria a primeira linha. Nenhum outro usuário, perfil ou papel foi criado. A contagem ficou em 1, com prefixo `$argon2id$`, e o agregado dos 4 papéis não mudou.
@@ -82,6 +86,7 @@ A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de 
 
 ## Histórico
 
+- 2026-11-02 — C092: o Florescer Web publicado passou para `casa-web:c091` e o BancoFlorescerPP. `api.thvp.cloud` permaneceu.
 - 2026-11-02 — C092: a conta real recebeu a primeira credencial Argon2id. A imagem reconstruída foi provada em `127.0.0.1` e o contêiner saiu. O desenho publicado não mudou. Sem corte.
 - 2026-11-01 — C091: cadastro real copiado para o BancoFlorescerPP e arquivo fora de `public/`. A flag passou a ser argumento de build, com padrão vazio. Sem corte.
 - 2026-11-01 — C090: jsonb uma vez, lista de orientações completa e portões de `/app/finance` e `/app/admin/users`. A imagem isolada foi removida. Sem corte.

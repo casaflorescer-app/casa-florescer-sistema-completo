@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { PracticeUiProvider } from "@/components/layout/PracticeUi";
@@ -15,6 +16,8 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname() || "/app";
+  const canvas = pathname === "/app" || pathname === "/app/dashboard";
   const sections = navSectionsFor(authorization);
 
   useEffect(() => {
@@ -48,10 +51,11 @@ export function AppShell({
           onNavigate={() => setMenuOpen(false)}
           onClose={() => setMenuOpen(false)}
         />
-        <div className="min-w-0">
+        <div className={canvas ? "min-w-0 bg-[radial-gradient(ellipse_at_50%_8%,_#f4c6dc_0%,_#e39abf_26%,_#ce619f_55%,_#602747_100%)]" : "min-w-0"}>
           <AppHeader
             menuOpen={menuOpen}
             onMenuToggle={() => setMenuOpen((open) => !open)}
+            tone={canvas ? "canvas" : "paper"}
           />
           <main className="view-enter min-w-0 w-full overflow-x-clip px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-3.5">
             {children}

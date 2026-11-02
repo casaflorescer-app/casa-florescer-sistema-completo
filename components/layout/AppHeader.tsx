@@ -18,9 +18,11 @@ function initials(name: string) {
 export function AppHeader({
   menuOpen,
   onMenuToggle,
+  tone = "paper",
 }: {
   menuOpen?: boolean;
   onMenuToggle: () => void;
+  tone?: "paper" | "canvas";
 }) {
   const { user, authorization, signOut } = useAuth();
   const router = useRouter();
@@ -36,7 +38,11 @@ export function AppHeader({
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 bg-casa-mist/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur">
+    <header
+      className={`sticky top-0 z-30 flex h-16 items-center justify-between gap-3 px-3 pt-[env(safe-area-inset-top)] ${
+        tone === "canvas" ? "bg-transparent" : "bg-casa-mist/90 backdrop-blur"
+      }`}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
@@ -71,18 +77,22 @@ export function AppHeader({
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-casa-plum text-xs font-semibold text-white" aria-hidden>
             {initials(displayName)}
           </span>
-          <span className="hidden min-w-0 text-left sm:block">
-            <span className="block truncate text-sm font-semibold text-casa-ink">{displayName}</span>
-            <span className="block truncate text-xs text-casa-ink/60">
+          <span className="hidden text-left sm:block">
+            <span className="block text-sm font-semibold text-casa-ink">{displayName}</span>
+            <span className="block whitespace-nowrap text-xs text-casa-ink/60">
               {roles.length ? roleLabels(roles) : orgName ?? "Casa Florescer"}
             </span>
           </span>
         </div>
-        <PracticeSelector />
+        <span className={tone === "canvas" ? "[&_p]:text-white/85" : undefined}>
+          <PracticeSelector />
+        </span>
         <button
           type="button"
           onClick={() => void handleSignOut()}
-          className="min-h-11 shrink-0 px-2 text-sm text-lotus-600 transition-colors hover:text-lotus-900"
+          className={`min-h-11 shrink-0 px-2 text-sm transition-colors ${
+            tone === "canvas" ? "text-white/85 hover:text-white" : "text-lotus-600 hover:text-lotus-900"
+          }`}
         >
           Sair
         </button>

@@ -20,7 +20,7 @@ export function NavItem({
   icon?: ReactNode;
   tone?: "paper" | "plum";
 }) {
-  const className = `flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+  const className = `flex min-h-10 items-start gap-2 rounded-lg px-2.5 py-2 text-[13px] leading-tight transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
     tone === "plum"
       ? active
         ? "bg-casa-rose font-medium text-white"
@@ -41,7 +41,7 @@ export function NavItem({
         data-nav-external="true"
       >
         {icon}
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className={`min-w-0 flex-1 ${tone === "plum" ? "whitespace-normal" : "truncate"}`}>{label}</span>
         <span className="ml-1 shrink-0 text-lotus-500" aria-hidden>
           ↗
         </span>
@@ -58,7 +58,7 @@ export function NavItem({
       className={className}
     >
       {icon}
-      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className={`min-w-0 flex-1 ${tone === "plum" ? "whitespace-normal" : "truncate"}`}>{label}</span>
     </Link>
   );
 }

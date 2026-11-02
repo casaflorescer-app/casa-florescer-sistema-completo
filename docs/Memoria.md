@@ -211,8 +211,14 @@ O Chromium em `127.0.0.1:3013`, com o CSS já compilado, mediu a sidebar em `rgb
 
 A C113 tinha começado um envio longo para restaurar o dump num database `casa_c113`. A diretriz nova manda usar o BancoFlorescerPP e só criar ambiente isolado quando a operação for destrutiva e a necessidade estiver comprovada. O envio foi interrompido antes de criar esse database. O BancoFlorescerPP não recebeu restauração nem teste destrutivo. Deploy continua dependendo de autorização expressa.
 
+## 2026-11-02 — A gestante opaca não se funde ao fundo
+
+`public/brand/gestante.webp` é RGB 864×1152, sem canal alfa. Os cantos medem cerca de rgb(118, 62, 95) e o centro cerca de rgb(188, 124, 127). O degradê da página ao lado fica perto de rgb(215, 154, 187). Máscara radial esconde o retângulo e desenha a área esfumada que a inspeção rejeitou. O arquivo a substituir é esse, com o mesmo enquadramento, fundo transparente e os anéis luminosos. `public/brand/logo-florescer.png` tem cantos transparentes; a flor visível é ameixa escura, perto de rgb(75, 31, 52). No menu ameixa ela some. O recorte da flor, invertido para branco, é o símbolo com contraste. O texto do PNG não entra no menu.
+
 ## Histórico
 
+- 2026-11-02 — A gestante grande expunha o retângulo do arquivo opaco. No tamanho de cerca de 280 px, a máscara oval é o enquadramento pedido.
+- 2026-11-02 — `gestante.webp` não tem transparência. A máscara recria o recorte esfumado. A flor do PNG é ameixa sobre ameixa; o contraste pede o recorte em branco.
 - 2026-11-02 — `--font-sans` sem valor invalida `font-family` e o navegador cai em Times New Roman. A casca precisa definir a variável com uma fonte sem serifa.
 - 2026-11-02 — C113: sem database novo. A candidata usa o BancoFlorescerPP. O Mac vê o contêiner por túnel, não pelo localhost da VPS. Samara, Thais e sala não foram gravados.
 - 2026-11-02 — Diretriz de agilidade: o envio da cópia `casa_c113` foi interrompido. O banco de trabalho é o BancoFlorescerPP. Sem teste destrutivo e sem deploy.

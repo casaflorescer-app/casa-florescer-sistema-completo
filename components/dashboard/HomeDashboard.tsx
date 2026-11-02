@@ -6,6 +6,7 @@ import { CalendarDays, Heart, Plus, Users, Wallet } from "lucide-react";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
 import { hasStaffRole, isClinicStaff } from "@/lib/auth/access";
 import { loadHomeCasa, type HomeSnapshot } from "@/lib/casa/reads";
+import { FloralMark } from "@/components/layout/BrandMark";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 
 const CLOCK = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
@@ -58,45 +59,49 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
     };
   }, [professional?.id, includeFinance, scope, practiceIds.join("|")]);
 
+  const metrics = [
+    { icon: <CalendarDays className="h-5 w-5" aria-hidden />, label: "Consultas hoje", value: snapshot ? snapshot.todayCount ?? "—" : null },
+    { icon: <Users className="h-5 w-5" aria-hidden />, label: "Pacientes", value: snapshot?.patients ?? null },
+    { icon: <Heart className="h-5 w-5" aria-hidden />, label: "Gestações em acompanhamento", value: snapshot?.pregnanciesInCare ?? null },
+    ...(includeFinance
+      ? [{ icon: <Wallet className="h-5 w-5" aria-hidden />, label: "Recebido no mês", value: snapshot ? money(snapshot.financeCents ?? 0) : null }]
+      : []),
+  ];
+
   return (
-    <div className="-m-3 min-h-[calc(100dvh-4rem)] space-y-3 bg-[radial-gradient(ellipse_at_top,_#e7b7d4_0%,_#ad79ab_38%,_#602747_100%)] p-3 lg:-m-3.5 lg:p-3.5">
-      <section className="relative overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_58%_42%,_#f3c3df_0%,_#ce619f_38%,_#602747_100%)] px-4 py-4 text-white shadow-sm lg:min-h-[300px] lg:px-5">
+    <div className="space-y-4">
+      <section className="relative">
         <HeroGlow />
-        <div className="relative z-10 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(180px,0.9fr)_338px] lg:items-center">
-          <div className="max-w-md">
-            <p className="text-sm text-white/85">Bem-vinda à</p>
-            <h1 className="mt-1 text-[2rem] font-semibold leading-none tracking-tight sm:text-[2.6rem]">
-              Casa Florescer
-            </h1>
-            <p className="mt-3 max-w-xs text-sm leading-6 text-white/90">
+        <div className="relative z-10 grid items-center gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,280px)_300px]">
+          <div className="max-w-sm pt-1 text-white">
+            <div className="flex items-start gap-3">
+              <FloralMark className="h-14 w-14 shrink-0" />
+              <div>
+                <p className="text-sm leading-5 text-white/85">Bem-vinda à</p>
+                <h1 className="mt-1 text-[2rem] font-semibold leading-none tracking-tight sm:text-[2.6rem]">Casa Florescer</h1>
+              </div>
+            </div>
+            <p className="mt-4 max-w-[16rem] text-sm leading-6 text-white/90">
               Cuidado integral à saúde da mulher, em todas as fases da sua vida.
             </p>
             <p className="mt-2 text-xs text-white/75">Olá, {firstName(fullName)}</p>
             {isClinicStaff(auth) ? (
               <Link
                 href="/app/agenda"
-                className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-casa-rose px-4 text-sm font-semibold text-white shadow-sm hover:bg-white hover:text-casa-plum"
+                className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-casa-rose px-4 text-sm font-semibold text-white shadow-sm hover:bg-white hover:text-casa-plum"
               >
                 <Plus className="h-4 w-4" aria-hidden />
                 Novo atendimento
               </Link>
             ) : null}
           </div>
-          <img
-            src="/brand/gestante.webp"
-            alt=""
-            width={864}
-            height={1152}
-            className="pointer-events-none mx-auto h-64 w-auto max-w-full object-contain [mask-image:radial-gradient(ellipse_at_center,black_58%,transparent_78%)] lg:h-[280px]"
-            aria-hidden
-          />
-          <div className="grid gap-2.5">
-            <Metric icon={<CalendarDays className="h-4 w-4" aria-hidden />} label="Consultas hoje" value={snapshot ? snapshot.todayCount ?? "—" : null} />
-            <Metric icon={<Users className="h-4 w-4" aria-hidden />} label="Pacientes" value={snapshot?.patients ?? null} />
-            <Metric icon={<Heart className="h-4 w-4" aria-hidden />} label="Gestações em acompanhamento" value={snapshot?.pregnanciesInCare ?? null} />
-            {includeFinance ? (
-              <Metric icon={<Wallet className="h-4 w-4" aria-hidden />} label="Recebido no mês" value={snapshot ? money(snapshot.financeCents ?? 0) : null} />
-            ) : null}
+          <div className="relative mx-auto h-64 w-full max-w-[220px] lg:h-[280px]">
+            <GestanteFigure />
+          </div>
+          <div className="grid content-start gap-2.5">
+            {metrics.map((item) => (
+              <Metric key={item.label} icon={item.icon} label={item.label} value={item.value} />
+            ))}
           </div>
         </div>
       </section>
@@ -112,8 +117,8 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
         </p>
       ) : null}
 
-      <section className="grid gap-3 lg:grid-cols-[41fr_29fr_30fr]">
-        <article className="rounded-2xl bg-casa-mist p-4 shadow-[0_8px_24px_rgb(96_39_71_/_0.06)]">
+      <section className="grid gap-3 lg:grid-cols-5">
+        <article className="rounded-2xl bg-[#fcf7fa] p-4 shadow-[0_8px_24px_rgb(96_39_71_/_0.06)] lg:col-span-3">
           <h2 className="text-base font-semibold text-casa-ink">Próximos atendimentos</h2>
           {snapshot && snapshot.upcoming.length > 0 ? (
             <ul className="mt-4 space-y-3">
@@ -131,7 +136,7 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
             <Empty>Nenhum horário à frente.</Empty>
           )}
         </article>
-        <article className="rounded-2xl bg-casa-mist p-4 shadow-[0_8px_24px_rgb(96_39_71_/_0.06)]">
+        <article className="rounded-2xl bg-[#fcf7fa] p-4 shadow-[0_8px_24px_rgb(96_39_71_/_0.06)] lg:col-span-2">
           <h2 className="text-base font-semibold text-casa-ink">Pacientes recentes</h2>
           {snapshot && snapshot.recent.length > 0 ? (
             <ul className="mt-4 space-y-3">
@@ -148,7 +153,7 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
             <Empty>Nenhuma paciente recente neste recorte.</Empty>
           )}
         </article>
-        <article className="rounded-2xl bg-casa-mist p-4 shadow-[0_8px_24px_rgb(96_39_71_/_0.06)]">
+        <article className="rounded-2xl bg-[#fcf7fa] p-4 shadow-[0_8px_24px_rgb(96_39_71_/_0.06)] lg:col-span-5">
           <h2 className="text-base font-semibold text-casa-ink">Pendências</h2>
           {snapshot && snapshot.pending.length > 0 ? (
             <ul className="mt-4 space-y-3 text-sm">
@@ -164,11 +169,10 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
         </article>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Summary label="Consultas hoje" value={snapshot ? snapshot.todayCount ?? "—" : null} />
-        <Summary label="Pacientes" value={snapshot?.patients ?? null} />
-        <Summary label="Gestações em acompanhamento" value={snapshot?.pregnanciesInCare ?? null} />
-        {includeFinance ? <Summary label="Recebido no mês" value={snapshot ? money(snapshot.financeCents ?? 0) : null} /> : null}
+      <section className="flex flex-col overflow-hidden rounded-2xl bg-[#fcf7fa] shadow-[0_8px_24px_rgb(96_39_71_/_0.06)] sm:flex-row">
+        {metrics.map((item) => (
+          <Summary key={item.label} label={item.label} value={item.value} />
+        ))}
       </section>
     </div>
   );
@@ -176,11 +180,11 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
 
 function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: number | string | null }) {
   return (
-    <article className="flex min-h-[68px] items-center gap-3 rounded-2xl bg-casa-mist px-4 py-2.5 shadow-[0_8px_24px_rgb(96_39_71_/_0.08)]">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-casa-plum">{icon}</span>
+    <article className="flex min-h-[74px] items-center gap-3 rounded-2xl bg-[#fcf7fa] px-4 py-3 shadow-[0_10px_24px_rgb(96_39_71_/_0.08)]">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f3d0e2] text-casa-plum">{icon}</span>
       <span className="min-w-0">
-        <span className="block truncate text-xs text-casa-ink/70">{label}</span>
-        <span className="block text-xl font-semibold tracking-tight text-casa-ink">{value === null ? "…" : value}</span>
+        <span className="block text-xs leading-4 text-casa-ink/70">{label}</span>
+        <span className="block text-2xl font-semibold leading-tight tracking-tight text-casa-ink">{value === null ? "…" : value}</span>
       </span>
     </article>
   );
@@ -188,19 +192,37 @@ function Metric({ icon, label, value }: { icon: ReactNode; label: string; value:
 
 function Summary({ label, value }: { label: string; value: number | string | null }) {
   return (
-    <article className="rounded-2xl bg-casa-mist px-4 py-3 shadow-[0_8px_24px_rgb(96_39_71_/_0.06)]">
+    <div className="min-w-0 flex-1 border-casa-rose/15 px-4 py-3 sm:border-l sm:first:border-l-0">
       <h2 className="text-xs text-casa-ink/70">{label}</h2>
-      <p className="mt-1 text-lg font-semibold text-casa-ink">{value === null ? "…" : value}</p>
-    </article>
+      <p className="mt-1 text-xl font-semibold text-casa-ink">{value === null ? "…" : value}</p>
+    </div>
+  );
+}
+
+function GestanteFigure() {
+  return (
+    <>
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 280 280" aria-hidden>
+        <circle cx="140" cy="140" r="96" fill="none" stroke="white" strokeWidth="1.15" strokeOpacity="0.4" />
+        <circle cx="140" cy="140" r="122" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.22" />
+      </svg>
+      <img
+        src="/brand/gestante.webp"
+        alt=""
+        width={864}
+        height={1152}
+        className="pointer-events-none relative mx-auto h-full w-auto max-w-full object-contain [mask-image:radial-gradient(ellipse_at_center,black_58%,transparent_78%)]"
+        aria-hidden
+      />
+    </>
   );
 }
 
 function HeroGlow() {
   return (
-    <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1000 360" preserveAspectRatio="xMidYMid slice" aria-hidden>
-      <circle cx="560" cy="180" r="120" fill="none" stroke="white" strokeOpacity="0.28" />
-      <circle cx="560" cy="180" r="168" fill="none" stroke="white" strokeOpacity="0.16" />
-      <path d="M0 300C180 250 280 340 460 290C640 240 760 320 1000 260" fill="none" stroke="white" strokeOpacity="0.2" strokeWidth="8" />
+    <svg className="pointer-events-none absolute inset-x-0 bottom-2 h-12 w-full text-white" viewBox="0 0 1000 64" preserveAspectRatio="none" aria-hidden>
+      <path d="M0 36C170 14 290 52 470 30C660 8 790 48 1000 22" fill="none" stroke="currentColor" strokeOpacity="0.4" strokeWidth="1.2" />
+      <path d="M0 50C190 30 320 58 520 40C720 22 840 54 1000 36" fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth="1" />
     </svg>
   );
 }

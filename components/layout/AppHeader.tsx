@@ -1,5 +1,6 @@
 "use client";
 
+import { Bell } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { PracticeSelector } from "@/components/layout/PracticeSelector";
@@ -59,12 +60,18 @@ export function AppHeader({
         </div>
       </div>
 
-      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-        <div className="hidden min-w-0 items-center gap-3 rounded-full bg-white px-3 py-1.5 shadow-sm sm:flex">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-casa-plum text-xs font-semibold text-white" aria-hidden>
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <span
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-casa-plum shadow-sm"
+          aria-hidden
+        >
+          <Bell className="h-5 w-5" />
+        </span>
+        <div className="flex min-w-0 items-center gap-3 rounded-full bg-white px-2 py-1.5 shadow-sm sm:px-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-casa-plum text-xs font-semibold text-white" aria-hidden>
             {initials(displayName)}
           </span>
-          <span className="min-w-0 text-left">
+          <span className="hidden min-w-0 text-left sm:block">
             <span className="block truncate text-sm font-semibold text-casa-ink">{displayName}</span>
             <span className="block truncate text-xs text-casa-ink/60">
               {roles.length ? roleLabels(roles) : orgName ?? "Casa Florescer"}

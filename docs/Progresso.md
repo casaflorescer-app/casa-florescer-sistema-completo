@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-11-02 — Visão geral alinhada ao desenho: gestante, cartões com números reais, sino e identificação de quem entrou. Sem percentual, sem gráfico e sem deploy.
 - 2026-11-02 — C113: cartões da plataforma pela sessão da casa e frase de CPF duplicado. Sem cópia de banco. A candidata `casa-web:c113` usa o BancoFlorescerPP e não é publicada. A imagem publicada continua `casa-web:c093`.
 - 2026-11-02 — Diretriz de agilidade registrada em `AGENTS.md`. O envio da cópia isolada `casa_c113` foi interrompido e o database não foi criado. O BancoFlorescerPP permanece o banco de trabalho. Sem teste destrutivo e sem deploy.
 - 2026-11-02 — C112 concluída no código, sem deploy. A visão geral e a casca autenticada seguem a paleta ameixa e rosa, com a ilustração própria da gestante e só com contagens reais. Sem percentual. A miniatura da foto sai no mesmo `GET /api/casa/files`, sem arquivo novo. O Chromium local, em 1280 e 390, mostrou o hero, o aviso de profissional ausente e os estados vazios. A sessão autenticada num contêiner da VPS não abriu: a chave SSH não estava carregada. A imagem publicada continua `casa-web:c093`.

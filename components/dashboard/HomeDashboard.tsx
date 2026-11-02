@@ -8,7 +8,6 @@ import { hasStaffRole, isClinicStaff } from "@/lib/auth/access";
 import { loadHomeCasa, type HomeSnapshot } from "@/lib/casa/reads";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 
-const WEEKDAY = new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "America/Sao_Paulo" });
 const CLOCK = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 const MONEY = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -116,17 +115,6 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
         ) : null}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
-        <article className="rounded-3xl bg-white p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-casa-ink">Consultas nos últimos 7 dias</h2>
-          {snapshot && snapshot.week.length > 0 ? <WeekBars days={snapshot.week} /> : <Empty>Sem consultas neste período.</Empty>}
-        </article>
-        <article className="rounded-3xl bg-white p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-casa-ink">Atendimentos por tipo</h2>
-          {snapshot && snapshot.kinds.length > 0 ? <KindSplit kinds={snapshot.kinds} /> : <Empty>Sem atendimentos para distribuir.</Empty>}
-        </article>
-      </section>
-
       <section className="grid gap-4 lg:grid-cols-3">
         <article className="rounded-3xl bg-white p-5 shadow-sm">
           <h2 className="text-base font-semibold text-casa-ink">Próximos atendimentos</h2>
@@ -184,83 +172,16 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
 
 function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: number | string | null }) {
   return (
-    <article className="rounded-3xl bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-casa-plum">
+    <article className="rounded-3xl bg-white p-5 shadow-sm">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-casa-mist text-casa-plum">
         {icon}
-        <h2 className="text-sm font-medium text-casa-ink/70">{label}</h2>
       </div>
-      <p className="mt-3 text-2xl font-semibold text-casa-ink">{value === null ? "…" : value}</p>
+      <h2 className="mt-4 text-sm font-medium text-casa-ink/70">{label}</h2>
+      <p className="mt-1 text-3xl font-semibold tracking-tight text-casa-ink">{value === null ? "…" : value}</p>
     </article>
   );
 }
 
 function Empty({ children }: { children: string }) {
   return <p className="mt-6 text-sm text-casa-ink/60">{children}</p>;
-}
-
-function WeekBars({ days }: { days: HomeSnapshot["week"] }) {
-  const max = Math.max(...days.map((item) => item.count), 1);
-  return (
-    <div className="mt-6 flex h-40 items-end gap-2">
-      {days.map((item) => (
-        <div key={item.day} className="flex flex-1 flex-col items-center gap-2">
-          <div className="flex h-28 w-full items-end">
-            <div
-              className="w-full rounded-t-lg bg-casa-lilac"
-              style={{ height: `${Math.max(8, (item.count / max) * 100)}%` }}
-              title={`${item.count}`}
-            />
-          </div>
-          <span className="text-[11px] capitalize text-casa-ink/60">{WEEKDAY.format(new Date(`${item.day}T12:00:00-03:00`))}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function KindSplit({ kinds }: { kinds: HomeSnapshot["kinds"] }) {
-  const total = kinds.reduce((sum, item) => sum + item.count, 0);
-  const consultation = kinds.find((item) => item.key === "consultation")?.count ?? 0;
-  const procedure = kinds.find((item) => item.key === "procedure")?.count ?? 0;
-  const consultationShare = total > 0 ? consultation / total : 0;
-  const dash = 2 * Math.PI * 42;
-  return (
-    <div className="mt-6 flex items-center gap-6">
-      <svg viewBox="0 0 120 120" className="h-28 w-28" role="img" aria-label={`${total} atendimentos`}>
-        <circle cx="60" cy="60" r="42" fill="none" stroke="#F5F0F5" strokeWidth="14" />
-        <circle
-          cx="60"
-          cy="60"
-          r="42"
-          fill="none"
-          stroke="#57366E"
-          strokeWidth="14"
-          strokeDasharray={`${dash * consultationShare} ${dash}`}
-          strokeLinecap="butt"
-          transform="rotate(-90 60 60)"
-        />
-        <circle
-          cx="60"
-          cy="60"
-          r="42"
-          fill="none"
-          stroke="#C884A5"
-          strokeWidth="14"
-          strokeDasharray={`${dash * (procedure / Math.max(total, 1))} ${dash}`}
-          strokeDashoffset={-dash * consultationShare}
-          transform="rotate(-90 60 60)"
-        />
-        <text x="60" y="58" textAnchor="middle" className="fill-casa-ink text-[18px] font-semibold">
-          {total}
-        </text>
-        <text x="60" y="74" textAnchor="middle" className="fill-casa-ink/70 text-[9px]">
-          Total
-        </text>
-      </svg>
-      <ul className="space-y-2 text-sm text-casa-ink">
-        <li>Consulta · {consultation}</li>
-        <li>Procedimento · {procedure}</li>
-      </ul>
-    </div>
-  );
 }

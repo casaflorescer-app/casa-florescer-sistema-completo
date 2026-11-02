@@ -76,6 +76,10 @@ Na imagem `casa-hml-web:c086c`, já removida, `GET` e `POST /api/casa/clinical` 
 
 No contêiner `casa-hml-web`, já removido, o login válido respondeu 200, a senha errada 401, a sessão 200 com o identificador do administrador principal, o logout 200 e o pedido sem cookie 401. O administrador principal criou os outros perfis. A administradora da clínica recebeu 403 ao tentar criar usuário. Na imagem seguinte, também removida, o cookie continuou `Secure` porque o processo estava em produção. O Chromium em HTTP descartou esse cookie; o teste de tela usou HTTPS só dentro do contêiner de teste. A agenda sem cookie respondeu 401. A ação da ficha sem cookie respondeu 500 e não gravou. O Florescer Web publicado continua no Auth. `sistema.thvp.cloud` não recebeu esse modo.
 
+## C094 — prova do domínio com os cinco serviços parados
+
+Em 2026-11-02, com Auth, REST, Storage, Realtime e a porta da API ainda parados e com reinício `no`, `https://sistema.thvp.cloud` repetiu login 200, senha errada 401, ficha 200, agenda anônima 401, identificador inexistente 404, financeiro 200, foto 200 com 496021 bytes antes e depois de um arquivo lateral criado e apagado, e logout 200. O paciente publicado permaneceu 1. A senha não está neste documento. A imagem em execução continua `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`.
+
 ## C093 — sessão publicada sem o Auth antigo
 
 Desde 2026-11-02, com `CASA_DATABASE_URL`, o middleware não chama `getUser()` do Auth antigo, mesmo sem cookie `casa_session`. A visita a `/app` sem sessão respondeu 200 em 0,05 s depois que Auth, REST, Storage, Realtime e a porta da API foram parados. A segunda prova no domínio repetiu login 200, senha errada 401, ficha 200 e foto 200 com 496021 bytes. A senha não está neste documento. O banco `supabase-db` não foi apagado. `api.thvp.cloud` responde 502 porque o envoy antigo segue no ar e os cinco serviços atrás dele estão parados. Religá-los é `docker start` dos mesmos nomes. A imagem `casa-web:c091` ainda chama o Auth antigo quando não há cookie; usá-la com esses serviços parados pode responder 500 numa visita sem sessão.
@@ -90,6 +94,7 @@ Em 2026-11-02 a única conta do BancoFlorescerPP passou a ter uma linha em `staf
 
 ## Histórico
 
+- 2026-11-02 — C094: a prova do domínio passou de novo com Auth, REST, Storage, Realtime e a porta da API parados. O reinício desses cinco ficou `no`. O banco antigo permanece.
 - 2026-11-02 — C093: a sessão publicada não consulta mais o Auth antigo. Auth, REST, Storage, Realtime e a porta da API foram parados. O banco antigo permanece. `api.thvp.cloud` responde 502.
 - 2026-11-02 — C092: a sessão publicada passou a ser a da casa. O Auth antigo permanece em `api.thvp.cloud` para o retorno.
 - 2026-11-02 — C092: a conta real do BancoFlorescerPP ganhou credencial Argon2id. A sessão publicada continua a do Auth. Sem senha no texto.

@@ -171,8 +171,15 @@ A imagem `casa-web:c091` chama `getUser()` sem tratamento quando não há cookie
 
 O dump `bancoflorescerpp-20261101T230539Z.dump` tem as seções COPY vazias. `pg_restore` por pipe também não semeia um arquivo customizado, porque esse formato precisa de busca. A cópia que alimentou a prova isolada foi um `pg_dump -Fc` do BancoFlorescerPP vivo, restaurado com `--no-owner` e sem `--no-acl`. `--no-acl` tira os `GRANT` e o papel `authenticated` recebe permissão negada. Esse database temporário foi apagado. O paciente publicado permaneceu em 1.
 
+## 2026-11-02 — C094, o dump de 1º de novembro não é o backup vivo
+
+O dump `bancoflorescerpp-20261101T230539Z.dump` continua com as seções COPY vazias. O backup que restaura o cadastro é o `pg_dump -Fc` de 2026-11-02, feito para um arquivo dentro do contêiner e copiado para fora. `pg_dumpall --globals-only` guarda os papéis, inclusive senha de papel, e não deve ser aplicado no cluster vivo nesta etapa: a conferência é a contagem de `CREATE ROLE`, não o texto. A imagem `mcr.microsoft.com/playwright` não traz o pacote Node `playwright`; o navegador da imagem só resolve o módulo depois de `npm install` com `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`. O cookie `casa_session` é `Secure` em produção, então o Chromium em HTTP precisa receber o cookie sem esse atributo para abrir a tela. A conversão não vai para `sistema.thvp.cloud`.
+
+O Compose do Supabase é compartilhado com `db`. Trocar `restart` só em `auth`, `rest`, `realtime` e `storage` não impede um `docker compose up` de subi-los uma vez. O arquivo do EasyPanel da porta da API também declara outros serviços; por isso não foi editado. `restart: "no"` impede a volta sozinha depois de `docker stop`, não um redeploy do painel.
+
 ## Histórico
 
+- 2026-11-02 — C094: o backup que restaura dados é o dump de 2026-11-02, não o de 2026-11-01. Globals não entram no cluster vivo. A conversão de navegador fica na cópia. `restart: "no"` não segura um redeploy do painel.
 - 2026-11-02 — C093: middleware sem `getUser()` quando o banco da casa existe. Volume gravável exigiu um segundo `mount-add`. O dump de 2026-11-01 do BancoFlorescerPP não semeia dados. A API antiga foi parada; o banco antigo permanece.
 - 2026-11-02 — C092: o corte é `service update` sem pull. Logout apaga `casa_sessions`. `api.thvp.cloud` ficou para o retorno.
 - 2026-11-02 — C092: `casa_password_replace` não cria a primeira linha. O hash sai do `hash()` da imagem candidata. O volume da foto não pode ficar sob o `/root` da imagem. Sem corte.

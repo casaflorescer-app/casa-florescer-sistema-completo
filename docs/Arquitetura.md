@@ -48,9 +48,13 @@ A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação termi
 Dependências do Supabase:
 
 - Já migrado, com a variável exatamente `1`: login da casa, agenda, prontuário, gestação, exames, receitas, repasse, relatórios, usuários, estoque, locação, relacionamento, portal, gravação, arquivos privados, financeiro, busca de item de estoque, orientações, documentos do atendimento, queixa, anamnese, exame físico, retorno clínico, feedback, auxílio de IA, contratos, salas, especialidades, políticas, auditoria, linha do tempo, vínculo de gestação na tela do atendimento, vínculo de prática e organizações.
-- Parcial: a conversão que cria uma gestação nova e o vínculo de uma já em cuidado usam o servidor quando o cliente está ausente. A prova isolada da C093 confirmou esse ramo num banco depois apagado.
+- Parcial: a conversão que cria uma gestação nova e o vínculo de uma já em cuidado usam o servidor quando o cliente está ausente. Na C094 o navegador executou o diálogo numa cópia restaurada do backup novo; a gestação ficou nessa cópia e o BancoFlorescerPP permaneceu com 0 gestações.
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime pelo app. Com `CASA_DATABASE_URL`, o middleware não consulta o Auth antigo. Auth, REST, Storage, Realtime e a porta da API foram parados; o banco antigo e o envoy permanecem. O SDK continua no código para o ramo sem a variável da casa.
+
+## C094 — conversão no navegador, na cópia restaurada
+
+Em 2026-11-02 o backup novo do BancoFlorescerPP foi restaurado em `casa_c094` e depois apagado. O Chromium abriu o atendimento de prova nessa cópia, em `127.0.0.1`, com a imagem `casa-web:c093`. O botão “Alterar para atendimento obstétrico” apareceu, a confirmação seguiu e a frase “Acompanhamento obstétrico criado” ficou na tela. A gestação `in_care` ficou vinculada ao atendimento só em `casa_c094`. O BancoFlorescerPP permaneceu com 1 paciente e 0 gestações. O domínio publicado não recebeu essa gravação. RN-CASA-013 e RN-CASA-014 continuam inferidas.
 
 ## C093 — middleware sem o Auth antigo
 
@@ -94,6 +98,7 @@ A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de 
 
 ## Histórico
 
+- 2026-11-02 — C094: a conversão de gestação rodou no navegador contra a cópia restaurada do backup novo. O banco publicado permaneceu com 1 paciente e 0 gestações. Auth, REST, Storage, Realtime e a porta da API seguem parados, com reinício `no`.
 - 2026-11-02 — C093: o middleware deixa de consultar o Auth antigo quando `CASA_DATABASE_URL` existe. A imagem publicada passou a `casa-web:c093`. Auth, REST, Storage, Realtime e a porta da API foram parados; o banco antigo e o envoy permanecem.
 - 2026-11-02 — C092: o Florescer Web publicado passou para `casa-web:c091` e o BancoFlorescerPP. `api.thvp.cloud` permaneceu.
 - 2026-11-02 — C092: a conta real recebeu a primeira credencial Argon2id. A imagem reconstruída foi provada em `127.0.0.1` e o contêiner saiu. O desenho publicado não mudou. Sem corte.

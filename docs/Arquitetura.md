@@ -48,9 +48,17 @@ A prova SQL da C084 rodou no BancoFlorescerPP em 2026-10-31. A transação termi
 Dependências do Supabase:
 
 - Já migrado, com a variável exatamente `1`: login da casa, agenda, prontuário, gestação, exames, receitas, repasse, relatórios, usuários, estoque, locação, relacionamento, portal, gravação, arquivos privados, financeiro, busca de item de estoque, orientações, documentos do atendimento, queixa, anamnese, exame físico, retorno clínico, feedback, auxílio de IA, contratos, salas, especialidades, políticas, auditoria, linha do tempo, vínculo de gestação na tela do atendimento, vínculo de prática e organizações.
-- Parcial: a conversão que cria uma gestação nova a partir do atendimento continua no cliente publicado.
+- Parcial: a conversão que cria uma gestação nova e o vínculo de uma já em cuidado usam o servidor quando o cliente está ausente. A prova isolada da C093 confirmou esse ramo num banco depois apagado.
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
-- Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
+- Legado: não há chamada de Realtime pelo app. Com `CASA_DATABASE_URL`, o middleware não consulta o Auth antigo. Auth, REST, Storage, Realtime e a porta da API foram parados; o banco antigo e o envoy permanecem. O SDK continua no código para o ramo sem a variável da casa.
+
+## C093 — middleware sem o Auth antigo
+
+Em 2026-11-02 o serviço `cap-romao_florescerweb` passou a executar `casa-web:c093`, `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`. A imagem foi construída do commit `972d8c0` com a alteração do middleware e com `NEXT_PUBLIC_CASA_AUTH=1`. Com `CASA_DATABASE_URL`, `skipLegacyAuth` devolve usuário nulo e não chama `supabase.auth.getUser()`. `lib/db/casa.ts` não entra nesse arquivo. O volume `/root/casa-files` está montado em `/casa-files` sem somente leitura. `casa-web:c091` (`sha256:493cb8e34e576d485d5a74153f64a12e86d1f24b64a0edd388903f69e63afae2`) e `florescerweb:c091-rollback` (`sha256:13d80a36ff7b8b50085fd3617de5fcc90c6fd4c32ccce40b80ed81f349e69ffb`) permanecem.
+
+A conversão de gestação já tinha ramo com cliente nulo. A prova isolada, no database `casa_c093` depois apagado, criou uma gestação, vinculou uma já em cuidado e gravou a especialidade. O BancoFlorescerPP permaneceu com 1 paciente. O dump `bancoflorescerpp-20261101T230539Z.dump` tem as seções COPY vazias e não semeia essas linhas; os arquivos de dump não foram apagados.
+
+Depois da prova no domínio, foram parados, sem `docker rm` e sem apagar volume: `cap-romao_florescerapi-porta-api-1`, `supabase-auth`, `supabase-rest`, `supabase-storage` e `realtime-dev.supabase-realtime`. Continuam no ar `supabase-db`, `supabase-studio`, `supabase-meta`, `supabase-imgproxy`, `supabase-envoy` e `casa-florescer-app-1`. `https://api.thvp.cloud/` respondeu 502. A segunda prova no domínio, com esses cinco parados, repetiu login 200, senha errada 401, ficha 200, agenda anônima 401, identificador inexistente 404, financeiro 200, foto 200 com 496021 bytes antes e depois de um arquivo de prova criado e apagado, logout 200 e 1 paciente. O Supabase não está apagado: o banco antigo e o envoy permanecem. Se a prova da imagem nova tivesse falhado, a volta seria `casa-web:c091` com o volume outra vez somente leitura e as três variáveis `CASA` mantidas. A etiqueta `florescerweb:c091-rollback` ainda consulta o Auth antigo; com ele parado, essa volta exige religar os cinco containers antes.
 
 ## C092 — corte do Florescer Web
 
@@ -86,6 +94,7 @@ A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de 
 
 ## Histórico
 
+- 2026-11-02 — C093: o middleware deixa de consultar o Auth antigo quando `CASA_DATABASE_URL` existe. A imagem publicada passou a `casa-web:c093`. Auth, REST, Storage, Realtime e a porta da API foram parados; o banco antigo e o envoy permanecem.
 - 2026-11-02 — C092: o Florescer Web publicado passou para `casa-web:c091` e o BancoFlorescerPP. `api.thvp.cloud` permaneceu.
 - 2026-11-02 — C092: a conta real recebeu a primeira credencial Argon2id. A imagem reconstruída foi provada em `127.0.0.1` e o contêiner saiu. O desenho publicado não mudou. Sem corte.
 - 2026-11-01 — C091: cadastro real copiado para o BancoFlorescerPP e arquivo fora de `public/`. A flag passou a ser argumento de build, com padrão vazio. Sem corte.

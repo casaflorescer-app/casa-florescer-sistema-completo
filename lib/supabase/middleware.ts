@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { APP_PATHNAME_HEADER, isPublicPath } from "@/lib/auth/paths";
 import { COOKIE_NAME, openCasaSession } from "@/lib/auth/casa-session";
-import { isSupabaseConfigured } from "./config";
+import { isSupabaseConfigured, skipLegacyAuth } from "./config";
 
 type CookieToSet = {
   name: string;
@@ -34,6 +34,9 @@ export async function updateSession(request: NextRequest): Promise<{
   const casa = await openCasaSession(request.cookies.get(COOKIE_NAME)?.value);
   if (casa) {
     return { response, user: { id: casa.userId } as User };
+  }
+  if (skipLegacyAuth(process.env.CASA_DATABASE_URL)) {
+    return { response, user: null };
   }
   if (!isSupabaseConfigured()) return { response, user: null };
 

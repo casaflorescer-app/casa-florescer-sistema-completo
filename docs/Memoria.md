@@ -163,8 +163,17 @@ A imagem etiquetada e sem contêiner pode sumir do host. A etiqueta `casa-web:c0
 
 O Florescer Web publicado é o serviço Swarm `cap-romao_florescerweb`. `docker stop` faz o Swarm recriar a imagem antiga. A troca que ficou de pé foi `docker service update --no-resolve-image`, porque `casa-web` não existe em registro público e um pull derruba a atualização. `casa_sessions` não tem `revoked_at`: o logout apaga a linha. Uma consulta a essa coluna fez o script devolver a imagem antiga mesmo com o HTTP aprovado; a segunda atualização, sem essa coluna, ficou.
 
+## 2026-11-02 — C093, o middleware antigo derruba o site se a API morre
+
+A imagem `casa-web:c091` chama `getUser()` sem tratamento quando não há cookie da casa e as variáveis públicas do Supabase existem. Com Auth, REST e Storage parados, essa chamada pode responder 500. `skipLegacyAuth` corta esse caminho quando `CASA_DATABASE_URL` existe. A função fica em `lib/supabase/config.ts` porque o middleware não pode importar `lib/db/casa.ts`, que puxa `pg`. O nome da função some no bundle; a prova da imagem é a ocorrência de `CASA_DATABASE_URL` em `/app/.next/server/middleware.js`.
+
+`--mount-rm` e `--mount-add` no mesmo `docker service update` trocaram a imagem e deixaram o volume ausente. Um segundo update, só com `--mount-add`, recolocou `/casa-files` gravável. O volume somente leitura impedia a escrita. A prova no domínio criou e apagou um arquivo ao lado da foto; não fez `POST` da foto do paciente real.
+
+O dump `bancoflorescerpp-20261101T230539Z.dump` tem as seções COPY vazias. `pg_restore` por pipe também não semeia um arquivo customizado, porque esse formato precisa de busca. A cópia que alimentou a prova isolada foi um `pg_dump -Fc` do BancoFlorescerPP vivo, restaurado com `--no-owner` e sem `--no-acl`. `--no-acl` tira os `GRANT` e o papel `authenticated` recebe permissão negada. Esse database temporário foi apagado. O paciente publicado permaneceu em 1.
+
 ## Histórico
 
+- 2026-11-02 — C093: middleware sem `getUser()` quando o banco da casa existe. Volume gravável exigiu um segundo `mount-add`. O dump de 2026-11-01 do BancoFlorescerPP não semeia dados. A API antiga foi parada; o banco antigo permanece.
 - 2026-11-02 — C092: o corte é `service update` sem pull. Logout apaga `casa_sessions`. `api.thvp.cloud` ficou para o retorno.
 - 2026-11-02 — C092: `casa_password_replace` não cria a primeira linha. O hash sai do `hash()` da imagem candidata. O volume da foto não pode ficar sob o `/root` da imagem. Sem corte.
 - 2026-11-01 — C091: o database publicado tinha cadastro real; a cópia foi para o BancoFlorescerPP. A flag é de build. Sem corte.

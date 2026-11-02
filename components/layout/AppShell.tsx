@@ -33,25 +33,25 @@ export function AppShell({
 
   return (
     <PracticeUiProvider memberships={authorization.memberships}>
-      <div className="min-h-screen bg-lotus-50">
-        <AppHeader
-          menuOpen={menuOpen}
-          onMenuToggle={() => setMenuOpen((open) => !open)}
-        />
+      <div className="min-h-screen bg-casa-mist text-casa-ink lg:grid lg:grid-cols-[minmax(240px,260px)_minmax(0,1fr)]">
         {menuOpen ? (
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-lotus-900/40 lg:hidden"
+            className="fixed inset-0 z-40 bg-casa-ink/40 lg:hidden"
             aria-label="Fechar menu"
             onClick={() => setMenuOpen(false)}
           />
         ) : null}
-        <div className="lg:grid lg:grid-cols-[minmax(240px,260px)_minmax(0,1fr)]">
-          <AppSidebar
-            sections={sections}
-            open={menuOpen}
-            onNavigate={() => setMenuOpen(false)}
-            onClose={() => setMenuOpen(false)}
+        <AppSidebar
+          sections={sections}
+          open={menuOpen}
+          onNavigate={() => setMenuOpen(false)}
+          onClose={() => setMenuOpen(false)}
+        />
+        <div className="min-w-0">
+          <AppHeader
+            menuOpen={menuOpen}
+            onMenuToggle={() => setMenuOpen((open) => !open)}
           />
           <main className="view-enter min-w-0 w-full overflow-x-clip px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:px-8">
             {children}
@@ -64,15 +64,21 @@ export function AppShell({
 
 export function AppLoadingShell({ message = "Carregando acesso…" }: { message?: string }) {
   return (
-    <div className="min-h-screen bg-lotus-50">
-      <header className="border-b border-lotus-100 bg-white/90 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-lotus-700">
+    <div className="min-h-screen bg-casa-mist text-casa-ink lg:grid lg:grid-cols-[minmax(240px,260px)_minmax(0,1fr)]">
+      <aside className="hidden bg-casa-plum lg:block" aria-hidden>
+        <p className="px-4 py-5 text-sm font-semibold uppercase tracking-[0.16em] text-white">
           Casa Florescer
         </p>
-      </header>
-      <main className="mx-auto max-w-5xl px-4 py-10">
-        <p className="text-sm text-lotus-600">{message}</p>
-      </main>
+      </aside>
+      <div>
+        <header className="border-b border-white/40 bg-white/80 px-4 py-3">
+          <p className="text-sm font-semibold text-casa-plum">Casa Florescer</p>
+        </header>
+        <main className="px-4 py-6 lg:px-8" aria-busy="true">
+          <p className="text-sm text-casa-ink/70">{message}</p>
+          <div className="mt-6 h-48 animate-pulse rounded-3xl bg-white/80" />
+        </main>
+      </div>
     </div>
   );
 }

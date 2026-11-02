@@ -100,8 +100,15 @@ A imagem `casa-hml-web:c086c` foi construída no clone da VPS, escutou em `127.0
 
 A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de criar agendamento, escutou em `127.0.0.1:3017` e falou só com `casa_hml`. `POST`, `GET`, `PATCH` e `DELETE` de `/api/casa/appointments` rodaram. O `DELETE` cancelou e a linha ficou. A ficha foi criada, lida e alterada pela ação já existente; o autor gravado foi a sessão. A outra médica não viu o agendamento nem a alergia. A secretária agendou e não leu a alergia. A agenda sem cookie respondeu 401. A ação da ficha sem cookie respondeu 500. O contêiner foi removido, as linhas fictícias saíram e o Florescer Web continuou sem `CASA_DATABASE_URL` e sem `NEXT_PUBLIC_CASA_AUTH`. O corte não foi executado. A etapa permanece bloqueada. A C089 não começa.
 
+## C112 — visão geral e casca
+
+A página `/app` e `/app/dashboard`, para quem já é da clínica, deixam a grade de atalhos e passam a `loadHomeCasa`. A leitura conta pacientes e gestações em acompanhamento no escopo da policy. Consultas do dia, da semana, próximos horários e pendências só entram quando a sessão tem profissional vinculado ou, sem o papel physician, quando a prática já está na sessão. Sem esse vínculo, esses blocos ficam vazios e o aviso de perfil profissional permanece. A lista inteira de pacientes não é carregada para rotular o dia. O financeiro do mês só entra para owner, admin ou caixa, como soma dos centavos já gravados.
+
+A casca autenticada continua em `AppShell` e `AppSidebar`. O menu segue `navSectionsFor`. Enquanto a autorização não chega, a casca de esqueleto permanece e o miolo espera. A miniatura da foto é gerada na hora em `GET /api/casa/files` e não grava outro arquivo.
+
 ## Histórico
 
+- 2026-11-02 — C112: a visão geral lê um recorte curto e a casca autenticada muda de cor. Sem deploy. A imagem publicada continua `casa-web:c093`.
 - 2026-11-02 — C110: `auth`, `rest`, `realtime`, `storage` e `porta-api` ficaram no perfil `legado-off`. O `compose up` padrão não os inclui. RN-CASA-013 e RN-CASA-014 passaram a confirmadas.
 - 2026-11-02 — C094: a conversão de gestação rodou no navegador contra a cópia restaurada do backup novo. O banco publicado permaneceu com 1 paciente e 0 gestações. Auth, REST, Storage, Realtime e a porta da API seguem parados, com reinício `no`.
 - 2026-11-02 — C093: o middleware deixa de consultar o Auth antigo quando `CASA_DATABASE_URL` existe. A imagem publicada passou a `casa-web:c093`. Auth, REST, Storage, Realtime e a porta da API foram parados; o banco antigo e o envoy permanecem.

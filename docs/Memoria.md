@@ -193,8 +193,19 @@ Na cópia, `SET LOCAL ROLE` dentro do `DO` ainda valia nas consultas seguintes. 
 
 O BancoFlorescerPP publicado tem 1 papel `physician`, 0 linhas em `professionals` e 0 salas `active`. O formulário da agenda exige profissional e sala. Sem esses cadastros, criar horário ou bloqueio não tem alvo. A função `agenda_block_create` gravou e o cancelamento marcou `cancelled` numa cópia que recebeu profissional e sala fictícios, dentro de uma transação desfeita. O índice `unique (organization_id, cpf)` recusou o segundo CPF igual. O painel de organização e os cartões da plataforma ainda chamam `createClient()`, que devolve nulo com a flag `1`, e mostram autenticação não configurada. A leitura da organização já existe em `listOrganizationsCasa`.
 
+## 2026-11-02 — C112, a visão geral não desenha o que o banco não tem
+
+Antes de mudar o desenho, o caminho da foto publicada já era conhecido: o arquivo real tem 496021 bytes e o `GET` sem variante responde `private, no-store` com `content-disposition: attachment`. A casca autenticada era trocada por `AppLoadingShell` enquanto a autorização não chegava. Não houve cronômetro de navegação num contêiner antes da alteração; esse número não é declarado.
+
+A referência mostra `+8,2%` e outros selos. RN-CASA-014, confirmada, proíbe percentual novo. Por isso nenhum cartão calcula variação. Um zero real pode aparecer como `R$ 0,00`. Série sem ponto fica em estado vazio.
+
+A miniatura é gerada na memória com `sharp`, 96 px, WebP. O teste local `scripts/c112-thumb-check.ts` conferiu que o resultado é menor que a origem e começa com o cabeçalho RIFF. Nenhum arquivo derivado é gravado ao lado da foto. A lista pede `variant=thumb`; o lightbox pede o arquivo inteiro só quando abre.
+
+O Chromium em `127.0.0.1:3013`, com o CSS já compilado, mediu a sidebar em `rgb(87, 54, 110)` e o hero no degradê ameixa, lilás e rosa. Em 1280 px a ilustração ficou à direita do hero, com 191×255 e o arquivo carregado. Em 390 px o menu ficou oculto e a ilustração entrou no fluxo, 168×224. Não houve contêiner candidato nesta etapa: `ssh-add -l` não tinha identidade e o BatchMode recusou a chave. Sem esse contêiner, o tempo de navegação autenticada não foi medido.
+
 ## Histórico
 
+- 2026-11-02 — C112: a foto inteira segue em 496021 bytes e `private, no-store`. A miniatura é outra resposta, privada, sem arquivo novo. Percentual não entra por causa da RN-CASA-014. Sem cronômetro de navegação anterior. A chave SSH não estava carregada, então o contêiner autenticado não abriu.
 - 2026-11-02 — C111.1: a tela Organização usa `listOrganizationsCasa` com a flag `1`. Samara, Thais, conselho, prática de cada uma e sala não estão no banco; nada foi inventado nem gravado. A agenda completa foi provada só na cópia, com `rollback`.
 - 2026-11-02 — C111: sem profissional e sem sala, a agenda publicada não tem o que selecionar. O bloqueio e o CPF duplicado foram provados só na cópia, com `rollback`.
 - 2026-11-02 — C110: `restart: "no"` não segura o `compose up`; o perfil `legado-off` segura. O config completo não se imprime.

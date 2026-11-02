@@ -219,6 +219,10 @@ Aplicação pelo Bash do container do serviço `bancoflorescer`, usuário de con
 
 O BancoFlorescerPP não recebeu escrita desta etapa. O dump `bancoflorescerpp-20261031T215302Z.dump` foi conferido de novo: 1343810 bytes, modo 600, SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`. A cópia `casa_hml` existe. A imagem `casa-hml-web:c086c` falou só com essa cópia, em `127.0.0.1:3017`, e foi removida. A porta 3017 e a 5432 fecharam. As linhas fictícias saíram: 4 agendamentos e 1 ficha antes da limpeza; usuários, organizações, pacientes, fichas, agendamentos e profissionais da prova em 0. O Florescer Web publicado ficou com zero ocorrências de `NEXT_PUBLIC_CASA_AUTH` e de `CASA_DATABASE_URL`. A ficha sem sessão, com cookie inválido, com sessão vencida e com sessão revogada respondeu 401. A secretária recebeu 403 e a outra médica 404. A médica da prática recebeu 200. “Salvando…” pintou com o botão desabilitado e um único envio pendente. A C089 não começou.
 
+## C112 — visão geral (2026-11-02)
+
+O código de `/app` passa a mostrar o hero, as contagens reais e a casca ameixa. Sem percentual. Sem rota nova. A imagem publicada continua `casa-web:c093`, `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`. `sistema.thvp.cloud` ainda não tem essa tela. Não houve `docker service update`. O contêiner candidato não subiu nesta etapa porque a chave SSH não estava carregada.
+
 ## C111.1 — correções operacionais (2026-11-02)
 
 Parecer: a tela Organização está corrigida no código e provada num contêiner só em `127.0.0.1`. Razão social, nome fantasia e CNPJ apareceram. A frase de autenticação não apareceu. Esse contêiner foi removido. A imagem publicada continua `casa-web:c093`, `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`, então `sistema.thvp.cloud` ainda não tem essa tela. Uma imagem candidata `casa-web:c1111` ficou na VPS e não foi publicada.

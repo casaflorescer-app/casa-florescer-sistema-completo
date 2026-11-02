@@ -89,6 +89,7 @@ export function PatientPhotoThumb({
   const [url, setUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">(photoPath ? "loading" : "empty");
   const [open, setOpen] = useState(false);
+  const [fullUrl, setFullUrl] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export function PatientPhotoThumb({
     }
     let cancelled = false;
     setStatus("loading");
-    void getPatientPhotoUrl(supabase, photoPath)
+    void getPatientPhotoUrl(supabase, photoPath, { thumb: true })
       .then((signed) => {
         if (cancelled) return;
         if (!signed) {
@@ -137,16 +138,25 @@ export function PatientPhotoThumb({
         type="button"
         className="inline-flex shrink-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-lotus-200"
         aria-label={`Ver fotografia de ${patientName}`}
-        onClick={(event) => {
+          onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           setOpen(true);
+          const casa = isCasaBrowserAuth();
+          const supabase = casa ? null : createClient();
+          void getPatientPhotoUrl(supabase, photoPath).then((full) => {
+            if (full) setFullUrl(full);
+          });
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}
           alt={`Fotografia de ${patientName}`}
+          width={48}
+          height={48}
+          loading="lazy"
+          decoding="async"
           className="h-12 w-12 rounded-2xl border border-lotus-100 object-cover"
           onError={() => {
             console.error("[patients] list photo image failed");
@@ -156,8 +166,8 @@ export function PatientPhotoThumb({
           }}
         />
       </button>
-      {open ? (
-        <PatientPhotoLightbox url={url} patientName={patientName} onClose={closeLightbox} />
+      {open && fullUrl ? (
+        <PatientPhotoLightbox url={fullUrl} patientName={patientName} onClose={closeLightbox} />
       ) : null}
     </>
   );

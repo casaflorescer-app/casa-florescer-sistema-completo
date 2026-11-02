@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/auth/session";
 import { isCasaDatabaseConfigured, withCasaUser } from "@/lib/db/casa";
 import { canReadExamFile, safeRelativePath } from "@/lib/files/casa-volume";
 import { acceptCasaUpload, readPrivateFile, removePrivateFile, writePrivateFile } from "@/lib/files/casa-store";
+import { patientPhotoThumb } from "@/lib/files/casa-thumb";
 import { callCasaRpc } from "@/lib/casa/rpc";
 
 export const runtime = "nodejs";
@@ -140,6 +141,19 @@ export async function GET(request: Request) {
   }
   const bytes = await readPrivateFile(located.path);
   if (!bytes) return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
+  const thumb = kind === "photo" && url.searchParams.get("variant") === "thumb"
+    ? await patientPhotoThumb(bytes)
+    : null;
+  if (thumb) {
+    return new NextResponse(new Uint8Array(thumb), {
+      headers: {
+        "content-type": "image/webp",
+        "content-disposition": "inline",
+        "cache-control": "private, max-age=300",
+        vary: "cookie",
+      },
+    });
+  }
   return new NextResponse(new Uint8Array(bytes), {
     headers: {
       "content-type": located.type,

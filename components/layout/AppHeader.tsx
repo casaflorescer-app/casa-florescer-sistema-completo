@@ -7,6 +7,13 @@ import { isClinicStaff, uniqueStaffRoles } from "@/lib/auth/access";
 import { roleLabels } from "@/lib/auth/app-nav";
 import { useRouter } from "next/navigation";
 
+function initials(name: string) {
+  const clean = name.includes("@") ? name.split("@")[0] ?? name : name;
+  const parts = clean.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  const letters = parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
+  return letters || "CF";
+}
+
 export function AppHeader({
   menuOpen,
   onMenuToggle,
@@ -28,11 +35,11 @@ export function AppHeader({
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-lotus-100 bg-white/95 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur supports-[backdrop-filter]:bg-white/90">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-casa-mist/90 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
-          className="min-h-11 min-w-11 shrink-0 rounded-lg border border-lotus-100 px-3 text-sm text-lotus-800 lg:hidden"
+          className="min-h-11 min-w-11 shrink-0 rounded-xl border border-casa-plum/15 bg-white px-3 text-sm text-casa-plum lg:hidden"
           onClick={onMenuToggle}
           aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
           aria-expanded={menuOpen ?? false}
@@ -40,23 +47,29 @@ export function AppHeader({
         >
           Menu
         </button>
-        <BrandMark
-          subtitle={
-            authorization?.isSystemAdmin && authorization && !isClinicStaff(authorization)
-              ? "Plataforma"
-              : "Clínica"
-          }
-        />
+        <div className="lg:hidden">
+          <BrandMark
+            compact
+            subtitle={
+              authorization?.isSystemAdmin && authorization && !isClinicStaff(authorization)
+                ? "Plataforma"
+                : "Clínica"
+            }
+          />
+        </div>
       </div>
 
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-        <div className="hidden min-w-0 text-right sm:block">
-          <p className="truncate text-sm font-semibold text-lotus-900">{displayName}</p>
-          <p className="truncate text-xs text-lotus-600">
-            {orgName ?? "Casa Florescer"}
-            {authorization?.isSystemAdmin ? " · Administração da plataforma" : ""}
-            {roles.length ? ` · ${roleLabels(roles)}` : ""}
-          </p>
+        <div className="hidden min-w-0 items-center gap-3 rounded-full bg-white px-3 py-1.5 shadow-sm sm:flex">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-casa-plum text-xs font-semibold text-white" aria-hidden>
+            {initials(displayName)}
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block truncate text-sm font-semibold text-casa-ink">{displayName}</span>
+            <span className="block truncate text-xs text-casa-ink/60">
+              {roles.length ? roleLabels(roles) : orgName ?? "Casa Florescer"}
+            </span>
+          </span>
         </div>
         <PracticeSelector />
         <button

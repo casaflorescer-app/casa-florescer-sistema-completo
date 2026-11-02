@@ -801,13 +801,15 @@ async function setPatientPhotoPath(
 export async function getPatientPhotoUrl(
   supabase: SupabaseClient | null,
   photoPath: string | null,
+  options?: { thumb?: boolean },
 ): Promise<string | null> {
   if (!photoPath) return null;
   if (!supabase) {
     if (!isCasaBrowserAuth()) return null;
     const patientId = photoPath.split("/")[1] ?? "";
     if (!patientId) return null;
-    return `/api/casa/files?kind=photo&id=${patientId}`;
+    const variant = options?.thumb ? "&variant=thumb" : "";
+    return `/api/casa/files?kind=photo&id=${patientId}${variant}`;
   }
   const { data, error } = await supabase.storage
     .from(PATIENT_PHOTO_BUCKET)

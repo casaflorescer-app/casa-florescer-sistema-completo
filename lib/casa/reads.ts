@@ -699,6 +699,185 @@ export async function listHistoricalDurationsCasa(practiceId: string, limit: num
   });
 }
 
+const HOME_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export type HomeAppointmentScope = "professional" | "practice" | "none";
+
+export type HomeSnapshot = {
+  patients: number;
+  pregnanciesInCare: number;
+  financeCents: number | null;
+  todayCount: number | null;
+  week: { day: string; count: number }[];
+  kinds: { key: "consultation" | "procedure"; count: number }[];
+  upcoming: { id: string; startsAt: string; patientName: string; kind: "consultation" | "procedure" }[];
+  recent: { id: string; fullName: string; photoPath: string | null }[];
+  pending: { id: string; patientName: string }[];
+};
+
+function saoPauloDay(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function dayStart(day: string) {
+  return new Date(`${day}T00:00:00-03:00`);
+}
+
+function asKind(value: unknown): "consultation" | "procedure" {
+  return value === "procedure" ? "procedure" : "consultation";
+}
+
+export async function loadHomeCasa(input: {
+  professionalId: string | null;
+  practiceIds: string[];
+  includeFinance: boolean;
+  appointmentScope: HomeAppointmentScope;
+}): Promise<HomeSnapshot> {
+  const userId = await actorId();
+  const today = saoPauloDay(new Date());
+  const todayStart = dayStart(today);
+  const weekStart = new Date(todayStart.getTime() - 6 * 24 * 60 * 60 * 1000);
+  const tomorrow = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  const monthStart = dayStart(`${today.slice(0, 8)}01`);
+  const weekDays = Array.from({ length: 7 }, (_, index) =>
+    saoPauloDay(new Date(weekStart.getTime() + index * 24 * 60 * 60 * 1000)),
+  );
+  const professionalId =
+    input.appointmentScope === "professional" && input.professionalId && HOME_UUID.test(input.professionalId)
+      ? input.professionalId
+      : null;
+  const practiceIds =
+    input.appointmentScope === "practice"
+      ? input.practiceIds.filter((id) => HOME_UUID.test(id)).slice(0, 8)
+      : [];
+  const scope =
+    professionalId ? "professional" : practiceIds.length > 0 ? "practice" : "none";
+
+  return withCasaUser(userId, async (client) => {
+    const [patients, pregnancies, finance] = await Promise.all([
+      client.query<{ n: number }>("select count(*)::int as n from public.patients"),
+      client.query<{ n: number }>(
+        "select count(*)::int as n from public.pregnancies where status = 'in_care'",
+      ),
+      input.includeFinance
+        ? client.query<{ cents: number }>(
+            "select coalesce(sum(amount_cents), 0)::int as cents from public.payments where paid_at >= $1",
+            [monthStart.toISOString()],
+          )
+        : Promise.resolve({ rows: [{ cents: null as number | null }] }),
+    ]);
+
+    const empty: HomeSnapshot = {
+      patients: patients.rows[0]?.n ?? 0,
+      pregnanciesInCare: pregnancies.rows[0]?.n ?? 0,
+      financeCents: input.includeFinance ? finance.rows[0]?.cents ?? 0 : null,
+      todayCount: null,
+      week: [],
+      kinds: [],
+      upcoming: [],
+      recent: [],
+      pending: [],
+    };
+    if (scope === "none") return empty;
+
+    const filterSql =
+      scope === "professional" ? "a.professional_id = $3" : "a.practice_id = any($3::uuid[])";
+    const filterValue = scope === "professional" ? professionalId : practiceIds;
+    const rows = await client.query<{
+      id: string;
+      kind: string;
+      starts_at: Date;
+      full_name: string | null;
+    }>(
+      `select a.id, a.kind, a.starts_at, p.full_name
+       from public.appointments a
+       left join public.patients p on p.id = a.patient_id
+       where a.status <> 'cancelled'
+         and a.starts_at >= $1
+         and a.starts_at < $2
+         and ${filterSql}
+       order by a.starts_at
+       limit 400`,
+      [weekStart.toISOString(), tomorrow.toISOString(), filterValue],
+    );
+    const upcomingRows = await client.query<{
+      id: string;
+      kind: string;
+      starts_at: Date;
+      full_name: string | null;
+    }>(
+      `select a.id, a.kind, a.starts_at, p.full_name
+       from public.appointments a
+       left join public.patients p on p.id = a.patient_id
+       where a.status <> 'cancelled'
+         and a.starts_at >= now()
+         and ${filterSql.replaceAll("$3", "$1")}
+       order by a.starts_at
+       limit 4`,
+      [filterValue],
+    );
+    const recent = await client.query<{ id: string; full_name: string; photo_path: string | null }>(
+      `select id, full_name, photo_path
+       from public.patients
+       order by created_at desc
+       limit 4`,
+    );
+    const pending =
+      scope === "professional"
+        ? await client.query<{ id: string; full_name: string | null }>(
+            `select e.id, p.full_name
+             from public.encounters e
+             left join public.patients p on p.id = e.patient_id
+             where e.professional_id = $1 and e.status = 'open'
+             order by e.created_at desc
+             limit 4`,
+            [professionalId],
+          )
+        : { rows: [] as { id: string; full_name: string | null }[] };
+
+    const week = weekDays.map((day) => ({
+      day,
+      count: rows.rows.filter((row) => saoPauloDay(new Date(row.starts_at)) === day).length,
+    }));
+    const kinds = (["consultation", "procedure"] as const).map((key) => ({
+      key,
+      count: rows.rows.filter((row) => asKind(row.kind) === key).length,
+    }));
+    return {
+      patients: empty.patients,
+      pregnanciesInCare: empty.pregnanciesInCare,
+      financeCents: empty.financeCents,
+      todayCount: rows.rows.filter((row) => {
+        const at = new Date(row.starts_at).getTime();
+        return at >= todayStart.getTime() && at < tomorrow.getTime();
+      }).length,
+      week: week.some((item) => item.count > 0) ? week : [],
+      kinds: kinds.some((item) => item.count > 0) ? kinds : [],
+      upcoming: upcomingRows.rows.map((row) => ({
+        id: row.id,
+        startsAt: new Date(row.starts_at).toISOString(),
+        patientName: row.full_name?.trim() || "Paciente",
+        kind: asKind(row.kind),
+      })),
+      recent: recent.rows.map((row) => ({
+        id: row.id,
+        fullName: row.full_name,
+        photoPath: row.photo_path,
+      })),
+      pending: pending.rows.map((row) => ({
+        id: row.id,
+        patientName: row.full_name?.trim() || "Paciente",
+      })),
+    };
+  });
+}
+
 export async function listAgendaBlocksCasa(practiceId: string, from: string, to: string): Promise<SqlRow[]> {
   const userId = await actorId();
   return withCasaUser(userId, async (client) => {

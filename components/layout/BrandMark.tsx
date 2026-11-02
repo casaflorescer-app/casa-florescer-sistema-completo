@@ -3,10 +3,14 @@ import { publicAsset } from "@/lib/hosting";
 export function BrandMark({
   compact = false,
   subtitle = "Clínica",
+  tone = "ink",
 }: {
   compact?: boolean;
   subtitle?: string;
+  tone?: "ink" | "light";
 }) {
+  const title = tone === "light" ? "text-white" : "text-lotus-600";
+  const note = tone === "light" ? "text-white/75" : "text-lotus-800";
   return (
     <div className="flex items-center gap-3">
       <img
@@ -18,10 +22,10 @@ export function BrandMark({
       />
       {!compact ? (
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-brand text-lotus-600">
+          <p className={`text-[11px] font-semibold uppercase tracking-brand ${title}`}>
             Casa Florescer
           </p>
-          <p className="text-sm text-lotus-800">{subtitle}</p>
+          <p className={`text-sm ${note}`}>{subtitle}</p>
         </div>
       ) : null}
     </div>

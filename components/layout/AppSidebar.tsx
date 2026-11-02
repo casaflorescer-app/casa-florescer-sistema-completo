@@ -1,9 +1,50 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import {
+  Baby,
+  BarChart3,
+  Boxes,
+  Building2,
+  CalendarDays,
+  DoorOpen,
+  FileText,
+  FlaskConical,
+  FolderOpen,
+  HeartHandshake,
+  LayoutDashboard,
+  MessageCircle,
+  Pill,
+  Settings,
+  UserRound,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { BrandMark } from "@/components/layout/BrandMark";
 import { NavItem } from "@/components/layout/NavItem";
 import type { AppNavSection } from "@/lib/auth/app-nav";
+
+const NAV_ICONS: Record<string, ReactNode> = {
+  overview: <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />,
+  agenda: <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />,
+  patients: <Users className="h-4 w-4 shrink-0" aria-hidden />,
+  records: <FolderOpen className="h-4 w-4 shrink-0" aria-hidden />,
+  obstetrics: <Baby className="h-4 w-4 shrink-0" aria-hidden />,
+  exams: <FlaskConical className="h-4 w-4 shrink-0" aria-hidden />,
+  prescriptions: <Pill className="h-4 w-4 shrink-0" aria-hidden />,
+  "relationship-central": <HeartHandshake className="h-4 w-4 shrink-0" aria-hidden />,
+  "relationship-chatwoot": <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />,
+  rooms: <DoorOpen className="h-4 w-4 shrink-0" aria-hidden />,
+  "clinical-contracts": <FileText className="h-4 w-4 shrink-0" aria-hidden />,
+  people: <UserRound className="h-4 w-4 shrink-0" aria-hidden />,
+  inventory: <Boxes className="h-4 w-4 shrink-0" aria-hidden />,
+  reports: <BarChart3 className="h-4 w-4 shrink-0" aria-hidden />,
+  finance: <Wallet className="h-4 w-4 shrink-0" aria-hidden />,
+  "clinic-admin": <Settings className="h-4 w-4 shrink-0" aria-hidden />,
+  portal: <UserRound className="h-4 w-4 shrink-0" aria-hidden />,
+  "system-home": <Building2 className="h-4 w-4 shrink-0" aria-hidden />,
+};
 
 export function AppSidebar({
   sections,
@@ -42,7 +83,7 @@ export function AppSidebar({
       ref={asideRef}
       id="app-sidebar"
       aria-hidden={exposed ? undefined : true}
-      className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col border-r border-lotus-100 bg-white shadow-lg transition-transform duration-200 ease-out lg:static lg:z-auto lg:max-h-[calc(100vh-4.25rem)] lg:w-auto lg:translate-x-0 lg:shadow-none lg:sticky lg:top-[4.25rem] lg:overflow-y-auto lg:border-b-0 ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col bg-casa-plum text-white shadow-lg transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-screen lg:w-auto lg:translate-x-0 lg:shadow-none lg:sticky lg:top-0 lg:overflow-y-auto ${
         open ? "translate-x-0" : "-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0"
       }`}
       style={{
@@ -50,21 +91,21 @@ export function AppSidebar({
         paddingBottom: "max(0px, env(safe-area-inset-bottom))",
       }}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-lotus-50 px-3 py-3 lg:hidden">
-        <p className="text-sm font-semibold text-lotus-900">Navegação</p>
+      <div className="flex items-center justify-between gap-2 px-4 py-5">
+        <BrandMark tone="light" subtitle="Ginecologia e Obstetrícia" />
         <button
           type="button"
-          className="min-h-11 min-w-11 rounded-lg border border-lotus-100 px-3 text-sm text-lotus-800"
+          className="min-h-11 min-w-11 rounded-lg border border-white/20 px-3 text-sm text-white lg:hidden"
           onClick={onClose}
           aria-label="Fechar menu"
         >
           Fechar
         </button>
       </div>
-      <nav className="flex flex-col gap-5 overflow-y-auto px-3 py-4" aria-label="Navegação principal">
+      <nav className="flex flex-col gap-5 overflow-y-auto px-3 pb-6" aria-label="Navegação principal">
         {sections.map((section) => (
           <div key={section.id}>
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-lotus-500">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
               {section.title}
             </p>
             <ul className="mt-2 space-y-0.5">
@@ -111,6 +152,8 @@ export function AppSidebar({
                       active={active}
                       external={isExternal}
                       onNavigate={onNavigate}
+                      tone="plum"
+                      icon={NAV_ICONS[item.id]}
                     />
                   </li>
                 );

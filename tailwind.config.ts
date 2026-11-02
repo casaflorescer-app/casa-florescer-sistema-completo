@@ -9,6 +9,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        casa: {
+          plum: "#57366E",
+          lilac: "#8662A4",
+          rose: "#C884A5",
+          mist: "#F5F0F5",
+          ink: "#292334",
+        },
         lotus: {
           50: "#FBF6F8",
           100: "#F7E3E9",

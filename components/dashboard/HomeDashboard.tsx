@@ -201,21 +201,14 @@ function Summary({ label, value }: { label: string; value: number | string | nul
 
 function GestanteFigure() {
   return (
-    <>
-      <svg className="pointer-events-none absolute -inset-8 h-[calc(100%+4rem)] w-[calc(100%+4rem)]" viewBox="0 0 340 470" aria-hidden>
-        <circle cx="170" cy="210" r="128" fill="none" stroke="white" strokeWidth="1.15" strokeOpacity="0.45" />
-        <circle cx="170" cy="210" r="164" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.24" />
-        <path d="M78 168c10-10 10-18 0-26-8 10-8 18 0 26Z" fill="none" stroke="white" strokeWidth="1.2" strokeOpacity="0.8" />
-      </svg>
-      <img
-        src="/brand/gestante.webp"
-        alt=""
-        width={864}
-        height={1152}
-        className="pointer-events-none relative h-full w-full object-contain object-top"
-        aria-hidden
-      />
-    </>
+    <img
+      src="/brand/gestante.png"
+      alt=""
+      width={768}
+      height={1024}
+      className="pointer-events-none relative h-full w-full object-contain object-top [mask-image:linear-gradient(to_bottom,#000_92%,transparent_100%)]"
+      aria-hidden
+    />
   );
 }
 

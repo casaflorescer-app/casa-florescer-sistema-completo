@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-11-02 — A gestante do painel local passou a `public/brand/gestante.png`, arquivo RGBA copiado sem recompactar. A bainha esmaece. Sem deploy.
 - 2026-11-02 — Flor do título e do menu unificadas em `public/brand/flor-florescer.png`, sem corte. A gestante não foi recortada: `gestante.webp` segue RGB opaco e não chegou arquivo com transparência. Sem deploy.
 - 2026-11-02 — A ilustração aprovada entrou no menu como `public/brand/gestante-menu.png`. O arquivo é RGBA, com cantos transparentes. O SVG anterior foi removido. Sem deploy.
 - 2026-11-02 — O SVG do menu foi refeito com perfil, cabelo, pescoço, barriga e mão apoiada. Isolado sobre ameixa, a silhueta segue legível sem o coração e sem as ondas. O painel autenticado não abriu: a porta local 15432 recusou a conexão. Sem deploy.

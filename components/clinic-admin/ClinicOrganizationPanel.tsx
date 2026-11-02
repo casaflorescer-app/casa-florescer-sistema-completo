@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { listOrganizationsCasa } from "@/lib/casa/reads";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { formatCnpj, formatDateTime, mapDbError } from "@/lib/platform/format";
@@ -22,6 +24,33 @@ export function ClinicOrganizationPanel() {
 
   useEffect(() => {
     if (!orgId) return;
+    let cancelled = false;
+    if (isCasaBrowserAuth()) {
+      void listOrganizationsCasa()
+        .then((rows) => {
+          if (cancelled) return;
+          const match = rows.find((item) => String(item.id) === orgId);
+          if (!match) {
+            setRow(null);
+            setError("Organização não encontrada.");
+            return;
+          }
+          setRow({
+            id: String(match.id),
+            legal_name: String(match.legal_name ?? ""),
+            trade_name: String(match.trade_name ?? ""),
+            cnpj: String(match.cnpj ?? ""),
+            created_at: String(match.created_at ?? ""),
+          });
+          setError(null);
+        })
+        .catch(() => {
+          if (!cancelled) setError("Não foi possível carregar a organização.");
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
     const supabase = createClient();
     if (!supabase) {
       setError("Autenticação não configurada neste ambiente.");
@@ -33,12 +62,17 @@ export function ClinicOrganizationPanel() {
       .eq("id", orgId)
       .maybeSingle()
       .then(({ data, error: queryError }) => {
+        if (cancelled) return;
         if (queryError) {
           setError(mapDbError(queryError));
           return;
         }
         setRow((data as OrgRow | null) ?? null);
+        setError(null);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [orgId]);
 
   return (

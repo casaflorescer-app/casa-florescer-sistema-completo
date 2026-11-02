@@ -181,12 +181,21 @@ O Compose do Supabase é compartilhado com `db`. Trocar `restart` só em `auth`,
 
 `restart: "no"` não impede `docker compose up` nem um redeploy do painel de criar o serviço uma vez. `profiles: ["legado-off"]` tira o serviço do `up` padrão e não para o que já está no ar. A prova é `docker compose config --services`, com e sem `--profile legado-off`. A saída completa de `docker compose config` interpola o ambiente e não se imprime. No arquivo do EasyPanel, `casa-api` e `easypanel` são redes, não serviços; o único serviço era `porta-api`. `functions` e `supavisor` já estavam no perfil `manual` do override e continuam de fora dos dois `config --services`.
 
+## 2026-11-02 — C111.1, a organização lê a casa e o cadastro ainda não tem os dados
+
+A tela Organização, com a flag `1`, não pode usar `createClient()`: ele devolve nulo e a frase de autenticação. A leitura já existia em `listOrganizationsCasa`. O título só entra no DOM depois que a casca recebe a autorização. Uma leitura no `DOMContentLoaded` vê a página vazia.
+
+O BancoFlorescerPP tem 1 perfil ativo, com os quatro papéis na única prática `house`. Não há profissional, nem sala ativa, nem nome Samara, nem nome Thais, nem `can_schedule_any_practice`. Para cadastrar as duas médicas e uma sala faltam, e não foram inventados: qual perfil é qual pessoa, ou dois perfis distintos; tipo, número e UF do conselho de cada uma; a prática de cada uma; código, nome e tipo da sala; e uma secretária que não seja a mesma conta da médica. Nada disso foi gravado na produção.
+
+Na cópia, `SET LOCAL ROLE` dentro do `DO` ainda valia nas consultas seguintes. A contagem da secretária só fechou em 2 depois de `reset role`. A imagem `playwright` resolve o módulo quando o script está no diretório em que o `npm install` rodou. O cookie `Secure` não vai para o Chromium em HTTP; a prova entrega o mesmo valor sem esse atributo. O contêiner candidato escutou só em `127.0.0.1` e foi removido. A imagem publicada não mudou.
+
 ## 2026-11-02 — C111, a agenda nova precisa de profissional e de sala
 
 O BancoFlorescerPP publicado tem 1 papel `physician`, 0 linhas em `professionals` e 0 salas `active`. O formulário da agenda exige profissional e sala. Sem esses cadastros, criar horário ou bloqueio não tem alvo. A função `agenda_block_create` gravou e o cancelamento marcou `cancelled` numa cópia que recebeu profissional e sala fictícios, dentro de uma transação desfeita. O índice `unique (organization_id, cpf)` recusou o segundo CPF igual. O painel de organização e os cartões da plataforma ainda chamam `createClient()`, que devolve nulo com a flag `1`, e mostram autenticação não configurada. A leitura da organização já existe em `listOrganizationsCasa`.
 
 ## Histórico
 
+- 2026-11-02 — C111.1: a tela Organização usa `listOrganizationsCasa` com a flag `1`. Samara, Thais, conselho, prática de cada uma e sala não estão no banco; nada foi inventado nem gravado. A agenda completa foi provada só na cópia, com `rollback`.
 - 2026-11-02 — C111: sem profissional e sem sala, a agenda publicada não tem o que selecionar. O bloqueio e o CPF duplicado foram provados só na cópia, com `rollback`.
 - 2026-11-02 — C110: `restart: "no"` não segura o `compose up`; o perfil `legado-off` segura. O config completo não se imprime.
 - 2026-11-02 — C094: o backup que restaura dados é o dump de 2026-11-02, não o de 2026-11-01. Globals não entram no cluster vivo. A conversão de navegador fica na cópia. `restart: "no"` não segura um redeploy do painel.

@@ -2,6 +2,7 @@
 
 ## Histórico
 
+- 2026-11-02 — A raiz local passou a abrir o formulário de e-mail e senha. A página com o botão Entrar saiu. O site publicado não foi atualizado.
 - 2026-11-02 — A visão geral passou a usar o PNG dos fios, sem as curvas SVG. Sem deploy.
 - 2026-11-02 — Fios da visão geral recoloridos para o branco quente e os dois rosas da referência, com uma curva abaixo dos cards. Sem deploy.
 - 2026-11-02 — Os fios da visão geral foram alongados e clareados na barriga, para se aproximar da referência. Sem deploy.

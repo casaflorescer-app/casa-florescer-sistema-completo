@@ -110,6 +110,12 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 - **Enunciado:** A tela lista o que a policy já devolve. A rota `/app/finance` abre para owner, admin ou quem tem caixa. A secretária não entra. Fatura e pagamento gravam só onde `invoices_write` e `payments_via_invoice` já permitem. O rateio é somente leitura e mostra `amount_cents` já gravado. Nenhum percentual é calculado. Despesa compartilhada é centro `is_shared` com `practice_id` nulo. Despesa particular leva `practice_id`. A administradora grava despesa. A médica lê a compartilhada e a particular da própria prática e não grava despesa. A secretária não lê. Se a policy recusar, a tela mostra a recusa.
 - **Rastreio:** `components/finance/FinanceDesk.tsx`, `lib/casa/writes.ts`, `0056` e `0057`. Desde 2026-11-02 `/app/finance` no domínio publicado responde pelo BancoFlorescerPP. A conta real concentra os quatro papéis, então a recusa da secretária não foi repetida nela. A prova isolada da C093, num banco depois apagado, repetiu a matriz: cada médica viu a própria fatura e a despesa compartilhada, a administradora viu as duas faturas, e a secretária não viu fatura nem despesa.
 
+### RN-CASA-017 — A entrada abre o login
+
+- **Status:** `⚠ inferida`
+- **Enunciado:** O endereço da casa, sem caminho, abre o formulário de e-mail e senha. A página com o texto da casa e o botão Entrar não aparece. O encaminhamento fica na página, fora do middleware. Quem já entrou segue para a visão geral pela tela de login.
+- **Rastreio:** `app/(shell)/page.tsx`, `app/(shell)/login/page.tsx`.
+
 ### RN-CASA-016 — Visão geral sem percentual e sem gráfico
 
 - **Status:** `confirmada`
@@ -124,6 +130,7 @@ Este documento começa pelas regras de isolamento da casa. As telas já descrita
 
 ## Histórico
 
+- 2026-11-02 — RN-CASA-017 inferida: a raiz encaminha para o formulário de e-mail e senha. Sem deploy.
 - 2026-11-02 — RN-CASA-016 confirmada: a visão geral não mostra percentual nem gráfico. O sino não traz número inventado.
 - 2026-11-02 — C110: RN-CASA-013 e RN-CASA-014 passaram a `confirmada`. O enunciado permanece o da C109.
 - 2026-11-02 — C093: RN-CASA-013 segue inferida. A conversão de gestação nova e o vínculo de uma já em cuidado passaram a constar no servidor. O volume publicado ficou gravável. RN-CASA-014 segue inferida; a matriz da secretária foi repetida só no banco descartado.

@@ -223,8 +223,13 @@ O contorno do menu não se acerta enxugando o traço anterior. Com poucos Bézie
 
 `public/brand/gestante-menu.png` é RGBA 682×1024. Os cantos medem alfa 0. O preto visto na prévia do anexo é a área transparente, não uma chapa opaca. Os traços fortes ficam em rosa, com alfa até 252. O arquivo foi copiado sem filtro.
 
+## 2026-11-02 — A raiz não pode passar pelo middleware
+
+Encaminhar `/` para `/login` no middleware reabre o ciclo 307 que deixava a entrada inacessível no EasyPanel. O encaminhamento fica em `app/(shell)/page.tsx`. `/` e `/login` continuam fora do `matcher`.
+
 ## Histórico
 
+- 2026-11-02 — O encaminhamento da raiz para o login ficou na página. O middleware não voltou a cobrir `/` nem `/login`.
 - 2026-11-02 — `fios-luz.png` é RGBA 1024×450. Os cantos têm alfa 0. O estreitamento dos fios fica perto de (500, 321), alinhado à barriga.
 - 2026-11-02 — Cada fio tem núcleo de cerca de 1,2 px e uma camada `#F6A8CD` desfocada. A curva da direita fica na faixa inferior, abaixo dos cards.
 - 2026-11-02 — O fio principal da barriga agora chega perto de x -940 no viewBox da ilustração e some na ponta.

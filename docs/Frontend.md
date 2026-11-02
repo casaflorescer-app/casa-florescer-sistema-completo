@@ -2,7 +2,7 @@
 
 ## Login
 
-O formulário em `app/(shell)/login/ui.tsx` continua o mesmo na tela. Com `NEXT_PUBLIC_CASA_AUTH=1` o envio vai para `POST /api/casa/session` e não chama o Auth. Sem essa variável, o envio continua no cliente Supabase. A variável não está ligada na produção atual.
+O endereço sem caminho encaminha para `/login`. A página com o botão Entrar não é mais desenhada. O formulário de e-mail e senha é o de `app/(shell)/login/ui.tsx` e continua o mesmo na tela. Com `NEXT_PUBLIC_CASA_AUTH=1` o envio vai para `POST /api/casa/session` e não chama o Auth. Sem essa variável, o envio continua no cliente Supabase. A variável não está ligada na produção atual.
 
 As demais telas ainda leem e gravam pelo cliente do browser enquanto `NEXT_PUBLIC_CASA_AUTH` não está ligado. Cada módulo passa para `lib/db/casa.ts` numa etapa própria, depois que a conexão for autorizada. O schema `0000`–`0059` e a C074 já estão no BancoFlorescerPP. A conexão de produção não foi ligada. Com essa variável em `1`, o browser não abre o cliente Supabase, o login usa a sessão da casa e a casca carrega os papéis por `GET /api/casa/authorization`.
 
@@ -16,6 +16,7 @@ Quando `NEXT_PUBLIC_CASA_AUTH` é `1`, a lista e o cadastro de pacientes, a agen
 
 ## Histórico
 
+- 2026-11-02 — A raiz passou a abrir o formulário de e-mail e senha. A página com o botão Entrar saiu. Sem deploy.
 - 2026-11-02 — Os fios desenhados saíram. Entrou `fios-luz.png`, atrás da gestante, com o ponto claro na barriga. Sem deploy.
 - 2026-11-02 — Os fios passaram a `#FFF8EF`, `#FFD6E5` e `#F6A8CD`, com núcleo fino e brilho desfocado. Uma curva segue abaixo dos cards. Sem deploy.
 - 2026-11-02 — Os fios de luz ficaram mais longos e mais claros na saída da barriga, ainda abaixo do texto. Sem deploy.

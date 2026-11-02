@@ -15,6 +15,8 @@ No compose oficial do Supabase, `ENABLE_EMAIL_SIGNUP=false` vira `GOTRUE_EXTERNA
 
 A tela `app/(shell)/login/criar/page.tsx` já informa que a clínica libera o acesso. A API também recusa `POST /auth/v1/signup`.
 
+A raiz da casa encaminha para `/login` na própria página. O middleware continua fora de `/`, `/login` e `/auth`.
+
 O layout raiz guarda `metadata` e `viewport` e só repassa os filhos. `<html>` e `<body>` ficam no layout do grupo `app/(shell)/layout.tsx` (`data-casa="layout-9"`), junto com `AuthProvider`, `AlertProvider`, `PwaRegister` e o `import` de `globals.css`. As URLs continuam as mesmas. No ar, o layout raiz não entra no HTML. Um `template.tsx` recria o documento em toda navegação interna e a página fica branca; a casca saiu de lá. Sem o import de CSS nesse layout, a produção só recebe o CSS da fonte e a tela de login fica sem o visual. O middleware só cobre rotas com sessão: `/app`, `/medica`, `/secretaria`, `/gestao`, `/paciente` e `/unauthorized`. `/`, `/login` e `/auth` não passam por ele.
 
 `requireSession` só chama `redirect("/login")` quando o middleware informa um caminho protegido em `x-casa-pathname`. Sem esse caminho, esse guard não redireciona.
@@ -98,6 +100,7 @@ Em 2026-11-02 a única conta do BancoFlorescerPP passou a ter uma linha em `staf
 
 ## Histórico
 
+- 2026-11-02 — A raiz encaminha para `/login` na página. O middleware não passou a cobrir `/` nem `/login`. Sem deploy.
 - 2026-11-02 — C110: a prova do domínio passou com os cinco no perfil `legado-off` e ainda parados. A conta real continua com os quatro papéis.
 - 2026-11-02 — C094: a prova do domínio passou de novo com Auth, REST, Storage, Realtime e a porta da API parados. O reinício desses cinco ficou `no`. O banco antigo permanece.
 - 2026-11-02 — C093: a sessão publicada não consulta mais o Auth antigo. Auth, REST, Storage, Realtime e a porta da API foram parados. O banco antigo permanece. `api.thvp.cloud` responde 502.

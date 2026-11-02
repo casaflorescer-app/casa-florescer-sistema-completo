@@ -2,6 +2,10 @@
 
 ## Histórico
 
+- 2026-11-02 — A visão geral passou a usar o PNG dos fios, sem as curvas SVG. Sem deploy.
+- 2026-11-02 — Fios da visão geral recoloridos para o branco quente e os dois rosas da referência, com uma curva abaixo dos cards. Sem deploy.
+- 2026-11-02 — Os fios da visão geral foram alongados e clareados na barriga, para se aproximar da referência. Sem deploy.
+- 2026-11-02 — A visão geral ganhou fios de luz ancorados na barriga, atrás da gestante transparente. A bainha esmaece mais. Sem deploy.
 - 2026-11-02 — A gestante do painel local passou a `public/brand/gestante.png`, arquivo RGBA copiado sem recompactar. A bainha esmaece. Sem deploy.
 - 2026-11-02 — Flor do título e do menu unificadas em `public/brand/flor-florescer.png`, sem corte. A gestante não foi recortada: `gestante.webp` segue RGB opaco e não chegou arquivo com transparência. Sem deploy.
 - 2026-11-02 — A ilustração aprovada entrou no menu como `public/brand/gestante-menu.png`. O arquivo é RGBA, com cantos transparentes. O SVG anterior foi removido. Sem deploy.

@@ -225,6 +225,10 @@ O contorno do menu não se acerta enxugando o traço anterior. Com poucos Bézie
 
 ## Histórico
 
+- 2026-11-02 — `fios-luz.png` é RGBA 1024×450. Os cantos têm alfa 0. O estreitamento dos fios fica perto de (500, 321), alinhado à barriga.
+- 2026-11-02 — Cada fio tem núcleo de cerca de 1,2 px e uma camada `#F6A8CD` desfocada. A curva da direita fica na faixa inferior, abaixo dos cards.
+- 2026-11-02 — O fio principal da barriga agora chega perto de x -940 no viewBox da ilustração e some na ponta.
+- 2026-11-02 — Os fios de luz usam o viewBox da ilustração, com origem em cerca de (328, 648). Assim acompanham a barriga quando a coluna muda de tamanho.
 - 2026-11-02 — O PNG da gestante é RGBA 768×1024. Os cantos têm alfa 0. O preto da prévia é transparência. A bainha encosta na base do arquivo, então só essa faixa esmaece.
 - 2026-11-02 — O símbolo da marca está em `flor-florescer.png`, recorte do logo oficial acima do nome, com margem e sem pétala na borda. `gestante.webp` continua sem alfa.
 - 2026-11-02 — A prévia da ilustração aprovada mostra preto onde o PNG é transparente. Os cantos têm alfa 0.

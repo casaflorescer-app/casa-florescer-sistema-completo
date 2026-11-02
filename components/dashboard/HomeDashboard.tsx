@@ -71,9 +71,8 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
   return (
     <div className="space-y-4">
       <section className="relative">
-        <HeroGlow />
         <div className="relative z-10 grid items-start gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,280px)_300px]">
-          <div className="max-w-sm pt-2 text-white">
+          <div className="relative z-10 max-w-sm pt-2 text-white">
             <div className="flex items-start gap-3">
               <FloralMark className="mt-1 h-14 w-[4.75rem]" />
               <div>
@@ -98,7 +97,7 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
           <div className="relative mx-auto h-80 w-full max-w-[260px] lg:h-[390px] lg:max-w-[280px]">
             <GestanteFigure />
           </div>
-          <div className="grid content-start gap-2.5">
+          <div className="relative z-10 grid content-start gap-2.5">
             {metrics.map((item) => (
               <Metric key={item.label} icon={item.icon} label={item.label} value={item.value} />
             ))}
@@ -201,23 +200,24 @@ function Summary({ label, value }: { label: string; value: number | string | nul
 
 function GestanteFigure() {
   return (
-    <img
-      src="/brand/gestante.png"
-      alt=""
-      width={768}
-      height={1024}
-      className="pointer-events-none relative h-full w-full object-contain object-top [mask-image:linear-gradient(to_bottom,#000_92%,transparent_100%)]"
-      aria-hidden
-    />
-  );
-}
-
-function HeroGlow() {
-  return (
-    <svg className="pointer-events-none absolute inset-x-0 bottom-2 h-12 w-full text-white" viewBox="0 0 1000 64" preserveAspectRatio="none" aria-hidden>
-      <path d="M0 36C170 14 290 52 470 30C660 8 790 48 1000 22" fill="none" stroke="currentColor" strokeOpacity="0.4" strokeWidth="1.2" />
-      <path d="M0 50C190 30 320 58 520 40C720 22 840 54 1000 36" fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth="1" />
-    </svg>
+    <>
+      <img
+        src="/brand/fios-luz.png"
+        alt=""
+        width={1024}
+        height={450}
+        className="pointer-events-none absolute left-[43%] top-[62%] z-0 h-auto w-[280%] max-w-none -translate-x-[48.8%] -translate-y-[71.3%]"
+        aria-hidden
+      />
+      <img
+        src="/brand/gestante.png"
+        alt=""
+        width={768}
+        height={1024}
+        className="pointer-events-none relative z-10 h-full w-full object-contain object-top [mask-image:linear-gradient(to_bottom,#000_84%,transparent_100%)]"
+        aria-hidden
+      />
+    </>
   );
 }
 

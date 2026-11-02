@@ -225,6 +225,7 @@ O contorno do menu não se acerta enxugando o traço anterior. Com poucos Bézie
 
 ## Histórico
 
+- 2026-11-02 — O símbolo da marca está em `flor-florescer.png`, recorte do logo oficial acima do nome, com margem e sem pétala na borda. `gestante.webp` continua sem alfa.
 - 2026-11-02 — A prévia da ilustração aprovada mostra preto onde o PNG é transparente. Os cantos têm alfa 0.
 - 2026-11-02 — Poucas curvas transformam a cabeça em laço e a mão em zigue-zague. O contorno precisa passar pelo perfil e terminar a mão em concha.
 - 2026-11-02 — Ampliar o recorte da referência manteve o serrilhado, a linha vertical e as ondas duplicadas. O contorno do menu precisa ser SVG desenhado, não o PNG ampliado.

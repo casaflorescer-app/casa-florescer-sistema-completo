@@ -1,12 +1,14 @@
 import { publicAsset } from "@/lib/hosting";
 
-export function FloralMark({ className = "h-16 w-16" }: { className?: string }) {
+export function FloralMark({ className = "h-[4.5rem] w-24", tone = "light" }: { className?: string; tone?: "light" | "ink" }) {
   return (
-    <span className={`relative block shrink-0 overflow-hidden ${className}`} aria-hidden>
+    <span className={`relative block shrink-0 ${className}`} aria-hidden>
       <img
-        src={publicAsset("/brand/logo-florescer.png")}
+        src={publicAsset("/brand/flor-florescer.png")}
         alt=""
-        className="absolute left-1/2 top-[-33%] h-[197%] w-[194%] max-w-none -translate-x-1/2 brightness-0 invert"
+        width={643}
+        height={481}
+        className={`h-full w-full object-contain ${tone === "light" ? "brightness-0 invert" : ""}`}
       />
     </span>
   );

@@ -6,6 +6,7 @@ import { CalendarDays, Heart, Plus, Users, Wallet } from "lucide-react";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
 import { hasStaffRole, isClinicStaff } from "@/lib/auth/access";
 import { loadHomeCasa, type HomeSnapshot } from "@/lib/casa/reads";
+import { FloralMark } from "@/components/layout/BrandMark";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 
 const CLOCK = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
@@ -74,7 +75,7 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
         <div className="relative z-10 grid items-start gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,280px)_300px]">
           <div className="max-w-sm pt-2 text-white">
             <div className="flex items-start gap-3">
-              <TitleLotus />
+              <FloralMark className="mt-1 h-14 w-[4.75rem]" />
               <div>
                 <p className="text-sm leading-5 text-white/85">Bem-vinda à</p>
                 <h1 className="mt-1 text-[2rem] font-semibold leading-none tracking-tight sm:text-[2.6rem]">Casa Florescer</h1>
@@ -195,20 +196,6 @@ function Summary({ label, value }: { label: string; value: number | string | nul
       <h2 className="text-xs text-casa-ink/70">{label}</h2>
       <p className="mt-1 text-xl font-semibold text-casa-ink">{value === null ? "…" : value}</p>
     </div>
-  );
-}
-
-function TitleLotus() {
-  return (
-    <svg viewBox="0 0 72 72" className="mt-1 h-14 w-14 shrink-0 text-[#f6c6de]" aria-hidden>
-      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
-        <path d="M36 8c2 10 6 16 6 24s-6 14-6 26c0-12-6-18-6-26s4-14 6-24Z" />
-        <path d="M36 22c8-2 16 2 20 10 2 6-2 12-8 14-6-6-10-14-12-24Z" />
-        <path d="M36 22c-8-2-16 2-20 10-2 6 2 12 8 14 6-6 10-14 12-24Z" />
-        <path d="M30 42c-8 2-14 8-12 16 6 2 12-2 16-8" />
-        <path d="M42 42c8 2 14 8 12 16-6 2-12-2-16-8" />
-      </g>
-    </svg>
   );
 }
 

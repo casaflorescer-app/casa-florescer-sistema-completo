@@ -52,9 +52,17 @@ Dependências do Supabase:
 - Pendente: nenhuma função nova foi criada. O que não tinha função ou policy continua no cliente publicado.
 - Legado: não há chamada de Realtime. O SDK permanece porque a produção ainda depende dele.
 
+## C092 — credencial e prova isolada, sem corte
+
+Em 2026-11-02 a conta já migrada ganhou uma linha em `staff_credentials`. O hash foi gerado por `hash()` do `argon2` dentro da imagem candidata, sem parâmetros extras, e inserido para o administrador ativo que já existia. `casa_password_replace` não cria a primeira linha. Nenhum outro usuário, perfil ou papel foi criado. A contagem ficou em 1, com prefixo `$argon2id$`, e o agregado dos 4 papéis não mudou.
+
+A imagem `casa-web:c091` que tinha ficado sem contêiner foi removida do host antes da prova. Ela foi reconstruída do mesmo commit `972d8c0`, com `NEXT_PUBLIC_CASA_AUTH=1`. O identificador novo é `sha256:493cb8e34e576d485d5a74153f64a12e86d1f24b64a0edd388903f69e63afae2`. O contêiner `c092-web` escutou só em `127.0.0.1:3018`, na rede `easypanel-cap-romao`, com `/root/casa-c091.env` e o volume `/root/casa-files:/casa-files:ro`. Não teve rótulo de proxy. O processo `node` não atravessa o `/root` da imagem, modo 700; por isso `CASA_FILES_ROOT` dentro do contêiner é `/casa-files`. No host, os arquivos continuam em `/root/casa-files`, dono numérico 1000, diretórios 700 e arquivo 600.
+
+A prova, só leitura, devolveu login 200, senha errada 401, sessão 200, logout 200 e sessão seguinte 401. A ficha respondeu 200 com a paciente presente. A foto respondeu 200 com 496021 bytes. A agenda sem cookie respondeu 401; com cookie, um identificador inexistente respondeu 404 e a tabela continuou com 0 linhas. A tela `/app/finance` respondeu 200 e `public.invoices` continuou em 0. Nada disso gravou paciente, agendamento ou fatura. O contêiner foi removido. A origem permaneceu com 1 organização, 1 paciente e 1 objeto. O BancoFlorescerPP permaneceu com as mesmas contagens e 1 credencial. O Florescer Web publicado não recebeu a imagem nem variável `CASA`. `api.thvp.cloud` continua no ar. O corte não foi executado.
+
 ## C091 — prontidão, sem corte
 
-O Postgres que o Florescer API usa hoje é o database `postgres` do contêiner `supabase-db`. Em 2026-11-01 ele tinha 1 organização, 1 prática, 1 perfil, 1 paciente, 4 vínculos, 1 administrador ativo, 8 eventos de auditoria e 1 objeto no bucket `patient-photos`. Agendamentos, gestações e faturas estavam em 0. O BancoFlorescerPP estava em 0 nessas tabelas. A cópia levou essas mesmas contagens, mais o arquivo de 496021 bytes para `/root/casa-files`, fora de `public/`. A origem não foi apagada. `staff_credentials` continua em 0: a conta existente não tem hash Argon2id, então o login da casa ainda não autentica essa pessoa. O `Dockerfile` declara `NEXT_PUBLIC_CASA_AUTH` com padrão vazio. A flag só entra na imagem que for construída com o argumento `1`. A imagem candidata é `casa-web:c091`, commit `972d8c0`, sem contêiner e fora do proxy. O Florescer Web publicado não recebeu essa imagem nem as variáveis. `api.thvp.cloud` continua no ar. O corte não foi executado.
+O Postgres que o Florescer API usa hoje é o database `postgres` do contêiner `supabase-db`. Em 2026-11-01 ele tinha 1 organização, 1 prática, 1 perfil, 1 paciente, 4 vínculos, 1 administrador ativo, 8 eventos de auditoria e 1 objeto no bucket `patient-photos`. Agendamentos, gestações e faturas estavam em 0. O BancoFlorescerPP estava em 0 nessas tabelas. A cópia levou essas mesmas contagens, mais o arquivo de 496021 bytes para `/root/casa-files`, fora de `public/`. A origem não foi apagada. Naquele momento `staff_credentials` estava em 0 e o login da casa ainda não autenticava essa pessoa. O `Dockerfile` declara `NEXT_PUBLIC_CASA_AUTH` com padrão vazio. A flag só entra na imagem que for construída com o argumento `1`. A imagem candidata daquele momento era `casa-web:c091`, commit `972d8c0`, sem contêiner e fora do proxy. O Florescer Web publicado não recebeu essa imagem nem as variáveis. `api.thvp.cloud` continua no ar. O corte não foi executado. A credencial e a prova isolada estão na C092, abaixo. O desenho publicado continua o desta seção.
 
 ## C090 — prova na cópia, sem corte
 
@@ -74,6 +82,7 @@ A imagem `casa-hml-web:c086b`, construída no clone da VPS depois do código de 
 
 ## Histórico
 
+- 2026-11-02 — C092: a conta real recebeu a primeira credencial Argon2id. A imagem reconstruída foi provada em `127.0.0.1` e o contêiner saiu. O desenho publicado não mudou. Sem corte.
 - 2026-11-01 — C091: cadastro real copiado para o BancoFlorescerPP e arquivo fora de `public/`. A flag passou a ser argumento de build, com padrão vazio. Sem corte.
 - 2026-11-01 — C090: jsonb uma vez, lista de orientações completa e portões de `/app/finance` e `/app/admin/users`. A imagem isolada foi removida. Sem corte.
 - 2026-10-31 — C090: a previsão do término clínico deixou de exigir o cliente no modo da casa. Sem prova HTTP nova e sem corte.

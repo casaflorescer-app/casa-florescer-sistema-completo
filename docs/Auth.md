@@ -76,8 +76,13 @@ Na imagem `casa-hml-web:c086c`, já removida, `GET` e `POST /api/casa/clinical` 
 
 No contêiner `casa-hml-web`, já removido, o login válido respondeu 200, a senha errada 401, a sessão 200 com o identificador do administrador principal, o logout 200 e o pedido sem cookie 401. O administrador principal criou os outros perfis. A administradora da clínica recebeu 403 ao tentar criar usuário. Na imagem seguinte, também removida, o cookie continuou `Secure` porque o processo estava em produção. O Chromium em HTTP descartou esse cookie; o teste de tela usou HTTPS só dentro do contêiner de teste. A agenda sem cookie respondeu 401. A ação da ficha sem cookie respondeu 500 e não gravou. O Florescer Web publicado continua no Auth. `sistema.thvp.cloud` não recebeu esse modo.
 
+## C092 — credencial da conta real, sessão publicada antiga
+
+Em 2026-11-02 a única conta do BancoFlorescerPP passou a ter uma linha em `staff_credentials`, com hash `$argon2id$` produzido pela imagem candidata. A senha não está neste documento. A função `casa_password_replace` só substitui uma linha existente; a primeira linha foi inserida pelo console, sem criar outro usuário e sem mudar os 4 papéis. No contêiner isolado, já removido, a senha correta respondeu 200 com o cookie `casa_session`, a senha errada 401, a leitura da sessão 200, o logout 200 e a leitura seguinte 401. O Florescer Web publicado continua no Auth. `sistema.thvp.cloud` não recebeu esse modo.
+
 ## Histórico
 
+- 2026-11-02 — C092: a conta real do BancoFlorescerPP ganhou credencial Argon2id. A sessão publicada continua a do Auth. Sem senha no texto.
 - 2026-11-01 — C090: `/app/finance` abre para owner, admin ou caixa. `/app/admin/users` abre para o administrador principal, owner ou admin. O restante de `/app/admin` continua só para owner ou admin. A produção continua no Auth.
 - 2026-10-31 — C089: a produção continua no Auth. A sessão da casa permanece homologada só na cópia. Realtime não é chamado pelo app.
 - 2026-10-31 — C086: a rota da ficha devolveu 401 sem sessão. O cookie `Secure` continuou exigindo HTTPS no teste. A produção continua no Auth.

@@ -151,8 +151,17 @@ A imagem que rodou a rota nova é `casa-hml-web:c086b`, não a `c086`. O identif
 
 O Postgres do `supabase-db`, database `postgres`, tinha 1 organização, 1 prática, 1 perfil, 1 paciente, 4 papéis na mesma conta, 1 administrador ativo, 8 auditorias e 1 foto. Agendamentos, gestações e faturas estavam em 0. O BancoFlorescerPP estava em 0 e recebeu essa cópia. A conta não tem `staff_credentials`. `NEXT_PUBLIC_CASA_AUTH` é argumento de build; variável só no processo não liga o modo. O ambiente antigo da cópia aponta para `casa_hml`, não para o BancoFlorescerPP. A imagem publicada do Florescer Web não foi trocada.
 
+## 2026-11-02 — C092, a primeira credencial não nasce das funções de senha
+
+`casa_password_replace` só atualiza uma linha e responde “Credencial inexistente.” quando `staff_credentials` está vazia. `casa_staff_create` insere o hash, mas também cria outro `auth.users`, outro perfil e novos papéis. A primeira linha da conta já migrada é um `insert` direto, feito pelo console, do retorno de `hash()` do pacote `argon2` dentro da imagem candidata, sem parâmetros extras. O verificador aceita qualquer `$argon2id$` e lê memória, tempo e paralelismo de dentro do hash.
+
+A imagem etiquetada e sem contêiner pode sumir do host. A etiqueta `casa-web:c091` sumiu durante a espera da senha e foi reconstruída do commit `972d8c0`. O identificador deixou de ser `sha256:960e1bfdb70ef23cf9e4a51975e438e7ee6a3a387a9816f14ea2916cd7f13109` e passou a `sha256:493cb8e34e576d485d5a74153f64a12e86d1f24b64a0edd388903f69e63afae2`.
+
+`docker run --entrypoint id -u node IMAGEM` não pede o uid numérico: o `-u` é a opção `--user` do Docker. O argumento do `id` tem de vir depois do nome da imagem. O usuário `node` também não atravessa o `/root` da imagem, modo 700. Montar o volume em `/root/casa-files` dentro do contêiner não deixa o processo ler a foto. O caminho que funcionou foi `CASA_FILES_ROOT=/casa-files` com `-v /root/casa-files:/casa-files:ro`, dono 1000 e modos 700/600. O nome da rede não pode ser a concatenação de todas as redes do contêiner; a prova usou `easypanel-cap-romao`.
+
 ## Histórico
 
+- 2026-11-02 — C092: `casa_password_replace` não cria a primeira linha. O hash sai do `hash()` da imagem candidata. O volume da foto não pode ficar sob o `/root` da imagem. Sem corte.
 - 2026-11-01 — C091: o database publicado tinha cadastro real; a cópia foi para o BancoFlorescerPP. A flag é de build. Sem corte.
 - 2026-11-01 — C090: lista `SETOF`, porta do financeiro, layout de usuários, sessão SSH e limpeza da gestação de prova. A cópia foi esvaziada e o contêiner saiu. Sem deploy.
 - 2026-10-31 — C090: a previsão do término saiu do cliente no modo da casa. Sem cópia isolada nesta etapa. A C090 não está homologada.

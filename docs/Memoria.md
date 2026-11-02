@@ -181,8 +181,13 @@ O Compose do Supabase é compartilhado com `db`. Trocar `restart` só em `auth`,
 
 `restart: "no"` não impede `docker compose up` nem um redeploy do painel de criar o serviço uma vez. `profiles: ["legado-off"]` tira o serviço do `up` padrão e não para o que já está no ar. A prova é `docker compose config --services`, com e sem `--profile legado-off`. A saída completa de `docker compose config` interpola o ambiente e não se imprime. No arquivo do EasyPanel, `casa-api` e `easypanel` são redes, não serviços; o único serviço era `porta-api`. `functions` e `supavisor` já estavam no perfil `manual` do override e continuam de fora dos dois `config --services`.
 
+## 2026-11-02 — C111, a agenda nova precisa de profissional e de sala
+
+O BancoFlorescerPP publicado tem 1 papel `physician`, 0 linhas em `professionals` e 0 salas `active`. O formulário da agenda exige profissional e sala. Sem esses cadastros, criar horário ou bloqueio não tem alvo. A função `agenda_block_create` gravou e o cancelamento marcou `cancelled` numa cópia que recebeu profissional e sala fictícios, dentro de uma transação desfeita. O índice `unique (organization_id, cpf)` recusou o segundo CPF igual. O painel de organização e os cartões da plataforma ainda chamam `createClient()`, que devolve nulo com a flag `1`, e mostram autenticação não configurada. A leitura da organização já existe em `listOrganizationsCasa`.
+
 ## Histórico
 
+- 2026-11-02 — C111: sem profissional e sem sala, a agenda publicada não tem o que selecionar. O bloqueio e o CPF duplicado foram provados só na cópia, com `rollback`.
 - 2026-11-02 — C110: `restart: "no"` não segura o `compose up`; o perfil `legado-off` segura. O config completo não se imprime.
 - 2026-11-02 — C094: o backup que restaura dados é o dump de 2026-11-02, não o de 2026-11-01. Globals não entram no cluster vivo. A conversão de navegador fica na cópia. `restart: "no"` não segura um redeploy do painel.
 - 2026-11-02 — C093: middleware sem `getUser()` quando o banco da casa existe. Volume gravável exigiu um segundo `mount-add`. O dump de 2026-11-01 do BancoFlorescerPP não semeia dados. A API antiga foi parada; o banco antigo permanece.

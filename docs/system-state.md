@@ -219,6 +219,22 @@ Aplicação pelo Bash do container do serviço `bancoflorescer`, usuário de con
 
 O BancoFlorescerPP não recebeu escrita desta etapa. O dump `bancoflorescerpp-20261031T215302Z.dump` foi conferido de novo: 1343810 bytes, modo 600, SHA-256 `7a4fc75468e59fb7c6cfa97cdd58072f107ca32f3cd21132ccd339b2f9af8eb6`. A cópia `casa_hml` existe. A imagem `casa-hml-web:c086c` falou só com essa cópia, em `127.0.0.1:3017`, e foi removida. A porta 3017 e a 5432 fecharam. As linhas fictícias saíram: 4 agendamentos e 1 ficha antes da limpeza; usuários, organizações, pacientes, fichas, agendamentos e profissionais da prova em 0. O Florescer Web publicado ficou com zero ocorrências de `NEXT_PUBLIC_CASA_AUTH` e de `CASA_DATABASE_URL`. A ficha sem sessão, com cookie inválido, com sessão vencida e com sessão revogada respondeu 401. A secretária recebeu 403 e a outra médica 404. A médica da prática recebeu 200. “Salvando…” pintou com o botão desabilitado e um único envio pendente. A C089 não começou.
 
+## C111 — auditoria funcional (2026-11-02)
+
+Parecer: **APTO COM RESSALVAS**. Não houve correção de código nem deploy. A imagem publicada continua `casa-web:c093`, `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`. O BancoFlorescerPP segue com 1 paciente e 0 gestações.
+
+| Módulo | Estado | Prioridade | Ação |
+| --- | --- | --- | --- |
+| Pacientes | Leitura, criação e foto no servidor da casa. CPF repetido é recusado pelo índice. | P2 | A frase da tela ainda pode ser a do banco. |
+| Agenda | Criar, alterar, cancelar, abrir atendimento e bloqueio chamam o servidor. | P1 de cadastro | Publicados: 0 profissionais e 0 salas. Não gravar esse cadastro sem autorização. |
+| Prontuário | Evolução, assinatura e autoria usam o servidor. O isolamento entre práticas já foi provado na cópia anterior. | — | Nenhuma. |
+| Obstetrícia | Conversão e vínculo usam o servidor com cliente nulo. A prova de navegador continua a da C094, na cópia. | — | Nenhuma. |
+| Financeiro | Permanece o de RN-CASA-014. | — | Nenhuma. |
+| Administração | Usuários, profissionais, salas e especialidades têm ramo da casa. A tela Organização só lê o cliente antigo. | P2 | Trocar essa leitura por `listOrganizationsCasa` numa etapa autorizada. |
+| Complementares | Portal, estoque, locação, contratos e relatórios têm ramo da casa. Integrações são atalhos. Configurações redirecionam. | P3 | Nenhuma nesta etapa. |
+
+Na cópia `casa_c111`, já removida: `RESTORE_EXIT=0`, paciente fictício único, segundo CPF com a mesma chave recusado, bloqueio `REUNIAO` criado e cancelado, `rollback`, pacientes de novo 1 e bloqueio 0. O publicado foi lido antes e depois: 1 e 0. A etiqueta `florescerweb:c091-rollback` e os cinco serviços legados permanecem como na C110.
+
 ## C110 — encerramento controlado (2026-11-02)
 
 RN-CASA-013 e RN-CASA-014 estão `confirmada`. Auth, REST, Storage, Realtime e a porta da API seguem parados e agora têm o perfil `legado-off`, então um `compose up` padrão não os inicia. `cap-romao_florescerweb` continua `1/1` em `sha256:105956a7a607baeecb2326fa094a43813cfa9eb2468a86d975eedf1ce002bf34`. O BancoFlorescerPP segue com 1 paciente e 0 gestações. A foto segue com 496021 bytes. O backup de 2026-11-02 foi conferido de novo pelos mesmos tamanhos e SHA-256. `supabase-db` e o envoy continuam. A exclusão dos cinco, do envoy, de studio, meta, imgproxy e de `casa-florescer-app-1` continua pendente de autorização. `supabase-db` não entra nessa exclusão. A porta 5432 segue fechada. O detalhe está em `docs/Infraestrutura.md` e `docs/Auth.md`.

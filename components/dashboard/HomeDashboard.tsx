@@ -6,7 +6,6 @@ import { CalendarDays, Heart, Plus, Users, Wallet } from "lucide-react";
 import type { AuthorizationContext } from "@/lib/auth/authorization";
 import { hasStaffRole, isClinicStaff } from "@/lib/auth/access";
 import { loadHomeCasa, type HomeSnapshot } from "@/lib/casa/reads";
-import { FloralMark } from "@/components/layout/BrandMark";
 import { PatientPhotoThumb } from "@/components/patients/PatientPhotoThumb";
 
 const CLOCK = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
@@ -72,10 +71,10 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
     <div className="space-y-4">
       <section className="relative">
         <HeroGlow />
-        <div className="relative z-10 grid items-center gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,280px)_300px]">
-          <div className="max-w-sm pt-1 text-white">
+        <div className="relative z-10 grid items-start gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,280px)_300px]">
+          <div className="max-w-sm pt-2 text-white">
             <div className="flex items-start gap-3">
-              <FloralMark className="h-14 w-14 shrink-0" />
+              <TitleLotus />
               <div>
                 <p className="text-sm leading-5 text-white/85">Bem-vinda à</p>
                 <h1 className="mt-1 text-[2rem] font-semibold leading-none tracking-tight sm:text-[2.6rem]">Casa Florescer</h1>
@@ -95,7 +94,7 @@ export function HomeDashboard({ auth }: { auth: AuthorizationContext }) {
               </Link>
             ) : null}
           </div>
-          <div className="relative mx-auto h-64 w-full max-w-[220px] lg:h-[280px]">
+          <div className="relative mx-auto h-80 w-full max-w-[260px] lg:h-[390px] lg:max-w-[280px]">
             <GestanteFigure />
           </div>
           <div className="grid content-start gap-2.5">
@@ -199,19 +198,34 @@ function Summary({ label, value }: { label: string; value: number | string | nul
   );
 }
 
+function TitleLotus() {
+  return (
+    <svg viewBox="0 0 72 72" className="mt-1 h-14 w-14 shrink-0 text-[#f6c6de]" aria-hidden>
+      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+        <path d="M36 8c2 10 6 16 6 24s-6 14-6 26c0-12-6-18-6-26s4-14 6-24Z" />
+        <path d="M36 22c8-2 16 2 20 10 2 6-2 12-8 14-6-6-10-14-12-24Z" />
+        <path d="M36 22c-8-2-16 2-20 10-2 6 2 12 8 14 6-6 10-14 12-24Z" />
+        <path d="M30 42c-8 2-14 8-12 16 6 2 12-2 16-8" />
+        <path d="M42 42c8 2 14 8 12 16-6 2-12-2-16-8" />
+      </g>
+    </svg>
+  );
+}
+
 function GestanteFigure() {
   return (
     <>
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 280 280" aria-hidden>
-        <circle cx="140" cy="140" r="96" fill="none" stroke="white" strokeWidth="1.15" strokeOpacity="0.4" />
-        <circle cx="140" cy="140" r="122" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.22" />
+      <svg className="pointer-events-none absolute -inset-8 h-[calc(100%+4rem)] w-[calc(100%+4rem)]" viewBox="0 0 340 470" aria-hidden>
+        <circle cx="170" cy="210" r="128" fill="none" stroke="white" strokeWidth="1.15" strokeOpacity="0.45" />
+        <circle cx="170" cy="210" r="164" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.24" />
+        <path d="M78 168c10-10 10-18 0-26-8 10-8 18 0 26Z" fill="none" stroke="white" strokeWidth="1.2" strokeOpacity="0.8" />
       </svg>
       <img
         src="/brand/gestante.webp"
         alt=""
         width={864}
         height={1152}
-        className="pointer-events-none relative mx-auto h-full w-auto max-w-full object-contain [mask-image:radial-gradient(ellipse_at_center,black_58%,transparent_78%)]"
+        className="pointer-events-none relative h-full w-full object-contain object-top"
         aria-hidden
       />
     </>

@@ -217,6 +217,7 @@ A C113 tinha começado um envio longo para restaurar o dump num database `casa_c
 
 ## Histórico
 
+- 2026-11-02 — O recorte por degradê de `gestante.webp` comeu o vestido e deixou halo. A versão transparente, com a mesma pose e os arcos, ainda não existe. O contorno do menu veio da região inferior esquerda da referência; o vestido encosta no corte da captura.
 - 2026-11-02 — A gestante grande expunha o retângulo do arquivo opaco. No tamanho de cerca de 280 px, a máscara oval é o enquadramento pedido.
 - 2026-11-02 — `gestante.webp` não tem transparência. A máscara recria o recorte esfumado. A flor do PNG é ameixa sobre ameixa; o contraste pede o recorte em branco.
 - 2026-11-02 — `--font-sans` sem valor invalida `font-family` e o navegador cai em Times New Roman. A casca precisa definir a variável com uma fonte sem serifa.

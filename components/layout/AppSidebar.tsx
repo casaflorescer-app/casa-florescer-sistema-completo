@@ -22,6 +22,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { BrandMark } from "@/components/layout/BrandMark";
+import { publicAsset } from "@/lib/hosting";
 import { NavItem } from "@/components/layout/NavItem";
 import type { AppNavSection } from "@/lib/auth/app-nav";
 
@@ -171,14 +172,13 @@ export function AppSidebar({
 
 function SidebarBloom() {
   return (
-    <svg viewBox="0 0 204 220" className="pointer-events-none mt-auto h-44 w-full shrink-0 text-white/35" aria-hidden>
-      <path d="M-8 170c46-20 78 10 118-8 34-14 64 12 100-2" fill="none" stroke="currentColor" strokeWidth="1.15" />
-      <path d="M-8 192c52-16 84 12 124-6 32-12 58 10 96-4" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.7" />
-      <path d="M86 200c6-34 16-62 26-82 8 18 16 42 20 70" fill="none" stroke="currentColor" strokeWidth="1.45" />
-      <circle cx="124" cy="96" r="11" fill="none" stroke="currentColor" strokeWidth="1.35" />
-      <path d="M104 132c12-16 24-20 34-12 2 12-2 24-12 36" fill="none" stroke="currentColor" strokeWidth="1.35" />
-      <path d="M112 158c6-8 14-12 20-8 2 8 0 16-8 22" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <circle cx="156" cy="148" r="34" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.45" />
-    </svg>
+    <img
+      src={publicAsset("/brand/gestante-contorno.png")}
+      alt=""
+      width={324}
+      height={548}
+      className="pointer-events-none mt-auto h-56 w-full shrink-0 object-contain object-bottom"
+      aria-hidden
+    />
   );
 }

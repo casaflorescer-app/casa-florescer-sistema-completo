@@ -51,7 +51,7 @@ export function AppShell({
           onNavigate={() => setMenuOpen(false)}
           onClose={() => setMenuOpen(false)}
         />
-        <div className={canvas ? "min-w-0 bg-[radial-gradient(ellipse_at_50%_8%,_#f4c6dc_0%,_#e39abf_26%,_#ce619f_55%,_#602747_100%)]" : "min-w-0"}>
+        <div className={canvas ? "min-w-0 bg-[radial-gradient(ellipse_at_62%_16%,_#f6c6de_0%,_#d56aa4_24%,_#8d456e_58%,_#602747_100%)]" : "min-w-0"}>
           <AppHeader
             menuOpen={menuOpen}
             onMenuToggle={() => setMenuOpen((open) => !open)}

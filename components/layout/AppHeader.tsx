@@ -68,18 +68,18 @@ export function AppHeader({
 
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-casa-plum shadow-sm"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-casa-plum shadow-sm"
           aria-hidden
         >
-          <Bell className="h-5 w-5" />
+          <Bell className="h-4 w-4" />
         </span>
-        <div className="flex min-w-0 items-center gap-3 rounded-full bg-white px-2 py-1.5 shadow-sm sm:px-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-casa-plum text-xs font-semibold text-white" aria-hidden>
+        <div className="flex min-w-0 items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3 shadow-sm">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-casa-plum text-[11px] font-semibold text-white" aria-hidden>
             {initials(displayName)}
           </span>
           <span className="hidden text-left sm:block">
-            <span className="block text-sm font-semibold text-casa-ink">{displayName}</span>
-            <span className="block whitespace-nowrap text-xs text-casa-ink/60">
+            <span className="block text-[13px] font-semibold leading-4 text-casa-ink">{displayName}</span>
+            <span className="block whitespace-nowrap text-[11px] leading-4 text-casa-ink/60">
               {roles.length ? roleLabels(roles) : orgName ?? "Casa Florescer"}
             </span>
           </span>

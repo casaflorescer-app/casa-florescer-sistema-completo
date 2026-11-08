@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const ITEMS = [
   { id: "hub", label: "Visão geral", href: "/app/admin" },
+  { id: "practices", label: "Práticas", href: "/app/admin/practices" },
   { id: "users", label: "Usuários", href: "/app/admin/users" },
   { id: "organization", label: "Organização", href: "/app/admin/organization" },
   { id: "permissions", label: "Permissões", href: "/app/admin/permissions" },

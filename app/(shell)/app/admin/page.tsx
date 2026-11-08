@@ -4,6 +4,11 @@ import { PageHeader } from "@/components/ui/PageHeader";
 
 const LINKS = [
   {
+    href: "/app/admin/practices",
+    label: "Práticas",
+    note: "Práticas house da clínica (ex.: Samara e Thais).",
+  },
+  {
     href: "/app/admin/users",
     label: "Usuários",
     note: "Colaboradores e acessos da clínica.",

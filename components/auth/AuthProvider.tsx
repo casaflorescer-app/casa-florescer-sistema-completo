@@ -109,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   userId: context.user.id,
                   email: context.user.email ?? "",
                   fullName: context.profile?.fullName || context.user.email || "Usuária",
+                  // C075 — caminho casa não usa user_metadata GoTrue; sem flag em staff_credentials.
+                  mustChangePassword: false,
                 }
               : null,
           );

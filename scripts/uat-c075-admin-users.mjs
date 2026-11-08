@@ -35,6 +35,9 @@ const requireAuth = read("components/auth/RequireAuth.tsx");
 const middleware = read("middleware.ts");
 const paths = read("lib/auth/paths.ts");
 const userTs = read("lib/auth/user.ts");
+const authProvider = read("components/auth/AuthProvider.tsx");
+const sessionTs = read("lib/auth/session.ts");
+const mustChange = read("lib/auth/must-change-password.ts");
 const compose = read("deploy/docker-compose.yml");
 const client = read("lib/supabase/client.ts");
 
@@ -69,6 +72,41 @@ ok("RequireAuth bloqueia mustChangePassword", requireAuth.includes("mustChangePa
 ok("middleware redireciona /app com flag", middleware.includes("userMustChangePassword") && middleware.includes("CHANGE_PASSWORD_PATH"));
 ok("paths inclui /auth/change-password", paths.includes('"/auth/change-password"'));
 ok("AuthUser.mustChangePassword", userTs.includes("mustChangePassword"));
+ok("toAuthUser lê user_metadata", userTs.includes("must_change_password") && userTs.includes("toAuthUser"));
+
+// C075.1 — literais AuthUser no caminho casa devem incluir o campo obrigatório
+ok(
+  "AuthProvider casa preenche mustChangePassword",
+  authProvider.includes("mustChangePassword: false") ||
+    authProvider.includes("mustChangePassword:"),
+);
+ok(
+  "AuthProvider GoTrue usa toAuthUser",
+  authProvider.includes("toAuthUser(next)") || authProvider.includes("toAuthUser("),
+);
+ok(
+  "session.casaAuthUser preenche mustChangePassword",
+  sessionTs.includes("mustChangePassword: false") || sessionTs.includes("mustChangePassword:"),
+);
+ok("helper userMustChangePassword", mustChange.includes("must_change_password"));
+
+// Cenários A–E (estrutural): false → acesso; true → troca; limpa após updateUser
+ok(
+  "cenário A/B: toAuthUser false salvo quando metadata true",
+  userTs.includes("must_change_password === true"),
+);
+ok(
+  "cenário C: middleware + RequireAuth bloqueiam /app",
+  middleware.includes("userMustChangePassword") && requireAuth.includes("mustChangePassword"),
+);
+ok(
+  "cenário D: change-password limpa flag",
+  changePwd.includes("must_change_password: false"),
+);
+ok(
+  "cenário E: USER_UPDATED refresca AuthUser via toAuthUser",
+  authProvider.includes("USER_UPDATED") && authProvider.includes("toAuthUser"),
+);
 
 ok("compose passa SERVICE_ROLE_KEY runtime", compose.includes("SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}"));
 ok("compose não usa NEXT_PUBLIC_SERVICE_ROLE", !compose.includes("NEXT_PUBLIC_SERVICE_ROLE"));

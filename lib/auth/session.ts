@@ -11,7 +11,13 @@ async function casaAuthUser(): Promise<AuthUser | null> {
   if (!opened) return null;
   const active = await casaSessionActive(opened.sessionId);
   if (active !== opened.userId) return null;
-  return { userId: opened.userId, email: "", fullName: "Usuária" };
+  return {
+    userId: opened.userId,
+    email: "",
+    fullName: "Usuária",
+    // C075 — caminho casa não usa user_metadata GoTrue; sem flag em staff_credentials.
+    mustChangePassword: false,
+  };
 }
 
 export async function getAuthUser(): Promise<AuthUser | null> {

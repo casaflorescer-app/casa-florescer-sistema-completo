@@ -1,13 +1,8 @@
 import Link from "next/link";
-import { Playfair_Display } from "next/font/google";
 import { RedirectIfSession } from "@/components/layout/StaticAuthGates";
 import { publicAsset } from "@/lib/hosting";
+import { playfair } from "@/app/fonts/local";
 import { LoginForm } from "./ui";
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
 
 export default function LoginPage() {
   const fundo = publicAsset("/images/recepcao-fundo.jpg");

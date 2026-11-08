@@ -1,109 +1,108 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { listPlatformUsers, setProfileActive, setSecretaryCarePolicyView } from "@/lib/platform/users";
-import type { PlatformMembership, PlatformUser } from "@/lib/platform/types";
-import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
-import { listClinicUsersCasa } from "@/lib/casa/reads";
+import {
+  listPlatformUsers,
+  listPracticeUnits,
+  setProfileActive,
+  setSecretaryCarePolicyView,
+} from "@/lib/platform/users";
+import {
+  STAFF_ROLE_OPTIONS,
+  type PlatformMembership,
+  type PlatformPractice,
+  type PlatformUser,
+} from "@/lib/platform/types";
+import type { AppRole } from "@/lib/types/database";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { hasStaffRole } from "@/lib/auth/access";
 import { roleLabels } from "@/lib/auth/app-nav";
 import { formatDateTime } from "@/lib/platform/format";
 import { StatusMessage, fieldClass, ghostButtonClass } from "@/components/platform/Ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
+import { CreateFormShell } from "@/components/ui/CreateFormShell";
+import { FormActions } from "@/components/ui/FormActions";
+import { UserAccessEditor } from "@/components/platform/UserAccessEditor";
+
+type CreateFormState = {
+  fullName: string;
+  email: string;
+  practiceId: string;
+  role: AppRole | "";
+};
+
+type PasswordReveal = {
+  fullName: string;
+  email: string;
+  temporaryPassword: string;
+};
+
+const EMPTY_FORM: CreateFormState = {
+  fullName: "",
+  email: "",
+  practiceId: "",
+  role: "",
+};
 
 export function ClinicUsersPanel() {
   const { authorization } = useAuth();
   const orgId = authorization?.profile?.organizationId;
   const currentUserId = authorization?.user.id;
+  const callerIsOwner = authorization ? hasStaffRole(authorization, "owner") : false;
+  const allowedRoles = useMemo(
+    () =>
+      STAFF_ROLE_OPTIONS.filter((item) => item.value !== "owner" || callerIsOwner).map(
+        (item) => item.value,
+      ),
+    [callerIsOwner],
+  );
+
   const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [practices, setPractices] = useState<PlatformPractice[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const casa = isCasaBrowserAuth();
-  const [staffName, setStaffName] = useState("");
-  const [staffEmail, setStaffEmail] = useState("");
-  const [staffPassword, setStaffPassword] = useState("");
-  const [staffRole, setStaffRole] = useState<"secretary" | "physician" | "admin">("secretary");
-  const [staffPractices, setStaffPractices] = useState("");
-  const [staffBusy, setStaffBusy] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState<CreateFormState>(EMPTY_FORM);
+  const [busy, setBusy] = useState(false);
+  const [passwordReveal, setPasswordReveal] = useState<PasswordReveal | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [editingUser, setEditingUser] = useState<PlatformUser | null>(null);
 
-  useEffect(() => {
+  const housePractices = useMemo(
+    () =>
+      practices.filter(
+        (item) =>
+          item.organizationId === orgId && item.kind === "house" && item.isActive,
+      ),
+    [practices, orgId],
+  );
+
+  const reload = useCallback(async () => {
     const supabase = createClient();
     if (!supabase) {
-      if (!isCasaBrowserAuth()) {
-        setError("Autenticação não configurada neste ambiente.");
-        setUsers([]);
-        setLoading(false);
-        return;
-      }
-      void listClinicUsersCasa()
-        .then((data) => {
-          const orgNames = new Map(
-            data.organizations.map((row) => [
-              String(row.id),
-              String(row.trade_name || row.legal_name || row.id),
-            ]),
-          );
-          const admins = new Set(
-            data.admins
-              .filter((row) => row.revoked_at == null)
-              .map((row) => String(row.user_id)),
-          );
-          const memberships = new Map<string, PlatformUser["memberships"]>();
-          for (const row of data.roles) {
-            const userId = String(row.user_id ?? "");
-            const list = memberships.get(userId) ?? [];
-            list.push({
-              id: String(row.id),
-              practiceId: String(row.practice_id),
-              practiceName: String(row.practice_name || row.practice_id),
-              practiceKind: row.practice_kind === "house" || row.practice_kind === "sublet" ? row.practice_kind : null,
-              role: row.role as PlatformUser["memberships"][number]["role"],
-              clinicalAccess: String(row.clinical_access ?? "none"),
-              canViewCarePolicies: row.can_view_care_policies === true,
-            });
-            memberships.set(userId, list);
-          }
-          const rows: PlatformUser[] = data.profiles.flatMap((row) => {
-            const id = String(row.id ?? "");
-            const organizationId = String(row.organization_id ?? "");
-            if (!id || !row.full_name || !row.email || !organizationId) return [];
-            if (orgId && organizationId !== orgId) return [];
-            return [
-              {
-                id,
-                fullName: String(row.full_name),
-                email: String(row.email),
-                organizationId,
-                organizationName: orgNames.get(organizationId) ?? null,
-                isActive: row.is_active !== false,
-                createdAt: String(row.created_at ?? ""),
-                lastAccess: null,
-                isSystemAdmin: admins.has(id),
-                memberships: memberships.get(id) ?? [],
-              },
-            ];
-          });
-          setUsers(rows);
-          setLoading(false);
-        })
-        .catch((err: unknown) => {
-          setError(err instanceof Error ? err.message : "Não foi possível carregar os usuários.");
-          setLoading(false);
-        });
+      setError("Autenticação não configurada neste ambiente.");
+      setLoading(false);
       return;
     }
-    void listPlatformUsers(supabase)
-      .then((rows) => {
-        setUsers(orgId ? rows.filter((item) => item.organizationId === orgId) : rows);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Não foi possível carregar os usuários.");
-        setLoading(false);
-      });
+    const [rows, practiceRows] = await Promise.all([
+      listPlatformUsers(supabase),
+      listPracticeUnits(supabase),
+    ]);
+    setUsers(orgId ? rows.filter((item) => item.organizationId === orgId) : rows);
+    setPractices(practiceRows);
+    setLoading(false);
   }, [orgId]);
+
+  useEffect(() => {
+    void reload().catch((err: unknown) => {
+      setError(err instanceof Error ? err.message : "Não foi possível carregar os usuários.");
+      setLoading(false);
+    });
+  }, [reload]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -111,13 +110,97 @@ export function ClinicUsersPanel() {
     return users.filter((item) => `${item.fullName} ${item.email}`.toLowerCase().includes(q));
   }, [users, query]);
 
+  function startCreate() {
+    setForm({
+      ...EMPTY_FORM,
+      practiceId: housePractices[0]?.id ?? "",
+      role: "secretary",
+    });
+    setFormOpen(true);
+    setError(null);
+    setNotice(null);
+  }
+
+  function closeForm() {
+    if (busy) return;
+    setFormOpen(false);
+    setForm(EMPTY_FORM);
+  }
+
+  async function createUser() {
+    if (busy) return;
+    const fullName = form.fullName.trim();
+    const email = form.email.trim().toLowerCase();
+    if (!fullName || !email || !form.practiceId || !form.role) {
+      setError("Preencha nome, e-mail, prática e papel.");
+      return;
+    }
+    if (!allowedRoles.includes(form.role)) {
+      setError("Você não pode conceder este papel.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          email,
+          practiceId: form.practiceId,
+          role: form.role,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        userId?: string;
+        temporaryPassword?: string;
+        email?: string;
+        fullName?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "Não foi possível criar o usuário.");
+      }
+      if (!payload.temporaryPassword) {
+        throw new Error("Usuário criado, mas a senha provisória não veio na resposta.");
+      }
+      setPasswordReveal({
+        fullName: payload.fullName ?? fullName,
+        email: payload.email ?? email,
+        temporaryPassword: payload.temporaryPassword,
+      });
+      setCopied(false);
+      setFormOpen(false);
+      setForm(EMPTY_FORM);
+      setNotice("Usuário criado. Copie a senha provisória e envie pelo WhatsApp.");
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível criar o usuário.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyPassword() {
+    if (!passwordReveal) return;
+    try {
+      await navigator.clipboard.writeText(passwordReveal.temporaryPassword);
+      setCopied(true);
+    } catch {
+      setError("Não foi possível copiar. Selecione a senha manualmente.");
+    }
+  }
+
   async function toggle(user: PlatformUser) {
     if (user.id === currentUserId) {
       setError("Não desative o próprio perfil por esta tela.");
       return;
     }
     const supabase = createClient();
-    if (!supabase && !isCasaBrowserAuth()) return;
+    if (!supabase) return;
     try {
       await setProfileActive(supabase, user.id, !user.isActive);
       setUsers((current) =>
@@ -132,7 +215,7 @@ export function ClinicUsersPanel() {
 
   async function toggleCarePolicyView(user: PlatformUser, membership: PlatformMembership) {
     const supabase = createClient();
-    if (!supabase && !isCasaBrowserAuth()) return;
+    if (!supabase) return;
     try {
       await setSecretaryCarePolicyView(supabase, membership.id, !membership.canViewCarePolicies);
       setUsers((current) =>
@@ -160,91 +243,25 @@ export function ClinicUsersPanel() {
     }
   }
 
-  async function createStaff(event: React.FormEvent) {
-    event.preventDefault();
-    if (!authorization?.isSystemAdmin || !orgId) {
-      setError("Só o administrador principal cria usuários.");
-      return;
-    }
-    const practiceIds = staffPractices
-      .split(/[\s,;]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-    if (staffPassword.length < 8 || practiceIds.length === 0) {
-      setError("Informe uma senha de 8 caracteres e ao menos uma prática.");
-      return;
-    }
-    setStaffBusy(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/casa/staff", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          email: staffEmail.trim(),
-          fullName: staffName.trim(),
-          password: staffPassword,
-          organizationId: orgId,
-          memberships: practiceIds.map((practiceId) => ({
-            practiceId,
-            role: staffRole,
-            canScheduleAnyPractice: staffRole !== "physician",
-          })),
-        }),
-      });
-      if (!response.ok) {
-        setError("Não foi possível criar o usuário.");
-        return;
-      }
-      setStaffPassword("");
-      setStaffEmail("");
-      setStaffName("");
-      setNotice("Usuário criado. A senha digitada não fica nesta tela.");
-    } catch {
-      setError("Não foi possível criar o usuário.");
-    } finally {
-      setStaffBusy(false);
-    }
-  }
-
   const secretaries = users.filter((item) =>
     item.memberships.some((membership) => membership.role === "secretary"),
   );
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lotus-500">
-        Administração da clínica
-      </p>
-      <h1 className="page-title mt-1">Usuários da clínica</h1>
-      <p className="page-sub mt-2">
-        {casa
-          ? "No modo da casa, só o administrador principal cria usuários por esta tela."
-          : "Profiles da organização. A criação de contas Auth permanece fora desta fase."}
-      </p>
-      {casa && authorization?.isSystemAdmin ? (
-        <form className="mb-6 max-w-xl space-y-3 rounded-2xl border border-lotus-100 bg-white p-4" onSubmit={(event) => void createStaff(event)}>
-          <h2 className="text-sm font-semibold text-lotus-900">Novo usuário</h2>
-          <input className={fieldClass} placeholder="Nome" value={staffName} onChange={(event) => setStaffName(event.target.value)} required />
-          <input className={fieldClass} type="email" placeholder="E-mail" value={staffEmail} onChange={(event) => setStaffEmail(event.target.value)} required />
-          <input className={fieldClass} type="password" placeholder="Senha inicial" value={staffPassword} onChange={(event) => setStaffPassword(event.target.value)} autoComplete="new-password" required minLength={8} />
-          <select className={fieldClass} value={staffRole} onChange={(event) => setStaffRole(event.target.value as "secretary" | "physician" | "admin")}>
-            <option value="secretary">Secretária</option>
-            <option value="physician">Médica</option>
-            <option value="admin">Administradora</option>
-          </select>
-          <textarea className={fieldClass} placeholder="IDs das práticas, um por linha" value={staffPractices} onChange={(event) => setStaffPractices(event.target.value)} required />
-          <button className={ghostButtonClass} type="submit" disabled={staffBusy}>
-            {staffBusy ? "Criando…" : "Criar usuário"}
-          </button>
-        </form>
-      ) : null}
+      <PageHeader
+        eyebrow="Administração da clínica"
+        title="Usuários da clínica"
+        description="Crie contas com senha provisória (envie pelo WhatsApp Web) e gerencie papéis da organização. Papel médico não cadastra profissional automaticamente."
+        actions={<PrimaryCreateButton label="Novo usuário" onClick={startCreate} />}
+      />
       <StatusMessage error={error} notice={notice} />
       <input
         className={`${fieldClass} mb-4 max-w-sm`}
         placeholder="Pesquisar"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
+        aria-label="Pesquisar usuários"
       />
       {loading ? <p className="text-sm text-lotus-600">Carregando…</p> : null}
       <div className="overflow-x-auto rounded-2xl border border-lotus-100 bg-white">
@@ -272,20 +289,50 @@ export function ClinicUsersPanel() {
                 <td className="px-4 py-3">{item.isActive ? "ativo" : "inativo"}</td>
                 <td className="px-4 py-3">{formatDateTime(item.createdAt)}</td>
                 <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    className={ghostButtonClass}
-                    disabled={item.id === currentUserId}
-                    onClick={() => void toggle(item)}
-                  >
-                    {item.isActive ? "Desativar" : "Ativar"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={ghostButtonClass}
+                      onClick={() => {
+                        setEditingUser(item);
+                        setNotice(null);
+                        setError(null);
+                      }}
+                    >
+                      Papéis
+                    </button>
+                    <button
+                      type="button"
+                      className={ghostButtonClass}
+                      disabled={item.id === currentUserId}
+                      onClick={() => void toggle(item)}
+                    >
+                      {item.isActive ? "Desativar" : "Ativar"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {editingUser ? (
+        <UserAccessEditor
+          user={editingUser}
+          allowedRoles={allowedRoles}
+          onClose={() => setEditingUser(null)}
+          onChanged={async () => {
+            const supabase = createClient();
+            if (!supabase || !orgId) return;
+            const rows = await listPlatformUsers(supabase);
+            const scoped = rows.filter((item) => item.organizationId === orgId);
+            setUsers(scoped);
+            const refreshed = scoped.find((item) => item.id === editingUser.id);
+            if (refreshed) setEditingUser(refreshed);
+          }}
+        />
+      ) : null}
 
       <section className="mt-10">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-lotus-500">
@@ -330,6 +377,135 @@ export function ClinicUsersPanel() {
           ))}
         </div>
       </section>
+
+      <CreateFormShell
+        open={formOpen}
+        title="Novo usuário"
+        description="A senha provisória aparece uma vez. Envie pelo WhatsApp Web e peça a troca no primeiro acesso."
+        size="md"
+        busy={busy}
+        onClose={closeForm}
+        formId="clinic-user-create-form"
+      >
+        <label className="block text-sm">
+          Nome completo
+          <input
+            className={fieldClass}
+            value={form.fullName}
+            onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
+            autoComplete="name"
+            required
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          E-mail
+          <input
+            className={fieldClass}
+            type="email"
+            value={form.email}
+            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+            autoComplete="email"
+            required
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Prática (casa)
+          <select
+            className={fieldClass}
+            value={form.practiceId}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, practiceId: event.target.value }))
+            }
+            required
+          >
+            <option value="">Selecione</option>
+            {housePractices.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          {housePractices.length === 0 ? (
+            <span className="mt-1 block text-xs text-lotus-600">
+              Nenhuma prática house ativa nesta organização.
+            </span>
+          ) : null}
+        </label>
+        <label className="mt-3 block text-sm">
+          Papel
+          <select
+            className={fieldClass}
+            value={form.role}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                role: event.target.value as AppRole | "",
+              }))
+            }
+            required
+          >
+            <option value="">Selecione</option>
+            {STAFF_ROLE_OPTIONS.filter((item) => allowedRoles.includes(item.value)).map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <FormActions
+          primaryLabel="Criar usuário"
+          primaryBusy={busy}
+          busyLabel="Criando…"
+          primaryDisabled={
+            !form.fullName.trim() ||
+            !form.email.trim() ||
+            !form.practiceId ||
+            !form.role ||
+            housePractices.length === 0
+          }
+          onPrimary={() => void createUser()}
+          onCancel={closeForm}
+        />
+      </CreateFormShell>
+
+      <CreateFormShell
+        open={Boolean(passwordReveal)}
+        title="Senha provisória"
+        description="Mostre esta senha só agora. Depois ela não volta a aparecer."
+        size="md"
+        onClose={() => setPasswordReveal(null)}
+        formId="clinic-user-temp-password"
+      >
+        {passwordReveal ? (
+          <div className="space-y-4 text-sm text-lotus-800">
+            <p>
+              Conta de <strong className="font-semibold text-lotus-900">{passwordReveal.fullName}</strong>{" "}
+              ({passwordReveal.email}).
+            </p>
+            <div className="rounded-2xl border border-lotus-100 bg-lotus-50/70 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-lotus-500">
+                Senha provisória
+              </p>
+              <p
+                className="mt-2 break-all font-mono text-base text-lotus-900"
+                data-temp-password="true"
+              >
+                {passwordReveal.temporaryPassword}
+              </p>
+            </div>
+            <p>
+              Envie pelo WhatsApp Web e peça a troca no primeiro acesso. A pessoa só entra no sistema
+              depois de definir a senha definitiva.
+            </p>
+            <FormActions
+              primaryLabel={copied ? "Copiada" : "Copiar senha"}
+              onPrimary={() => void copyPassword()}
+              cancelLabel="Fechar"
+              onCancel={() => setPasswordReveal(null)}
+            />
+          </div>
+        ) : null}
+      </CreateFormShell>
     </div>
   );
 }

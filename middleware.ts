@@ -5,6 +5,10 @@ import {
   isLegacyPortalPath,
   isPublicPath,
 } from "@/lib/auth/paths";
+import {
+  CHANGE_PASSWORD_PATH,
+  userMustChangePassword,
+} from "@/lib/auth/must-change-password";
 
 function redirectTo(request: NextRequest, pathname: string, search = "") {
   const url = request.nextUrl.clone();
@@ -60,6 +64,15 @@ export async function middleware(request: NextRequest) {
       "/login",
       `?next=${encodeURIComponent(next)}`,
     );
+    return redirect ? stamp(redirect, pathname) : response;
+  }
+
+  // C075 — troca obrigatória de senha provisória antes de /app/*
+  if (
+    userMustChangePassword(user) &&
+    (pathname === "/app" || pathname.startsWith("/app/") || pathname === "/unauthorized")
+  ) {
+    const redirect = redirectTo(request, CHANGE_PASSWORD_PATH);
     return redirect ? stamp(redirect, pathname) : response;
   }
 

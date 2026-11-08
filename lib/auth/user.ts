@@ -5,6 +5,8 @@ export type AuthUser = {
   userId: string;
   email: string;
   fullName: string;
+  /** C075 — troca obrigatória no primeiro acesso (user_metadata). */
+  mustChangePassword: boolean;
 };
 
 export function toAuthUser(user: User): AuthUser {
@@ -19,6 +21,7 @@ export function toAuthUser(user: User): AuthUser {
     userId: user.id,
     email,
     fullName: metaName.trim() || email || "Usuária",
+    mustChangePassword: user.user_metadata?.must_change_password === true,
   };
 }
 

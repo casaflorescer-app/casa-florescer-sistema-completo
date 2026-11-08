@@ -19,6 +19,7 @@ export const PUBLIC_PATHS = [
   "/login/esqueci-senha",
   "/auth/callback",
   "/auth/reset-password",
+  "/auth/change-password",
 ] as const;
 
 function normalizePathname(pathname: string) {

@@ -14,6 +14,9 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # C075 — criação Auth em /api/admin/users (runtime only; nunca NEXT_PUBLIC_*)
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
     extra_hosts:
       - "${API_HOST}:host-gateway"
       - "${APP_HOST}:host-gateway"

@@ -6,6 +6,10 @@ import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { mapAuthError } from "@/lib/auth/errors";
 import { resolveAuthenticatedPath } from "@/lib/auth/paths";
+import {
+  CHANGE_PASSWORD_PATH,
+  userMustChangePassword,
+} from "@/lib/auth/must-change-password";
 
 const inputClass =
   "w-full rounded-xl border border-rose-100 bg-white py-3 pl-11 pr-4 text-base text-rose-900 outline-none transition placeholder:text-rose-900/35 focus:border-rose-300 focus:ring-2 focus:ring-rose-300/70";
@@ -71,13 +75,19 @@ export function LoginForm() {
 
     setBusy(true);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (signInError) {
         setError(mapAuthError(signInError, "Não foi possível entrar. Tente novamente."));
         setBusy(false);
+        return;
+      }
+
+      // C075 — senha provisória: troca obrigatória antes de /app
+      if (userMustChangePassword(signInData.user)) {
+        window.location.assign(CHANGE_PASSWORD_PATH);
         return;
       }
 

@@ -38,11 +38,17 @@ export function UserAccessEditor({
   user,
   onClose,
   onChanged,
+  allowedRoles,
 }: {
   user: PlatformUser;
   onClose: () => void;
   onChanged: () => Promise<void>;
+  /** C075 — restringe papéis oferecidos (ex.: admin não concede owner). */
+  allowedRoles?: AppRole[];
 }) {
+  const roleOptions = allowedRoles?.length
+    ? STAFF_ROLE_OPTIONS.filter((item) => allowedRoles.includes(item.value))
+    : STAFF_ROLE_OPTIONS;
   const [memberships, setMemberships] = useState<PlatformMembership[]>(user.memberships);
   const [practices, setPractices] = useState<PlatformPractice[]>([]);
   const [practiceId, setPracticeId] = useState("");
@@ -322,7 +328,7 @@ export function UserAccessEditor({
               required
             >
               <option value="">Selecione a função</option>
-              {STAFF_ROLE_OPTIONS.map((item) => (
+              {roleOptions.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
                 </option>
@@ -330,7 +336,11 @@ export function UserAccessEditor({
             </select>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" className={buttonClass} disabled={busy || orgPractices.length === 0}>
+            <button
+              type="submit"
+              className={buttonClass}
+              disabled={busy || orgPractices.length === 0 || roleOptions.length === 0}
+            >
               {busy ? "Salvando…" : "Salvar vínculo"}
             </button>
             {memberships.length > 0 ? (

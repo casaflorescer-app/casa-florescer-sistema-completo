@@ -143,7 +143,8 @@ const PATH_RULES: PathRule[] = [
   },
   {
     prefix: "/app/admin",
-    allow: (auth) => hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
+    allow: (auth) =>
+      auth.isSystemAdmin || hasStaffRole(auth, "owner") || hasStaffRole(auth, "admin"),
   },
   { prefix: "/app/portal", allow: (auth) => isPatientPortalUser(auth) },
   { prefix: "/app/records", allow: (auth) => hasStaffRole(auth, "physician") },

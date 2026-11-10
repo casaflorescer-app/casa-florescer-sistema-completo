@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isCasaBrowserAuth } from "@/lib/auth/casa-mode";
 import { createClient } from "@/lib/supabase/client";
 import {
   listPlatformUsers,
@@ -25,6 +26,9 @@ import { PrimaryCreateButton } from "@/components/ui/PrimaryCreateButton";
 import { CreateFormShell } from "@/components/ui/CreateFormShell";
 import { FormActions } from "@/components/ui/FormActions";
 import { UserAccessEditor } from "@/components/platform/UserAccessEditor";
+
+/** casa_staff_create não concede owner. */
+const CASA_CREATABLE_ROLES: AppRole[] = ["admin", "physician", "secretary"];
 
 type CreateFormState = {
   fullName: string;
@@ -51,13 +55,17 @@ export function ClinicUsersPanel() {
   const orgId = authorization?.profile?.organizationId;
   const currentUserId = authorization?.user.id;
   const callerIsOwner = authorization ? hasStaffRole(authorization, "owner") : false;
-  const allowedRoles = useMemo(
-    () =>
-      STAFF_ROLE_OPTIONS.filter((item) => item.value !== "owner" || callerIsOwner).map(
+  const casaMode = isCasaBrowserAuth();
+  const allowedRoles = useMemo(() => {
+    if (casaMode) {
+      return STAFF_ROLE_OPTIONS.filter((item) => CASA_CREATABLE_ROLES.includes(item.value)).map(
         (item) => item.value,
-      ),
-    [callerIsOwner],
-  );
+      );
+    }
+    return STAFF_ROLE_OPTIONS.filter((item) => item.value !== "owner" || callerIsOwner).map(
+      (item) => item.value,
+    );
+  }, [callerIsOwner, casaMode]);
 
   const [users, setUsers] = useState<PlatformUser[]>([]);
   const [practices, setPractices] = useState<PlatformPractice[]>([]);
@@ -83,7 +91,7 @@ export function ClinicUsersPanel() {
 
   const reload = useCallback(async () => {
     const supabase = createClient();
-    if (!supabase) {
+    if (!supabase && !isCasaBrowserAuth()) {
       setError("Autenticação não configurada neste ambiente.");
       setLoading(false);
       return;
@@ -144,19 +152,45 @@ export function ClinicUsersPanel() {
     setError(null);
     setNotice(null);
     try {
-      const response = await fetch("/api/admin/users", {
+      const casa = isCasaBrowserAuth();
+      if (casa && !orgId) {
+        throw new Error("Organização do administrador não encontrada.");
+      }
+      if (casa && form.role === "owner") {
+        throw new Error("No modo da casa, o papel proprietária não é concedido nesta tela.");
+      }
+      if (casa && !CASA_CREATABLE_ROLES.includes(form.role)) {
+        throw new Error("Papel inválido para criação no modo da casa.");
+      }
+
+      const response = await fetch(casa ? "/api/casa/staff" : "/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName,
-          email,
-          practiceId: form.practiceId,
-          role: form.role,
-        }),
+        body: JSON.stringify(
+          casa
+            ? {
+                fullName,
+                email,
+                organizationId: orgId,
+                memberships: [
+                  {
+                    practiceId: form.practiceId,
+                    role: form.role as "admin" | "physician" | "secretary",
+                  },
+                ],
+              }
+            : {
+                fullName,
+                email,
+                practiceId: form.practiceId,
+                role: form.role,
+              },
+        ),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
         userId?: string;
+        id?: string;
         temporaryPassword?: string;
         email?: string;
         fullName?: string;
@@ -200,7 +234,7 @@ export function ClinicUsersPanel() {
       return;
     }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     try {
       await setProfileActive(supabase, user.id, !user.isActive);
       setUsers((current) =>
@@ -215,7 +249,7 @@ export function ClinicUsersPanel() {
 
   async function toggleCarePolicyView(user: PlatformUser, membership: PlatformMembership) {
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase && !isCasaBrowserAuth()) return;
     try {
       await setSecretaryCarePolicyView(supabase, membership.id, !membership.canViewCarePolicies);
       setUsers((current) =>
@@ -324,7 +358,7 @@ export function ClinicUsersPanel() {
           onClose={() => setEditingUser(null)}
           onChanged={async () => {
             const supabase = createClient();
-            if (!supabase || !orgId) return;
+            if ((!supabase && !isCasaBrowserAuth()) || !orgId) return;
             const rows = await listPlatformUsers(supabase);
             const scoped = rows.filter((item) => item.organizationId === orgId);
             setUsers(scoped);

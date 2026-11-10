@@ -1,5 +1,17 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  canManagePractices,
+  resolveAdminCaller,
+  type AdminCaller,
+} from "@/lib/auth/admin-caller";
+import {
+  countHousePracticesCasa,
+  deletePracticeCasa,
+  insertHousePracticeCasa,
+  linkOwnerOnPracticeCasa,
+  listHousePracticesCasa,
+  type CasaPracticeRow,
+} from "@/lib/casa/admin-practices";
 import { createServiceRoleClient, getServiceRoleKey } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -13,7 +25,7 @@ type PracticeRow = {
   specialty: string;
   isolation_label: string;
   is_active: boolean;
-  created_at?: string;
+  created_at?: string | null;
 };
 
 function asTrimmedString(value: unknown) {
@@ -34,7 +46,7 @@ function normalizeCode(raw: string) {
     .slice(0, 40);
 }
 
-function toPublic(row: PracticeRow) {
+function toPublic(row: PracticeRow | CasaPracticeRow) {
   return {
     id: row.id,
     organizationId: row.organization_id,
@@ -48,98 +60,55 @@ function toPublic(row: PracticeRow) {
   };
 }
 
-async function resolveCallerContext() {
-  const supabase = await createServerSupabase();
-  if (!supabase) {
-    return { error: jsonError("Autenticação não configurada neste ambiente.", 503) };
-  }
-
-  const {
-    data: { user: caller },
-  } = await supabase.auth.getUser();
-  if (!caller) {
-    return { error: jsonError("Sessão inválida. Entre novamente.", 401) };
-  }
-
-  if (!getServiceRoleKey()) {
+async function requirePracticeAcl(): Promise<
+  { caller: AdminCaller } | { error: NextResponse }
+> {
+  const resolved = await resolveAdminCaller();
+  if (!resolved.ok) return { error: resolved.response };
+  if (!canManagePractices(resolved.caller)) {
     return {
       error: jsonError(
-        "Gestão de práticas indisponível: chave de serviço não configurada no servidor.",
-        503,
+        "Apenas proprietária, administração ou SYSTEM_ADMIN podem gerir práticas.",
+        403,
       ),
     };
   }
-
-  const admin = createServiceRoleClient();
-  if (!admin) {
-    return {
-      error: jsonError(
-        "Gestão de práticas indisponível: chave de serviço não configurada no servidor.",
-        503,
-      ),
-    };
-  }
-
-  const { data: callerProfile, error: profileError } = await admin
-    .from("profiles")
-    .select("id, organization_id, is_active")
-    .eq("id", caller.id)
-    .maybeSingle();
-
-  if (profileError || !callerProfile?.organization_id || !callerProfile.is_active) {
-    return { error: jsonError("Perfil do administrador não encontrado ou inativo.", 403) };
-  }
-
-  const organizationId = callerProfile.organization_id as string;
-
-  const [{ data: callerRoles }, { data: adminRow }] = await Promise.all([
-    admin
-      .from("user_practice_roles")
-      .select("role, practice_id, practice_units!inner ( organization_id, kind )")
-      .eq("user_id", caller.id),
-    admin
-      .from("system_admins")
-      .select("user_id, revoked_at")
-      .eq("user_id", caller.id)
-      .is("revoked_at", null)
-      .maybeSingle(),
-  ]);
-
-  const orgRoles = (callerRoles ?? []).filter((row) => {
-    const practice = Array.isArray(row.practice_units) ? row.practice_units[0] : row.practice_units;
-    const record = practice as { organization_id?: string; kind?: string } | null;
-    return record?.organization_id === organizationId && record?.kind === "house";
-  });
-
-  const callerIsOwner = orgRoles.some((row) => row.role === "owner");
-  const callerIsAdmin = orgRoles.some((row) => row.role === "admin");
-  const isSystemAdmin = Boolean(adminRow?.user_id);
-
-  if (!callerIsOwner && !callerIsAdmin && !isSystemAdmin) {
-    return {
-      error: jsonError("Apenas proprietária, administração ou SYSTEM_ADMIN podem gerir práticas.", 403),
-    };
-  }
-
-  return {
-    admin,
-    callerId: caller.id,
-    organizationId,
-    callerIsOwner,
-    callerIsAdmin,
-    isSystemAdmin,
-  };
+  return { caller: resolved.caller };
 }
 
 export async function GET() {
-  const ctx = await resolveCallerContext();
-  if ("error" in ctx && ctx.error) return ctx.error;
-  const { admin, organizationId } = ctx as Exclude<Awaited<ReturnType<typeof resolveCallerContext>>, { error: NextResponse }>;
+  const ctx = await requirePracticeAcl();
+  if ("error" in ctx) return ctx.error;
+  const { caller } = ctx;
+
+  if (caller.mode === "casa") {
+    try {
+      const rows = await listHousePracticesCasa(caller.userId, caller.organizationId);
+      return NextResponse.json({ practices: rows.map(toPublic) });
+    } catch (error) {
+      console.error("[admin/practices] casa list failed", error);
+      return jsonError("Não foi possível listar as práticas.", 500);
+    }
+  }
+
+  if (!getServiceRoleKey()) {
+    return jsonError(
+      "Gestão de práticas indisponível: chave de serviço não configurada no servidor.",
+      503,
+    );
+  }
+  const admin = createServiceRoleClient();
+  if (!admin) {
+    return jsonError(
+      "Gestão de práticas indisponível: chave de serviço não configurada no servidor.",
+      503,
+    );
+  }
 
   const { data, error } = await admin
     .from("practice_units")
     .select("id, organization_id, kind, code, name, specialty, isolation_label, is_active, created_at")
-    .eq("organization_id", organizationId)
+    .eq("organization_id", caller.organizationId)
     .eq("kind", "house")
     .order("name");
 
@@ -154,12 +123,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const ctx = await resolveCallerContext();
-  if ("error" in ctx && ctx.error) return ctx.error;
-  const { admin, callerId, organizationId } = ctx as Exclude<
-    Awaited<ReturnType<typeof resolveCallerContext>>,
-    { error: NextResponse }
-  >;
+  const ctx = await requirePracticeAcl();
+  if ("error" in ctx) return ctx.error;
+  const { caller } = ctx;
 
   let body: Record<string, unknown>;
   try {
@@ -183,10 +149,67 @@ export async function POST(request: Request) {
     return jsonError("Informe um código válido (letras/números).", 400);
   }
 
+  if (caller.mode === "casa") {
+    try {
+      const houseCount = await countHousePracticesCasa(caller.userId, caller.organizationId);
+      const isFirstHouse = houseCount === 0;
+      const inserted = await insertHousePracticeCasa(caller.userId, {
+        organizationId: caller.organizationId,
+        code,
+        name,
+        specialty,
+        isolationLabel,
+        isActive,
+      });
+
+      let linkedOwner = false;
+      if (isFirstHouse) {
+        try {
+          await linkOwnerOnPracticeCasa(caller.userId, inserted.id);
+          linkedOwner = true;
+        } catch (roleError) {
+          console.error("[admin/practices] casa bootstrap owner link failed", roleError);
+          try {
+            await deletePracticeCasa(caller.userId, inserted.id);
+          } catch {
+            /* best-effort */
+          }
+          return jsonError(
+            "Prática criada, mas o vínculo de proprietária falhou. Tente novamente.",
+            500,
+          );
+        }
+      }
+
+      return NextResponse.json({ practice: toPublic(inserted), linkedOwner });
+    } catch (error) {
+      const err = error as { code?: string; message?: string };
+      if (err.code === "duplicate_code" || /duplicate_code/i.test(err.message ?? "")) {
+        return jsonError("Já existe uma prática com este código nesta organização.", 409);
+      }
+      console.error("[admin/practices] casa insert failed", error);
+      return jsonError("Não foi possível criar a prática.", 500);
+    }
+  }
+
+  if (!getServiceRoleKey()) {
+    return jsonError(
+      "Gestão de práticas indisponível: chave de serviço não configurada no servidor.",
+      503,
+    );
+  }
+  const admin = createServiceRoleClient();
+  if (!admin) {
+    return jsonError(
+      "Gestão de práticas indisponível: chave de serviço não configurada no servidor.",
+      503,
+    );
+  }
+
   const { count: houseCount, error: countError } = await admin
     .from("practice_units")
     .select("id", { count: "exact", head: true })
-    .eq("organization_id", organizationId)
+    .eq("organization_id", caller.organizationId)
     .eq("kind", "house");
 
   if (countError) {
@@ -198,7 +221,7 @@ export async function POST(request: Request) {
   const { data: inserted, error: insertError } = await admin
     .from("practice_units")
     .insert({
-      organization_id: organizationId,
+      organization_id: caller.organizationId,
       kind: "house",
       code,
       name,
@@ -224,7 +247,7 @@ export async function POST(request: Request) {
   let linkedOwner = false;
   if (isFirstHouse) {
     const { error: roleError } = await admin.from("user_practice_roles").insert({
-      user_id: callerId,
+      user_id: caller.userId,
       practice_id: inserted.id,
       role: "owner",
     });

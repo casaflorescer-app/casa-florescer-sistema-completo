@@ -33,13 +33,19 @@ const subnav = read("components/clinic-admin/AdminSubnav.tsx");
 const hub = read("app/(shell)/app/admin/page.tsx");
 const adminHelper = read("lib/supabase/admin.ts");
 
+const adminCaller = read("lib/auth/admin-caller.ts");
+const casaPractices = read("lib/casa/admin-practices.ts");
+
 ok("API route GET/POST existe", api.includes("export async function GET") && api.includes("export async function POST"));
-ok("API usa createServiceRoleClient", api.includes("createServiceRoleClient"));
-ok("API só kind house", api.includes('kind: "house"') || api.includes("kind\", \"house\""));
-ok("API ACL owner|admin|SYSTEM_ADMIN", api.includes("isSystemAdmin") && api.includes("callerIsOwner"));
-ok("API bootstrap owner na primeira house", api.includes("isFirstHouse") && api.includes('role: "owner"'));
+ok("API dual-mode resolveAdminCaller", api.includes("resolveAdminCaller") && api.includes("canManagePractices"));
+ok("API ramo GoTrue createServiceRoleClient", api.includes("createServiceRoleClient"));
+ok("API ramo Casa listHousePracticesCasa", api.includes("listHousePracticesCasa"));
+ok("API só kind house", api.includes('kind: "house"') || api.includes('"house"') || casaPractices.includes("kind = 'house'"));
+ok("admin-caller ACL SYSTEM_ADMIN/owner/admin", adminCaller.includes("isSystemAdmin") && adminCaller.includes("isHouseOwner"));
+ok("API bootstrap owner na primeira house", api.includes("isFirstHouse") && (api.includes('role: "owner"') || api.includes("linkOwnerOnPracticeCasa")));
 ok("API não concede SYSTEM_ADMIN a terceiros", !api.includes("grant_system_admin"));
 ok("PATCH route existe", patch.includes("export async function PATCH"));
+ok("PATCH dual-mode + Casa update", patch.includes("resolveAdminCaller") && patch.includes("updateHousePracticeCasa"));
 ok("PATCH não altera code/kind", !patch.includes("patch.code") && !patch.includes("patch.kind"));
 
 ok("ClinicPracticesPanel CreateFormShell", panel.includes("CreateFormShell") && panel.includes('formId="clinic-practice-form"'));

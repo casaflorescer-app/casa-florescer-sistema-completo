@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { hash } from "argon2";
@@ -16,10 +17,15 @@ const membershipSchema = z.object({
 const bodySchema = z.object({
   email: z.string().trim().email().max(320),
   fullName: z.string().trim().min(2).max(160),
-  password: z.string().min(8).max(200),
+  /** Opcional — se omitido, o servidor gera senha provisória (paridade C075). */
+  password: z.string().min(8).max(200).optional(),
   organizationId: z.string().uuid(),
   memberships: z.array(membershipSchema).min(1).max(8),
 });
+
+function generateTemporaryPassword() {
+  return randomBytes(18).toString("base64url");
+}
 
 export async function POST(request: Request) {
   if (!isCasaDatabaseConfigured() || !process.env.CASA_SESSION_SECRET) {
@@ -47,8 +53,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
 
+  const temporaryPassword = parsed.data.password ?? generateTemporaryPassword();
+
   try {
-    const passwordHash = await hash(parsed.data.password);
+    const passwordHash = await hash(temporaryPassword);
     const id = await createStaffAccount(session.userId, {
       email: parsed.data.email,
       fullName: parsed.data.fullName,
@@ -56,8 +64,34 @@ export async function POST(request: Request) {
       organizationId: parsed.data.organizationId,
       memberships: parsed.data.memberships,
     });
-    return NextResponse.json({ id });
-  } catch {
+    if (!id) {
+      return NextResponse.json(
+        { error: "Não foi possível criar o usuário." },
+        { status: 403 },
+      );
+    }
+    return NextResponse.json({
+      id,
+      userId: id,
+      temporaryPassword,
+      email: parsed.data.email,
+      fullName: parsed.data.fullName,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/administrador principal|system_admin|Somente o administrador/i.test(message)) {
+      return NextResponse.json(
+        { error: "Somente o administrador principal pode criar usuários." },
+        { status: 403 },
+      );
+    }
+    if (/já existe|duplicate|unique|e-mail/i.test(message)) {
+      return NextResponse.json(
+        { error: "Já existe uma conta com este e-mail." },
+        { status: 409 },
+      );
+    }
+    console.error("[casa/staff] create failed", message || error);
     return NextResponse.json(
       { error: "Não foi possível criar o usuário." },
       { status: 403 },
